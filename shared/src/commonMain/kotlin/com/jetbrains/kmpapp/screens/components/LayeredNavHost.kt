@@ -107,6 +107,11 @@ fun LayeredNavHost(
                 .swipeBackLayer(
                     layerX = layerX,
                     widthPx = widthPx,
+                    // Жест обязан перезапускаться при смене экрана: узел
+                    // pointerInput держит ссылки на состояния старого экрана,
+                    // иначе после возврата свайп пишет в мёртвый слой
+                    // (баг «после выхода жест не работает»).
+                    restartKey = screen,
                     isCommitted = { committed },
                     onCommit = { velocity -> back(velocity) }
                 )
@@ -124,6 +129,7 @@ fun LayeredNavHost(
 private fun Modifier.swipeBackLayer(
     layerX: androidx.compose.runtime.MutableFloatState,
     widthPx: Float,
+    restartKey: Any?,
     isCommitted: () -> Boolean,
     onCommit: (velocityPxPerSec: Float) -> Unit
 ): Modifier = composed {
@@ -132,7 +138,7 @@ private fun Modifier.swipeBackLayer(
     val scope = rememberCoroutineScope()
     val flingVelocityPx = with(LocalDensity.current) { 800.dp.toPx() }
 
-    pointerInput(Unit) {
+    pointerInput(restartKey) {
         detectHorizontalDragGestures(
             onDragStart = { offset ->
                 startedAtEdge = offset.x <= 200f
