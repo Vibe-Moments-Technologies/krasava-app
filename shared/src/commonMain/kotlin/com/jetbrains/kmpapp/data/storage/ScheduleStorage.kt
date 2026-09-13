@@ -656,12 +656,11 @@ class ScheduleStorage(
         private const val KEY_NOTES = "mirea_notes_pages"
         // Дефолт дока для НОВЫХ установок (решение владельца): Существующие
         // пользователи не затрагиваются — их сохранённый док доверяется.
-        // «Аудитории» и «Сравнение» добавляются в настройках дока.
         val DEFAULT_DOCK_TABS = listOf(
             AppTab.SCHEDULE,
             AppTab.TASKS,
+            AppTab.SERVICES,
             AppTab.MAP,
-            AppTab.NOTES,
             AppTab.OTHER
         )
     }

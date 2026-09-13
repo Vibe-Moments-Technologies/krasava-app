@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.DebugConfig
+import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 
 @Composable
@@ -127,6 +128,36 @@ fun DebugSettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+
+            // Тест уведомлений: мгновенная доставка и будильник через минуту.
+            if (NotificationsManager.supportsNotifications) {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Тест уведомлений", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            "Отправить тестовое уведомление сейчас или запланировать его на минуту вперёд.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        OutlinedButton(
+                            onClick = { NotificationsManager.sendTest(1_500L) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Отправить сейчас")
+                        }
+                        OutlinedButton(
+                            onClick = { NotificationsManager.sendTest(60_000L) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Запланировать через 1 минуту")
+                        }
+                    }
                 }
             }
 

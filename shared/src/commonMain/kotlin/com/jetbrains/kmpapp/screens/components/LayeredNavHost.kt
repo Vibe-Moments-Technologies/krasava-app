@@ -3,9 +3,11 @@ package com.jetbrains.kmpapp.screens.components
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -132,6 +134,10 @@ fun LayeredNavHost(
         androidx.compose.foundation.layout.Box(
             Modifier
                 .fillMaxSize()
+                // Экраны-вкладки (Конспекты, Задачи и др.) собраны без фона —
+                // как подстраницы они «просвечивали» и склеивались с родителем.
+                // Непрозрачный фон в одном месте лечит их все.
+                .background(MaterialTheme.colorScheme.background)
                 .graphicsLayer { translationX = layerX.floatValue.coerceIn(0f, widthPx) }
                 .swipeBackLayer(
                     layerX = layerX,

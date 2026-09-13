@@ -45,6 +45,26 @@ object NotificationsManager {
     }
 
     /**
+     * Отладка: тестовое уведомление через [delayMillis] (сейчас ≈ 1.5 с).
+     * Фиксированные id — повторные тесты заменяют предыдущие, партию
+     * напоминаний о занятиях не трогают.
+     */
+    fun sendTest(delayMillis: Long) {
+        val eng = engine ?: return
+        requestAuthorization()
+        eng.schedule(
+            id = if (delayMillis <= 2_000L) "test-now" else "test-delayed",
+            title = "Тестовое уведомление",
+            body = if (delayMillis <= 2_000L) {
+                "Доставка уведомлений работает"
+            } else {
+                "Запланировано на минуту вперёд — проверка будильника"
+            },
+            dateEpochMillis = Clock.System.now().toEpochMilliseconds() + delayMillis
+        )
+    }
+
+    /**
      * Перепланировать напоминания: снять прошлую партию и забронировать все
      * занятия [lessons] на следующие [DAYS_AHEAD] дней, у которых время
      * показа (минус [minutesBefore]) ещё не наступило.

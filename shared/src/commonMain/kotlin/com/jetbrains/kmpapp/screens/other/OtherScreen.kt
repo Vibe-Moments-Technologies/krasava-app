@@ -183,7 +183,11 @@ private fun OtherMainContent(
         if (dockTabs.take(5).contains(AppTab.SERVICES)) {
             emptyList()
         } else {
-            AppTab.entries.filter { it != AppTab.OTHER && it !in dockTabs.take(5) }
+            // Сам «Сервисы» в блок не входит: это контейнер, а не сервис,
+            // добавляется в док из настроек дока.
+            AppTab.entries.filter {
+                it != AppTab.OTHER && it != AppTab.SERVICES && it !in dockTabs.take(5)
+            }
         }
     }
     // Сервис из блока открывается подстраницей «Другого» (назад — свайп и

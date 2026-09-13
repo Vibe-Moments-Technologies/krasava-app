@@ -1,5 +1,10 @@
 package com.jetbrains.kmpapp.screens.schedule
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,9 +22,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.withTransform
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,6 +44,10 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 @Composable
 internal fun DaySchedulePage(
@@ -134,9 +151,15 @@ internal fun DaySchedulePage(
     }
 
     if (slots.isEmpty()) {
+        // Тап по хлопушке — конфетти, как в Telegram.
+        var burst by remember { mutableIntStateOf(0) }
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🎉", fontSize = 48.sp)
+                Text(
+                    "🎉",
+                    fontSize = 48.sp,
+                    modifier = Modifier.clickable { burst++ }
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("На этот день пар нет", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(4.dp))
@@ -147,6 +170,7 @@ internal fun DaySchedulePage(
                     IconButton(onClick = onRetry) { Icon(Icons.Default.Refresh, contentDescription = "Повторить") }
                 }
             }
+            ConfettiBurst(trigger = burst)
         }
         return
     }
@@ -173,6 +197,72 @@ internal fun DaySchedulePage(
                     showLessonProgress = showLessonProgress,
                     showAbbreviatedNames = showAbbreviatedNames,
                     scheduleTargetType = scheduleTargetType
+                )
+            }
+        }
+    }
+}
+
+private class ConfettiParticle(
+    val vx: Float,
+    val vy: Float,
+    val color: Color,
+    val sizePx: Float,
+    val rotation: Float,
+    val spin: Float
+)
+
+private val CONFETTI_COLORS = listOf(
+    Color(0xFFEF4444), Color(0xFFF59E0B), Color(0xFFFDE047),
+    Color(0xFF22C55E), Color(0xFF3B82F6), Color(0xFFEC4899), Color(0xFF8B5CF6)
+)
+
+/**
+ * Взрыв конфетти по тапу на эмодзи — как реакция в Telegram: частицы
+ * разлетаются из центра во все стороны, тормозятся гравитацией и гаснут.
+ * Каждый тап (`trigger++`) — новый взрыв с новой раскладкой частиц.
+ */
+@Composable
+private fun ConfettiBurst(trigger: Int, modifier: Modifier = Modifier) {
+    // Частицы фиксируются на тап — в кадре меняется только прогресс.
+    val particles = remember(trigger) {
+        if (trigger == 0) emptyList()
+        else List(64) {
+            val angle = Random.nextFloat() * 2f * PI.toFloat()
+            val speed = 0.30f + Random.nextFloat() * 0.65f
+            ConfettiParticle(
+                vx = cos(angle) * speed,
+                vy = sin(angle) * speed * 0.75f - 0.45f,
+                color = CONFETTI_COLORS[Random.nextInt(CONFETTI_COLORS.size)],
+                sizePx = 4f + Random.nextFloat() * 5f,
+                rotation = Random.nextFloat() * 360f,
+                spin = (Random.nextFloat() - 0.5f) * 640f
+            )
+        }
+    }
+    val progress = remember(trigger) { Animatable(1f) }
+    LaunchedEffect(trigger) {
+        if (trigger > 0) {
+            progress.snapTo(0f)
+            progress.animateTo(1f, animationSpec = tween(1100, easing = LinearEasing))
+        }
+    }
+    if (trigger == 0) return
+    Canvas(modifier.fillMaxSize()) {
+        val t = progress.value
+        if (t >= 1f) return@Canvas
+        val w = size.width
+        val h = size.height
+        particles.forEach { p ->
+            val px = w / 2f + p.vx * w * t
+            // Баллистика: равномерный разлёт + гравитационный прогиб.
+            val py = h / 2f + p.vy * h * 0.55f * t + 1.2f * t * t * h * 0.28f
+            withTransform({ rotate(p.rotation + p.spin * t, pivot = Offset(px, py)) }) {
+                drawRect(
+                    color = p.color,
+                    topLeft = Offset(px - p.sizePx / 2f, py - p.sizePx / 3f),
+                    size = Size(p.sizePx, p.sizePx * 0.62f),
+                    alpha = (1f - t * t).coerceIn(0f, 1f)
                 )
             }
         }

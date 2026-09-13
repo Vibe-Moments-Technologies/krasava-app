@@ -79,6 +79,11 @@ private val SERVICE_DESCRIPTIONS = mapOf(
     AppTab.COMPARE to "Сравнение расписаний нескольких групп"
 )
 
+// Развёрнутые имена только на этой странице; в доке и блоке — краткие.
+private val SERVICE_DISPLAY_TITLES = mapOf(
+    AppTab.FREE_ROOMS to "Свободные аудитории"
+)
+
 @Composable
 fun ServicesScreen(
     viewModel: ServicesViewModel,
@@ -194,7 +199,7 @@ private fun ServiceCard(tab: AppTab, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = tab.title,
+                    text = SERVICE_DISPLAY_TITLES[tab] ?: tab.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
