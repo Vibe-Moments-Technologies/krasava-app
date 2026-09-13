@@ -34,10 +34,18 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         content.title = title
         content.body = body
         content.sound = .default
-        let date = Date(timeIntervalSince1970: TimeInterval(dateEpochMillis) / 1000)
-        let components = Calendar.current.dateComponents(
-            [.year, .month, .day, .hour, .minute], from: date)
-        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        // Тестовые уведомления: огонь по секундам, календарь округляет
+        // до минут (dateComponents без секунд) и убивал бы их пачками.
+        let interval = TimeInterval(dateEpochMillis) / 1000 - Date().timeIntervalSince1970
+        let trigger: UNNotificationTrigger
+        if interval <= 90 {
+            trigger = UNTimeIntervalNotificationTrigger(timeInterval: max(1, interval), repeats: false)
+        } else {
+            let date = Date(timeIntervalSince1970: TimeInterval(dateEpochMillis) / 1000)
+            let components = Calendar.current.dateComponents(
+                [.year, .month, .day, .hour, .minute], from: date)
+            trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+        }
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: id, content: content, trigger: trigger))
     }

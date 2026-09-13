@@ -5,6 +5,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -157,7 +158,11 @@ internal fun DaySchedulePage(
                 Text(
                     "🎉",
                     fontSize = 48.sp,
-                    modifier = Modifier.clickable { burst++ }
+                    // Без ripple: квадратная анимация нажатия портила эмодзи.
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { burst++ }
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 Text("На этот день пар нет", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
