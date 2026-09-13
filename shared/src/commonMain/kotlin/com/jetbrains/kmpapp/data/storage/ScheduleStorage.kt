@@ -261,6 +261,7 @@ class ScheduleStorage(
     }
 
     fun setThemeMode(mode: ThemeMode) {
+        val changed = _themeMode.value != mode
         _themeMode.value = mode
         scope.launch {
             try {
@@ -269,6 +270,7 @@ class ScheduleStorage(
                 println("Failed to persist themeMode: ${e.message}")
             }
         }
+        if (changed) AppAnalytics.logEvent("theme_set", mapOf("mode" to mode.name))
     }
 
     fun setShowEmptyLessons(enabled: Boolean) {
@@ -316,6 +318,7 @@ class ScheduleStorage(
     }
 
     fun setThemeOverlay(overlay: ThemeOverlay) {
+        val changed = _themeOverlay.value != overlay
         _themeOverlay.value = overlay
         scope.launch {
             try {
@@ -327,6 +330,7 @@ class ScheduleStorage(
                 println("Failed to persist theme overlay: ${e.message}")
             }
         }
+        if (changed) AppAnalytics.logEvent("theme_overlay_set", mapOf("overlay" to overlay.name))
     }
 
     fun setCyberpunkTheme(enabled: Boolean) {
@@ -454,15 +458,28 @@ class ScheduleStorage(
 
 
     fun addTarget(target: ScheduleTarget) {
+        val wasNew = _savedTargets.value.none { it.id == target.id }
         _savedTargets.update { list ->
             if (list.any { it.id == target.id }) list
             else list + target
         }
         selectTarget(target)
         persistTargets()
+        // Аналитика: только тип (GROUP/TEACHER/AUDITORIUM) и количество —
+        // ни id, ни название группы/преподавателя наружу не уходят.
+        if (wasNew) {
+            AppAnalytics.logEvent(
+                "target_added",
+                mapOf(
+                    "type" to target.type.name,
+                    "count" to _savedTargets.value.size.toString()
+                )
+            )
+        }
     }
 
     fun removeTarget(targetId: Int) {
+        val removed = _savedTargets.value.firstOrNull { it.id == targetId }
         _savedTargets.update { list -> list.filter { it.id != targetId } }
         if (_selectedTarget.value?.id == targetId) {
             _selectedTarget.value = _savedTargets.value.firstOrNull()
@@ -473,6 +490,15 @@ class ScheduleStorage(
         platformStorage.remove(KEY_LESSONS_PREFIX + targetId)
         platformStorage.remove(KEY_LAST_SYNC_PREFIX + targetId)
         persistTargets()
+        if (removed != null) {
+            AppAnalytics.logEvent(
+                "target_removed",
+                mapOf(
+                    "type" to removed.type.name,
+                    "count" to _savedTargets.value.size.toString()
+                )
+            )
+        }
     }
 
     fun selectTarget(target: ScheduleTarget?) {

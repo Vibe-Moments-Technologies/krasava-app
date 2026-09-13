@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.screens.notes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.ScheduleRepository
+import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.DEFAULT_NOTE_COLOR
 import com.jetbrains.kmpapp.data.model.NotePage
 import com.jetbrains.kmpapp.data.model.NoteSection
@@ -42,6 +43,11 @@ class NotesViewModel(
         )
         repository.updateNotePages(repository.notePages.value + newPage)
         _selectedPageId.value = newPage.id
+        // Только счётчик страниц: ни заголовок, ни текст конспекта не уходят.
+        AppAnalytics.logEvent(
+            "notes_page_added",
+            mapOf("pages" to repository.notePages.value.size.toString())
+        )
     }
 
     fun deletePage(pageId: String) {

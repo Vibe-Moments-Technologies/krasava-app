@@ -193,8 +193,19 @@ private fun OtherMainContent(
     // Сервис из блока открывается подстраницей «Другого» (назад — свайп и
     // стрелка на иконке дока); сам раздел «Сервисы» — вкладкой.
     val openHiddenTab: (AppTab) -> Unit = { tab ->
-        if (tab == AppTab.SERVICES) onNavigateToTab(tab)
-        else tab.toServiceSubScreen()?.let { onNavigate(it) }
+        if (tab == AppTab.SERVICES) {
+            onNavigateToTab(tab)
+        } else {
+            tab.toServiceSubScreen()?.let { subScreen ->
+                // То же событие, что и со страницы «Сервисы» — в панели
+                // сценарии сходятся по одному service_open, различает source.
+                AppAnalytics.logEvent(
+                    "service_open",
+                    mapOf("service" to tab.name, "source" to "other_block")
+                )
+                onNavigate(subScreen)
+            }
+        }
     }
 
     Scaffold(

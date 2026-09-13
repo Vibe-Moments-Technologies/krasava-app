@@ -160,7 +160,9 @@ class OtherViewModel(
 
     fun navigateToSubScreen(subScreen: OtherSubScreen) {
         _activeSubScreen.value = subScreen
-        if (subScreen != OtherSubScreen.ROOT) {
+        // Сервисные подстраницы пишут свой service_open (с источником) —
+        // здесь их не дублируем, иначе в панели двойной счёт.
+        if (subScreen != OtherSubScreen.ROOT && !subScreen.isServiceScreen) {
             AppAnalytics.logEvent("screen_view", mapOf("screen" to subScreen.name))
         }
     }
