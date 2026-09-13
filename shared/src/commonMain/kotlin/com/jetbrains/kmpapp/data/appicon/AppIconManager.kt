@@ -2,7 +2,8 @@ package com.jetbrains.kmpapp.data.appicon
 
 /**
  * Мост к системной смене иконки. Android-движок не регистрируется вовсе:
- * там строка настроек скрыта (см. SettingsScreen), и весь менеджер спит.
+ * там иконка одна (новая) и автоподстраивается под тему через alias'ы
+ * (ThemeIconSwitcher), выбора нет — строка настроек скрыта (SettingsScreen).
  * iOS хранит выбранную иконку сам (setAlternateIconName переживает
  * перезапуски), поэтому при старте ничего переустанавливать не нужно —
  * применяем только в момент выбора пользователем.
@@ -10,8 +11,7 @@ package com.jetbrains.kmpapp.data.appicon
 object AppIconManager {
     /** Значения совпадают с именами appiconset'ов в Assets.xcassets (asset catalog). */
     const val ICON_DEFAULT = "default"
-    const val ICON_NEW_LIGHT = "AppIconNewLight"
-    const val ICON_NEW_DARK = "AppIconNewDark"
+    const val ICON_CLASSIC = "AppIconClassic"
 
     interface IconEngine {
         fun applyIcon(name: String)

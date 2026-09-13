@@ -40,7 +40,6 @@ import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kmp_app_template.shared.generated.resources.Res
 import kmp_app_template.shared.generated.resources.app_icon
-import kmp_app_template.shared.generated.resources.appicon_new_dark
 import kmp_app_template.shared.generated.resources.appicon_new_light
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
@@ -65,21 +64,15 @@ fun IconPickerScreen(
     val options = listOf(
         IconOption(
             key = AppIconManager.ICON_DEFAULT,
-            title = "Стандартная",
-            subtitle = "Иконка, установленная по умолчанию",
-            preview = Res.drawable.app_icon
-        ),
-        IconOption(
-            key = AppIconManager.ICON_NEW_LIGHT,
-            title = "Новая · светлая",
-            subtitle = "Светлая версия нового дизайна",
+            title = "Новая",
+            subtitle = "Светлая и тёмная — автоматически под тему системы",
             preview = Res.drawable.appicon_new_light
         ),
         IconOption(
-            key = AppIconManager.ICON_NEW_DARK,
-            title = "Новая · тёмная",
-            subtitle = "Тёмная версия нового дизайна",
-            preview = Res.drawable.appicon_new_dark
+            key = AppIconManager.ICON_CLASSIC,
+            title = "Старая",
+            subtitle = "Предыдущий дизайн приложения",
+            preview = Res.drawable.app_icon
         )
     )
 

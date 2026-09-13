@@ -32,13 +32,34 @@
         <activity
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
-            android:name=".MainActivity">
+            android:name=".MainActivity" />
+
+        <!-- Иконка автоподстройки под тему: ровно один алиас включён
+             (ThemeIconSwitcher переключает при смене day/night). -->
+        <activity-alias
+            android:name=".AliasLight"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias
+            android:name=".AliasDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_dark"
+            android:roundIcon="@mipmap/ic_launcher_dark"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <receiver
             android:name=".notifications.LessonAlarmReceiver"

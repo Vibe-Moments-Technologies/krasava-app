@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <!-- Новый дизайн — цельная отрисовка целиком в фоне; передний слой
+         пустой: маска лаунчера вырезает форму сама. -->
+    <background android:drawable="@mipmap/ic_launcher_bg_light" />
+    <foreground android:drawable="@drawable/ic_launcher_fg_empty" />
     <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

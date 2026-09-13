@@ -41,4 +41,10 @@ class MainActivity : ComponentActivity() {
             App()
         }
     }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // Смена темы системы → автоподстройка иконки (светлая/тёмная).
+        ThemeIconSwitcher.apply(this)
+    }
 }

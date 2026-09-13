@@ -201,7 +201,7 @@ fun SettingsScreen(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "Стандартная или новый дизайн · светлая и тёмная",
+                                text = "Новая или старая · тема — автоматически",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

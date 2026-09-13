@@ -22,6 +22,8 @@ class ScheduleApp : Application() {
         // Движок напоминаний: секция «Уведомления» в настройках видна там,
         // где движок зарегистрирован (Android и iOS симметричны).
         NotificationsManager.setEngine(AndroidNotificationsEngine)
+        // Иконка под тему системы: сверяем alias'ы с текущим day/night.
+        ThemeIconSwitcher.apply(this)
 
         // Pre-warm Android InputMethodManager and Compose text classes on main thread idle
         android.os.Looper.myQueue().addIdleHandler {
