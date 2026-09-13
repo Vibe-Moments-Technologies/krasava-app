@@ -74,6 +74,8 @@ fun OtherScreen(
         onBackToParent = {
             viewModel.navigateToSubScreen(activeSubScreen.parent() ?: OtherSubScreen.ROOT)
         },
+        // Возврат из другой вкладки с открытой подстраницей — показать сразу.
+        initiallyRevealed = remember { activeSubScreen != OtherSubScreen.ROOT },
         rootContent = {
             OtherMainContent(
                 viewModel = viewModel,

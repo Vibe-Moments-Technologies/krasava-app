@@ -79,6 +79,8 @@ fun ScheduleScreen(
         screen = selectedLessonForDetail,
         parentScreen = null,
         onBackToParent = { viewModel.selectLessonForDetail(null) },
+        // Возврат из другой вкладки с открытым детальным экраном — без въезда.
+        initiallyRevealed = remember { selectedLessonForDetail != null },
         rootContent = { ScheduleMainContent(viewModel = viewModel) },
         screenContent = { detailLesson, back ->
             LessonDetailScreen(

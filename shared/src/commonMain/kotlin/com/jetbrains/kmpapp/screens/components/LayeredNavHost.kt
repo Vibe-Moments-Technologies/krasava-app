@@ -48,6 +48,9 @@ fun LayeredNavHost(
     screen: Any?,
     parentScreen: Any?,
     onBackToParent: () -> Unit,
+    // Возврат из другой вкладки с уже открытой подстраницей: показать её
+    // сразу, без повторной анимации въезда («настройки сами открываются»).
+    initiallyRevealed: Boolean = false,
     modifier: Modifier = Modifier,
     rootContent: @Composable () -> Unit,
     screenContent: @Composable (screen: Any?, back: () -> Unit) -> Unit
@@ -62,12 +65,18 @@ fun LayeredNavHost(
         }
 
         var isBackTransition by remember { mutableStateOf(false) }
+        // Одноразовый флаг: подстраница уже открыта в момент композиции
+        // (возврат из другой вкладки) — без въезда; потребляется первым же
+        // LaunchedEffect и не влияет на последующие переходы.
+        var skipInitialEnter by remember { mutableStateOf(initiallyRevealed) }
         var committed by remember(screen) { mutableStateOf(false) }
         // Возврат: экран-родитель уже был под пальцем — стартуем сразу «на
         // месте» (0), иначе — въезд из-за правого края. Флаг читаем в момент
         // композиции: LaunchedEffect сработал бы кадром позже и новый экран
         // успевал мигнуть «за пределами» (баг на подстраницах 2-го уровня).
-        val layerX = remember(screen) { mutableFloatStateOf(if (isBackTransition) 0f else widthPx) }
+        val layerX = remember(screen) {
+            mutableFloatStateOf(if (isBackTransition || skipInitialEnter) 0f else widthPx)
+        }
 
         val back: (Float) -> Unit = { initialVelocity ->
             committed = true
@@ -85,6 +94,9 @@ fun LayeredNavHost(
             if (isBackTransition) {
                 // Возврат: экран уже на месте, только сбрасываем флаг.
                 isBackTransition = false
+            } else if (skipInitialEnter) {
+                // Подстраница была уже открыта — просто показать, без въезда.
+                skipInitialEnter = false
             } else {
                 // Въезд — с плавным торможением (LinearOutSlowIn): без
                 // «вылета» рывком с правого края.
