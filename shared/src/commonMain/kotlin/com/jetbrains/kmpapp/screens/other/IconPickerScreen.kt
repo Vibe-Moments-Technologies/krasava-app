@@ -38,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 import kmp_app_template.shared.generated.resources.Res
 import kmp_app_template.shared.generated.resources.app_icon
 import kmp_app_template.shared.generated.resources.appicon_new_dark
@@ -111,7 +110,6 @@ fun IconPickerScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         Column(
             modifier = Modifier

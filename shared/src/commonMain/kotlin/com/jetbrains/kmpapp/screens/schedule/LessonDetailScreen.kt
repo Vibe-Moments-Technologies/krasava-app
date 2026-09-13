@@ -54,7 +54,6 @@ import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.Subject
 import com.jetbrains.kmpapp.data.model.SubjectImportance
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 import org.koin.compose.koinInject
 import kotlin.time.Clock
 
@@ -101,7 +100,6 @@ fun LessonDetailScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         Column(
             modifier = Modifier

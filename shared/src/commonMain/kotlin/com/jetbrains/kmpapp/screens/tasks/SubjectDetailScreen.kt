@@ -70,7 +70,6 @@ import com.jetbrains.kmpapp.data.model.Subject
 import com.jetbrains.kmpapp.data.model.SubjectImportance
 import com.jetbrains.kmpapp.data.model.TaskStatus
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 
 @Composable
 internal fun SubjectDetailScreen(
@@ -160,7 +159,6 @@ internal fun SubjectDetailScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier

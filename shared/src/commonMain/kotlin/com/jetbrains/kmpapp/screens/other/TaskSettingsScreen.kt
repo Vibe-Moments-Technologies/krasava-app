@@ -46,7 +46,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import kotlinx.coroutines.launch
 
@@ -93,7 +92,6 @@ fun TaskSettingsScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         Column(
             modifier = Modifier

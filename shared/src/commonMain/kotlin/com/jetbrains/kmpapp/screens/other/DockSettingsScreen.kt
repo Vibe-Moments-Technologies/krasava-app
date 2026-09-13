@@ -46,7 +46,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 
 @Composable
 fun DockSettingsScreen(
@@ -86,7 +85,6 @@ fun DockSettingsScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         Column(
             modifier = Modifier

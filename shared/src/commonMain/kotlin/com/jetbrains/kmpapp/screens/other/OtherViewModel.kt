@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.TaskRepository
 import com.jetbrains.kmpapp.data.DebugConfig
+import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
 import com.jetbrains.kmpapp.data.model.StorageStats
@@ -44,6 +45,23 @@ enum class OtherSubScreen(val depth: Int) {
     EXPERIMENTAL_SETTINGS(3),
     ICON_PICKER(2)
 }
+
+/** Родитель подстраницы для послойной навигации (null = корень). */
+private val SUB_SCREEN_PARENT = mapOf(
+    OtherSubScreen.MANAGE_SCHEDULES to OtherSubScreen.ROOT,
+    OtherSubScreen.SETTINGS to OtherSubScreen.ROOT,
+    OtherSubScreen.DATA_AND_CACHE to OtherSubScreen.SETTINGS,
+    OtherSubScreen.DOCK_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.TASK_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
+    OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
+    OtherSubScreen.DEBUG_SETTINGS to OtherSubScreen.ABOUT,
+    OtherSubScreen.EXPERIMENTAL_SETTINGS to OtherSubScreen.DEBUG_SETTINGS,
+    OtherSubScreen.ICON_PICKER to OtherSubScreen.SETTINGS
+)
+
+fun OtherSubScreen.parent(): OtherSubScreen? =
+    if (this == OtherSubScreen.ROOT) null else SUB_SCREEN_PARENT[this]
 
 class OtherViewModel(
     private val repository: ScheduleRepository,
@@ -109,6 +127,9 @@ class OtherViewModel(
 
     fun navigateToSubScreen(subScreen: OtherSubScreen) {
         _activeSubScreen.value = subScreen
+        if (subScreen != OtherSubScreen.ROOT) {
+            AppAnalytics.logEvent("screen_view", mapOf("screen" to subScreen.name))
+        }
     }
 
     fun resetToRoot() {

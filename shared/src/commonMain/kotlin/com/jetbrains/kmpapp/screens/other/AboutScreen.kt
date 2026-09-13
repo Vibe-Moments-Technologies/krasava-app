@@ -64,7 +64,6 @@ import coil3.compose.AsyncImage
 import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.model.GitHubContributor
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 import kmp_app_template.shared.generated.resources.Res
 import kmp_app_template.shared.generated.resources.app_icon
 import org.jetbrains.compose.resources.painterResource
@@ -117,7 +116,6 @@ fun AboutScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         Column(
             modifier = Modifier

@@ -40,7 +40,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import com.jetbrains.kmpapp.theme.ThemeOverlay
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 
 @Composable
 fun ExperimentalSettingsScreen(
@@ -84,7 +83,6 @@ fun ExperimentalSettingsScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         ExperimentalSettingsContent(
             modifier = Modifier.padding(innerPadding),

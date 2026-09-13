@@ -54,7 +54,6 @@ import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.AlertDialog
@@ -118,7 +117,6 @@ fun SettingsScreen(
         },
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
     ) { innerPadding ->
         Column(
             modifier = Modifier

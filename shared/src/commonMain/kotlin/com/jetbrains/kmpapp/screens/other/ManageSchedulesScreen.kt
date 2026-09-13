@@ -64,7 +64,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
 import com.jetbrains.kmpapp.screens.schedule.AddScheduleBottomSheet
 import kotlinx.coroutines.launch
 
@@ -95,7 +94,6 @@ fun ManageSchedulesScreen(
         containerColor = MaterialTheme.colorScheme.background,
         modifier = modifier
             .fillMaxSize()
-            .swipeToDismissBack(requireEdge = true, onBack = onBack)
             .pointerInput(Unit) {
                 detectTapGestures(onTap = { focusManager.clearFocus() })
             },

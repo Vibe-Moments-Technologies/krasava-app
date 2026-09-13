@@ -115,15 +115,25 @@ fun App() {
 
     val betaChannel by otherViewModel.betaChannel.collectAsState()
 
-    // Аналитика интересов: состав дока, кто пользуется (тип цели), бета-канал
+    // Аналитика: одна стартовая метрика среза аудитории + трекеры изменений.
+    // dock_config — каждый слот отдельным параметром: в панели Metrica
+    // такое строится в графики, в отличие от строки через запятую.
+    LaunchedEffect(Unit) {
+        AppAnalytics.logEvent(
+            "app_open",
+            mapOf(
+                "target_type" to (selectedTarget?.type?.name ?: "none"),
+                "beta_channel" to betaChannel.toString()
+            )
+        )
+    }
     LaunchedEffect(dockTabs) {
-        AppAnalytics.logEvent("dock_config", mapOf("tabs" to dockTabs.joinToString(",") { it.name }))
+        val params = mutableMapOf("count" to dockTabs.size.toString())
+        dockTabs.forEachIndexed { index, tab -> params["slot_${index + 1}"] = tab.name }
+        AppAnalytics.logEvent("dock_config", params)
     }
     LaunchedEffect(selectedTarget) {
         selectedTarget?.let { AppAnalytics.logEvent("target_type", mapOf("type" to it.type.name)) }
-    }
-    LaunchedEffect(betaChannel) {
-        AppAnalytics.logEvent("beta_channel", mapOf("enabled" to betaChannel.toString()))
     }
 
     val systemDark = isSystemInDarkTheme()

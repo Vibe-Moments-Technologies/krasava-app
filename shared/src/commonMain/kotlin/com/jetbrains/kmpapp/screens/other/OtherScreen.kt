@@ -1,14 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -56,12 +47,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.screens.components.AppTab
+import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 
 @Composable
 fun OtherScreen(
@@ -74,103 +65,72 @@ fun OtherScreen(
     val updateResult by viewModel.updateResult.collectAsState()
     val uriHandler = LocalUriHandler.current
 
-    AnimatedContent(
-        targetState = activeSubScreen,
-        transitionSpec = {
-            val slide = tween<IntOffset>(280, easing = FastOutSlowInEasing)
-            val fade = tween<Float>(280, easing = FastOutSlowInEasing)
-            if (targetState.depth >= initialState.depth) {
-                // Moving forward: new screen enters from right
-                (slideInHorizontally(slide) { width -> width } + fadeIn(fade)).togetherWith(
-                    slideOutHorizontally(slide) { width -> -width } + fadeOut(fade)
-                )
-            } else {
-                // Moving back: мягкое продолжение жеста, не «хлопок» —
-                // линейный старт, плавное торможение, подольше.
-                val backSlide = tween<IntOffset>(350, easing = LinearOutSlowInEasing)
-                val backFade = tween<Float>(350, easing = LinearOutSlowInEasing)
-                (slideInHorizontally(backSlide) { width -> -width } + fadeIn(backFade)).togetherWith(
-                    slideOutHorizontally(backSlide) { width -> width } + fadeOut(backFade)
-                )
+    val childScreen = activeSubScreen.takeIf { it != OtherSubScreen.ROOT }
+    LayeredNavHost(
+        screen = childScreen,
+        parentScreen = childScreen?.parent(),
+        onBackToParent = {
+            viewModel.navigateToSubScreen(activeSubScreen.parent() ?: OtherSubScreen.ROOT)
+        },
+        rootContent = {
+            OtherMainContent(
+                viewModel = viewModel,
+                onNavigate = { viewModel.navigateToSubScreen(it) },
+                onNavigateToTab = onNavigateToTab
+            )
+        },
+        screenContent = { subScreen, back ->
+            when (subScreen as OtherSubScreen) {
+                OtherSubScreen.ROOT -> {}
+                OtherSubScreen.MANAGE_SCHEDULES -> {
+                    ManageSchedulesScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.SETTINGS -> {
+                    SettingsScreen(
+                        viewModel = viewModel,
+                        onBack = back,
+                        onOpenDataAndCache = { viewModel.navigateToSubScreen(OtherSubScreen.DATA_AND_CACHE) },
+                        onOpenDockSettings = { viewModel.navigateToSubScreen(OtherSubScreen.DOCK_SETTINGS) },
+                        onOpenTaskSettings = { viewModel.navigateToSubScreen(OtherSubScreen.TASK_SETTINGS) },
+                        onOpenIconPicker = { viewModel.navigateToSubScreen(OtherSubScreen.ICON_PICKER) }
+                    )
+                }
+                OtherSubScreen.DATA_AND_CACHE -> {
+                    DataAndCacheScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.DOCK_SETTINGS -> {
+                    DockSettingsScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.ICON_PICKER -> {
+                    IconPickerScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.TASK_SETTINGS -> {
+                    TaskSettingsScreen(tasksViewModel = tasksViewModel, onBack = back)
+                }
+                OtherSubScreen.RESOURCES -> {
+                    ResourcesScreen(onBack = back)
+                }
+                OtherSubScreen.ABOUT -> {
+                    AboutScreen(
+                        viewModel = viewModel,
+                        onBack = back,
+                        onOpenDebugMenu = { viewModel.navigateToSubScreen(OtherSubScreen.DEBUG_SETTINGS) }
+                    )
+                }
+                OtherSubScreen.DEBUG_SETTINGS -> {
+                    DebugSettingsScreen(
+                        viewModel = viewModel,
+                        onBack = back,
+                        onOpenExperimentalSettings = { viewModel.navigateToSubScreen(OtherSubScreen.EXPERIMENTAL_SETTINGS) }
+                    )
+                }
+                OtherSubScreen.EXPERIMENTAL_SETTINGS -> {
+                    ExperimentalSettingsScreen(viewModel = viewModel, onBack = back)
+                }
             }
         },
-        modifier = modifier.fillMaxSize()
-    ) { subScreen ->
-        when (subScreen) {
-            OtherSubScreen.ROOT -> {
-                OtherMainContent(
-                    viewModel = viewModel,
-                    onNavigate = { viewModel.navigateToSubScreen(it) },
-                    onNavigateToTab = onNavigateToTab
-                )
-            }
-            OtherSubScreen.MANAGE_SCHEDULES -> {
-                ManageSchedulesScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.resetToRoot() }
-                )
-            }
-            OtherSubScreen.SETTINGS -> {
-                SettingsScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.resetToRoot() },
-                    onOpenDataAndCache = { viewModel.navigateToSubScreen(OtherSubScreen.DATA_AND_CACHE) },
-                    onOpenDockSettings = { viewModel.navigateToSubScreen(OtherSubScreen.DOCK_SETTINGS) },
-                    onOpenTaskSettings = { viewModel.navigateToSubScreen(OtherSubScreen.TASK_SETTINGS) },
-                    onOpenIconPicker = { viewModel.navigateToSubScreen(OtherSubScreen.ICON_PICKER) }
-                )
-            }
-            OtherSubScreen.DATA_AND_CACHE -> {
-                DataAndCacheScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.navigateToSubScreen(OtherSubScreen.SETTINGS) }
-                )
-            }
-            OtherSubScreen.DOCK_SETTINGS -> {
-                DockSettingsScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.navigateToSubScreen(OtherSubScreen.SETTINGS) }
-                )
-            }
-            OtherSubScreen.ICON_PICKER -> {
-                IconPickerScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.navigateToSubScreen(OtherSubScreen.SETTINGS) }
-                )
-            }
-            OtherSubScreen.TASK_SETTINGS -> {
-                TaskSettingsScreen(
-                    tasksViewModel = tasksViewModel,
-                    onBack = { viewModel.navigateToSubScreen(OtherSubScreen.SETTINGS) }
-                )
-            }
-            OtherSubScreen.RESOURCES -> {
-                ResourcesScreen(
-                    onBack = { viewModel.resetToRoot() }
-                )
-            }
-            OtherSubScreen.ABOUT -> {
-                AboutScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.resetToRoot() },
-                    onOpenDebugMenu = { viewModel.navigateToSubScreen(OtherSubScreen.DEBUG_SETTINGS) }
-                )
-            }
-            OtherSubScreen.DEBUG_SETTINGS -> {
-                DebugSettingsScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.navigateToSubScreen(OtherSubScreen.ABOUT) },
-                    onOpenExperimentalSettings = { viewModel.navigateToSubScreen(OtherSubScreen.EXPERIMENTAL_SETTINGS) }
-                )
-            }
-            OtherSubScreen.EXPERIMENTAL_SETTINGS -> {
-                ExperimentalSettingsScreen(
-                    viewModel = viewModel,
-                    onBack = { viewModel.navigateToSubScreen(OtherSubScreen.DEBUG_SETTINGS) }
-                )
-            }
-        }
-    }
+        modifier = modifier
+    )
 }
 
 @Composable

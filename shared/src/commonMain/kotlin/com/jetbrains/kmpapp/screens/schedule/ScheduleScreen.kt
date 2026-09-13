@@ -1,14 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
 
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,7 +32,9 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Surface
+import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.RefreshStatus
+import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -63,7 +56,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jetbrains.kmpapp.data.model.ScheduleSlot
+import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -82,35 +75,19 @@ fun ScheduleScreen(
 ) {
     val selectedLessonForDetail by viewModel.selectedLessonForDetail.collectAsState()
 
-    AnimatedContent(
-        targetState = selectedLessonForDetail,
-        transitionSpec = {
-            val slide = tween<IntOffset>(280, easing = FastOutSlowInEasing)
-            val fade = tween<Float>(280, easing = FastOutSlowInEasing)
-            if (targetState != null) {
-                (slideInHorizontally(slide) { width -> width } + fadeIn(fade)).togetherWith(
-                    slideOutHorizontally(slide) { width -> -width } + fadeOut(fade)
-                )
-            } else {
-                // Назад: мягкое продолжение жеста — линейный старт, плавное торможение.
-                val backSlide = tween<IntOffset>(350, easing = LinearOutSlowInEasing)
-                val backFade = tween<Float>(350, easing = LinearOutSlowInEasing)
-                (slideInHorizontally(backSlide) { width -> -width } + fadeIn(backFade)).togetherWith(
-                    slideOutHorizontally(backSlide) { width -> width } + fadeOut(backFade)
-                )
-            }
-        },
-        modifier = modifier.fillMaxSize()
-    ) { detailLesson ->
-        if (detailLesson != null) {
+    LayeredNavHost(
+        screen = selectedLessonForDetail,
+        parentScreen = null,
+        onBackToParent = { viewModel.selectLessonForDetail(null) },
+        rootContent = { ScheduleMainContent(viewModel = viewModel) },
+        screenContent = { detailLesson, back ->
             LessonDetailScreen(
-                lesson = detailLesson,
-                onBack = { viewModel.selectLessonForDetail(null) }
+                lesson = detailLesson as Lesson,
+                onBack = back
             )
-        } else {
-            ScheduleMainContent(viewModel = viewModel)
-        }
-    }
+        },
+        modifier = modifier
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -251,6 +228,9 @@ private fun ScheduleMainContent(
                 // Серверы МИРЭА доступны только с IP России: при включённом
                 // VPN расписание не обновится — предупреждаем заранее.
                 if (isVpnActive) {
+                    LaunchedEffect(Unit) {
+                        AppAnalytics.logEvent("vpn_banner_shown")
+                    }
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.errorContainer,

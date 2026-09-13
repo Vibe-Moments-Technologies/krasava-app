@@ -329,15 +329,26 @@ class ScheduleStorage(
 
     /** Выбор иконки приложения; применяется немедленно (iOS), хранится для UI. */
     fun setAppIcon(name: String) {
+        val changed = _appIcon.value != name
         _appIcon.value = name
         AppIconManager.apply(name)
         scope.launch { platformStorage.saveString(KEY_APP_ICON, name) }
+        if (changed) {
+            AppAnalytics.logEvent("app_icon_changed", mapOf("icon" to name))
+        }
     }
 
     fun setNotificationsEnabled(enabled: Boolean) {
+        val changed = _notificationsEnabled.value != enabled
         _notificationsEnabled.value = enabled
         if (enabled) NotificationsManager.requestAuthorization()
         scope.launch { platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, enabled.toString()) }
+        if (changed) {
+            AppAnalytics.logEvent("notifications_changed", mapOf(
+                "enabled" to enabled.toString(),
+                "minutes_before" to _notifyMinutesBefore.value.toString()
+            ))
+        }
     }
 
     fun setNotifyMinutesBefore(minutes: Int) {

@@ -1,16 +1,7 @@
 package com.jetbrains.kmpapp.screens.tasks
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -110,7 +101,8 @@ import com.jetbrains.kmpapp.data.model.TaskCategory
 import com.jetbrains.kmpapp.data.model.TaskPriority
 import com.jetbrains.kmpapp.data.model.TaskStatus
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import com.jetbrains.kmpapp.screens.components.swipeToDismissBack
+import com.jetbrains.kmpapp.data.analytics.AppAnalytics
+import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import kotlinx.coroutines.launch
 
 // internal: используется и в SubjectDetailScreen.kt, и в TaskEditSheets.kt
@@ -150,44 +142,32 @@ fun TasksScreen(
 
     var selectedSubjectId by remember { mutableStateOf<String?>(null) }
 
-    AnimatedContent(
-        targetState = selectedSubjectId,
-        transitionSpec = {
-            val slide = tween<IntOffset>(280, easing = FastOutSlowInEasing)
-            val fade = tween<Float>(280, easing = FastOutSlowInEasing)
-            if (targetState != null) {
-                (slideInHorizontally(slide) { width -> width } + fadeIn(fade)).togetherWith(
-                    slideOutHorizontally(slide) { width -> -width } + fadeOut(fade)
-                )
-            } else {
-                // Назад: мягкое продолжение жеста — линейный старт, плавное торможение.
-                val backSlide = tween<IntOffset>(350, easing = LinearOutSlowInEasing)
-                val backFade = tween<Float>(350, easing = LinearOutSlowInEasing)
-                (slideInHorizontally(backSlide) { width -> -width } + fadeIn(backFade)).togetherWith(
-                    slideOutHorizontally(backSlide) { width -> width } + fadeOut(backFade)
-                )
-            }
-        },
-        modifier = modifier.fillMaxSize()
-    ) { activeSubjectId ->
-        if (activeSubjectId == null) {
+    LayeredNavHost(
+        screen = selectedSubjectId,
+        parentScreen = null,
+        onBackToParent = { selectedSubjectId = null },
+        rootContent = {
             TasksMainContent(
                 subjects = subjects,
                 tasks = tasks,
                 activeCount = activeCount,
                 completedCount = completedCount,
                 overallProgress = overallProgress,
-                onSelectSubject = { selectedSubjectId = it },
+                onSelectSubject = {
+                    selectedSubjectId = it
+                    AppAnalytics.logEvent("screen_view", mapOf("screen" to "task_subject_detail"))
+                },
                 onCreateSubject = { showCreateSubjectSheet = true }
             )
-        } else {
-            val currentSubject = subjects.find { it.id == activeSubjectId }
+        },
+        screenContent = { s, back ->
+            val currentSubject = subjects.find { it.id == s }
             if (currentSubject != null) {
                 val subjectTasks = tasks.filter { it.subjectId == currentSubject.id }
                 SubjectDetailScreen(
                     subject = currentSubject,
                     tasks = subjectTasks,
-                    onBack = { selectedSubjectId = null },
+                    onBack = back,
                     onAddTask = {
                         selectedSubjectForTask = currentSubject.id
                         showCreateTaskSheet = true
@@ -205,8 +185,9 @@ fun TasksScreen(
                     selectedSubjectId = null
                 }
             }
-        }
-    }
+        },
+        modifier = modifier
+    )
 
     // Create / Edit Subject Sheet
     if (showCreateSubjectSheet || subjectToEdit != null) {
