@@ -91,6 +91,14 @@ class ScheduleStorage(
     private val _notifyMinutesBefore = MutableStateFlow(15)
     val notifyMinutesBefore: StateFlow<Int> = _notifyMinutesBefore.asStateFlow()
 
+    private val _askBeforeNoteDelete = MutableStateFlow(true)
+    val askBeforeNoteDelete: StateFlow<Boolean> = _askBeforeNoteDelete.asStateFlow()
+
+    private val _notePages = MutableStateFlow<List<com.jetbrains.kmpapp.data.model.NotePage>>(
+        com.jetbrains.kmpapp.data.model.defaultNotePages()
+    )
+    val notePages: StateFlow<List<com.jetbrains.kmpapp.data.model.NotePage>> = _notePages.asStateFlow()
+
     private val lastSyncTimes = mutableMapOf<Int, Long>()
 
     init {
@@ -102,6 +110,7 @@ class ScheduleStorage(
             loadPreferenceFlags()
             loadDockTabsSetting()
             restoreScheduleData()
+            loadNotePages()
         } catch (t: Throwable) {
             println("ScheduleStorage: failed to load persisted state: ${t.message}")
         }
@@ -126,6 +135,7 @@ class ScheduleStorage(
         _notificationsEnabled.value = loadBooleanFlag(KEY_NOTIFICATIONS_ENABLED, false)
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
+        _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
     }
 
     private fun loadBooleanFlag(key: String, default: Boolean): Boolean = try {
@@ -211,6 +221,36 @@ class ScheduleStorage(
             val selected = targets.firstOrNull { it.id == activeId } ?: targets.firstOrNull()
             _selectedTarget.value = selected
         } catch (_: Throwable) {}
+    }
+
+    private fun loadNotePages() {
+        try {
+            val pagesJson = platformStorage.getString(KEY_NOTES)
+            val loaded: List<com.jetbrains.kmpapp.data.model.NotePage> = if (!pagesJson.isNullOrBlank()) {
+                try {
+                    json.decodeFromString(pagesJson)
+                } catch (_: Throwable) {
+                    com.jetbrains.kmpapp.data.model.defaultNotePages()
+                }
+            } else {
+                com.jetbrains.kmpapp.data.model.defaultNotePages()
+            }
+            _notePages.value = loaded
+        } catch (_: Throwable) {
+            _notePages.value = com.jetbrains.kmpapp.data.model.defaultNotePages()
+        }
+    }
+
+    /** Полная перезапись страниц конспектов; запись на диск с дебаунсом. */
+    fun saveNotePages(pages: List<com.jetbrains.kmpapp.data.model.NotePage>) {
+        _notePages.value = pages
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_NOTES, json.encodeToString(pages))
+            } catch (e: Exception) {
+                println("Failed to persist note pages: ${e.message}")
+            }
+        }
     }
 
     fun setThemeMode(mode: ThemeMode) {
@@ -356,6 +396,11 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, minutes.toString()) }
     }
 
+    fun setAskBeforeNoteDelete(ask: Boolean) {
+        _askBeforeNoteDelete.value = ask
+        scope.launch { platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, ask.toString()) }
+    }
+
     fun setSakuraThemeExclusive(enabled: Boolean) {
         setThemeOverlay(if (enabled) ThemeOverlay.SAKURA else ThemeOverlay.NONE)
     }
@@ -483,6 +528,7 @@ class ScheduleStorage(
         val analyticsConsentBefore = _analyticsConsent.value
         val notificationsEnabledBefore = _notificationsEnabled.value
         val notifyMinutesBeforeBefore = _notifyMinutesBefore.value
+        val askBeforeNoteDeleteBefore = _askBeforeNoteDelete.value
         platformStorage.clearAll()
         _savedTargets.value = emptyList()
         _selectedTarget.value = null
@@ -501,6 +547,8 @@ class ScheduleStorage(
         _analyticsConsent.value = analyticsConsentBefore
         _notificationsEnabled.value = notificationsEnabledBefore
         _notifyMinutesBefore.value = notifyMinutesBeforeBefore
+        _askBeforeNoteDelete.value = askBeforeNoteDeleteBefore
+        _notePages.value = com.jetbrains.kmpapp.data.model.defaultNotePages()
         lastSyncTimes.clear()
         scope.launch {
             if (cheatsAgreedBefore == null) platformStorage.remove(KEY_CHEATS_AGREED)
@@ -512,6 +560,8 @@ class ScheduleStorage(
             else platformStorage.saveString(KEY_ANALYTICS_CONSENT, analyticsConsentBefore.toString())
             platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, notificationsEnabledBefore.toString())
             platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, notifyMinutesBeforeBefore.toString())
+            platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, askBeforeNoteDeleteBefore.toString())
+            platformStorage.saveString(KEY_NOTES, json.encodeToString(_notePages.value))
         }
     }
 
@@ -596,6 +646,8 @@ class ScheduleStorage(
         private const val KEY_APP_ICON = "mirea_app_icon"
         private const val KEY_NOTIFICATIONS_ENABLED = "mirea_notifications_enabled"
         private const val KEY_NOTIFY_MINUTES_BEFORE = "mirea_notify_minutes_before"
+        private const val KEY_ASK_BEFORE_NOTE_DELETE = "mirea_ask_before_note_delete"
+        private const val KEY_NOTES = "mirea_notes_pages"
         // Дефолт дока для НОВЫХ установок (решение владельца): Существующие
         // пользователи не затрагиваются — их сохранённый док доверяется.
         // «Аудитории» и «Сравнение» добавляются в настройках дока.
@@ -603,6 +655,7 @@ class ScheduleStorage(
             AppTab.SCHEDULE,
             AppTab.TASKS,
             AppTab.MAP,
+            AppTab.NOTES,
             AppTab.OTHER
         )
     }
