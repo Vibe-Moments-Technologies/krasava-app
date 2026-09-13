@@ -257,10 +257,14 @@ private fun ConfettiBurst(trigger: Int, modifier: Modifier = Modifier) {
             // Баллистика: равномерный разлёт + гравитационный прогиб.
             val py = h / 2f + p.vy * h * 0.55f * t + 1.2f * t * t * h * 0.28f
             drawContext.canvas.save()
-            drawContext.canvas.rotate(p.rotation + p.spin * t, px, py)
+            // Пивот — через translate: у Canvas в этой версии rotate
+            // принимает только угол, а вариант с опорной точкой не
+            // переносим между версиями библиотеки.
+            drawContext.canvas.translate(px, py)
+            drawContext.canvas.rotate(p.rotation + p.spin * t)
             drawRect(
                 color = p.color,
-                topLeft = Offset(px - p.sizePx / 2f, py - p.sizePx / 3f),
+                topLeft = Offset(-p.sizePx / 2f, -p.sizePx * 0.31f),
                 size = Size(p.sizePx, p.sizePx * 0.62f),
                 alpha = (1f - t * t).coerceIn(0f, 1f)
             )
