@@ -12,15 +12,22 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.VelocityTracker
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
 /**
- * Свайп «назад» от левого края: экран едет за пальцем (как перелистывание
- * дней в расписании), а при пересечении порога назад срабатывает сразу,
- * в моменте — страница-родитель въезжает под пальцем, а не «в конце».
- * До отпускания пальца текущий экран продолжает ехать за ним и улетает.
+ * Свайп «назад» от левого края, как системный iOS:
+ *  - экран едет за пальцем 1:1;
+ *  - короткий БЫСТРЫЙ флик — сразу «назад», даже если проехал мало;
+ *  - медленный малый сдвиг — отскакивает на место;
+ *  - дотянул на четверть экрана — «назад» в моменте, родитель
+ *    появляется под пальцем.
+ * Плавность появления родителя задаётся в transitionSpec хостов
+ * (LinearOutSlowIn 350 мс — продолжение движения пальца, не «хлопок»).
  * Один модификатор — все подстраницы приложения.
  */
 fun Modifier.swipeToDismissBack(
@@ -36,6 +43,15 @@ fun Modifier.swipeToDismissBack(
     var startedAtEdge by remember { mutableStateOf(false) }
     var committed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val velocityTracker = remember { VelocityTracker() }
+    val flingVelocityPx = with(LocalDensity.current) { 800.dp.toPx() }
+
+    fun tryCommit() {
+        if (!committed) {
+            committed = true
+            onBack()
+        }
+    }
 
     pointerInput(enabled) {
         detectHorizontalDragGestures(
@@ -43,24 +59,21 @@ fun Modifier.swipeToDismissBack(
                 startedAtEdge = !requireEdge || (offset.x <= edgeWidthPx)
                 dragPx = 0f
                 committed = false
+                velocityTracker.resetTracking()
             },
-            onHorizontalDrag = { _, dragAmount ->
+            onHorizontalDrag = { change, dragAmount ->
                 if (startedAtEdge && !committed) {
                     dragPx = (dragPx + dragAmount).coerceAtLeast(0f)
-                    // Коммит в моменте: AnimatedContent-переход стартует, пока
-                    // палец ещё на экране, — родитель виден сразу, «мёртвой зоны» нет.
-                    // Порог — минимум 40% ширины экрана: мелкий сдвиг не должен
-                    // дёргать переход, он просто отскакивает на место.
-                    val commitThreshold = max(thresholdPx, size.width * 0.4f)
-                    if (dragPx >= commitThreshold) {
-                        committed = true
-                        onBack()
-                    }
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                    val commitThreshold = max(thresholdPx, size.width * 0.25f)
+                    if (dragPx >= commitThreshold) tryCommit()
                 }
             },
             onDragEnd = {
-                if (!committed) {
-                    scope.launch {
+                if (startedAtEdge && !committed) {
+                    val vx = velocityTracker.calculateVelocity().x
+                    if (vx >= flingVelocityPx) tryCommit()
+                    else scope.launch {
                         animate(dragPx, 0f, animationSpec = tween(200)) { v, _ -> dragPx = v }
                     }
                 }

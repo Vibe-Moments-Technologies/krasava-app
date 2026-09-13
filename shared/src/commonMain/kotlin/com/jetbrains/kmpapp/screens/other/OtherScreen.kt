@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.screens.other
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -84,9 +85,12 @@ fun OtherScreen(
                     slideOutHorizontally(slide) { width -> -width } + fadeOut(fade)
                 )
             } else {
-                // Moving back: previous screen enters from left
-                (slideInHorizontally(slide) { width -> -width } + fadeIn(fade)).togetherWith(
-                    slideOutHorizontally(slide) { width -> width } + fadeOut(fade)
+                // Moving back: мягкое продолжение жеста, не «хлопок» —
+                // линейный старт, плавное торможение, подольше.
+                val backSlide = tween<IntOffset>(350, easing = LinearOutSlowInEasing)
+                val backFade = tween<Float>(350, easing = LinearOutSlowInEasing)
+                (slideInHorizontally(backSlide) { width -> -width } + fadeIn(backFade)).togetherWith(
+                    slideOutHorizontally(backSlide) { width -> width } + fadeOut(backFade)
                 )
             }
         },
