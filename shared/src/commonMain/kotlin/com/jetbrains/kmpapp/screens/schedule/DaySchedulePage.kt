@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.withTransform
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -257,14 +256,15 @@ private fun ConfettiBurst(trigger: Int, modifier: Modifier = Modifier) {
             val px = w / 2f + p.vx * w * t
             // Баллистика: равномерный разлёт + гравитационный прогиб.
             val py = h / 2f + p.vy * h * 0.55f * t + 1.2f * t * t * h * 0.28f
-            withTransform({ rotate(p.rotation + p.spin * t, pivot = Offset(px, py)) }) {
-                drawRect(
-                    color = p.color,
-                    topLeft = Offset(px - p.sizePx / 2f, py - p.sizePx / 3f),
-                    size = Size(p.sizePx, p.sizePx * 0.62f),
-                    alpha = (1f - t * t).coerceIn(0f, 1f)
-                )
-            }
+            drawContext.canvas.save()
+            drawContext.canvas.rotate(p.rotation + p.spin * t, px, py)
+            drawRect(
+                color = p.color,
+                topLeft = Offset(px - p.sizePx / 2f, py - p.sizePx / 3f),
+                size = Size(p.sizePx, p.sizePx * 0.62f),
+                alpha = (1f - t * t).coerceIn(0f, 1f)
+            )
+            drawContext.canvas.restore()
         }
     }
 }
