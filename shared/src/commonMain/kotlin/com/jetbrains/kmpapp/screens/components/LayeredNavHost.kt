@@ -1,6 +1,5 @@
 package com.jetbrains.kmpapp.screens.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
@@ -33,7 +32,9 @@ import kotlin.math.max
  *  - анимируется ОДИН слой (graphicsLayer translationX) — на Android
  *    это радикально дешевле, чем две анимируемые композиции
  *    AnimatedContent (меньше «рваности»);
- *  - вперёд — мягкий въезд справа (280 мс), назад — продолжение жеста
+ *  - вперёд — въезд справа с плавным торможением (300 мс), родитель
+ *    уезжает с параллаксом на четверть ширины (ripple нажатой карточки
+ *    не «обрезается»); назад — продолжение жеста
  *    (350 мс, линейный старт → плавное торможение);
  *  - быстрый короткий флик — сразу назад; медленный малый сдвиг —
  *    отскок; дотянул четверть экрана и отпустил — назад.
@@ -58,14 +59,6 @@ fun LayeredNavHost(
         if (screen == null) {
             rootContent()
             return@BoxWithConstraints
-        }
-
-        // Слой родителя — статичен, виден при сдвиге дочернего.
-        if (parentScreen != null) {
-            // back недостижим: родитель полностью закрыт дочерним экраном.
-            screenContent(parentScreen) {}
-        } else {
-            rootContent()
         }
 
         var isBackTransition by remember { mutableStateOf(false) }
@@ -93,10 +86,32 @@ fun LayeredNavHost(
                 // Возврат: экран уже на месте, только сбрасываем флаг.
                 isBackTransition = false
             } else {
+                // Въезд — с плавным торможением (LinearOutSlowIn): без
+                // «вылета» рывком с правого края.
                 animate(
                     layerX.floatValue, 0f,
-                    animationSpec = tween(280, easing = FastOutSlowInEasing)
+                    animationSpec = tween(300, easing = LinearOutSlowInEasing)
                 ) { v, _ -> layerX.floatValue = v }
+            }
+        }
+
+        // Слой родителя с параллаксом, как в iOS: пока дочерний закрывает
+        // экран, родитель уезжает на четверть ширины; по мере раскрытия —
+        // доезжает до места. Ripple нажатой карточки уезжает вместе с
+        // родителем, а не «обрезается» въезжающим экраном. Одна
+        // graphicsLayer-трансформация статичного слоя — дешево для Android.
+        androidx.compose.foundation.layout.Box(
+            Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationX = -(1f - layerX.floatValue / widthPx) * widthPx * 0.25f
+                }
+        ) {
+            if (parentScreen != null) {
+                // back недостижим: родитель полностью закрыт дочерним экраном.
+                screenContent(parentScreen) {}
+            } else {
+                rootContent()
             }
         }
 
