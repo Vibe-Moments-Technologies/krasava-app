@@ -70,7 +70,11 @@ fun LayeredNavHost(
 
         var isBackTransition by remember { mutableStateOf(false) }
         var committed by remember(screen) { mutableStateOf(false) }
-        val layerX = remember(screen) { mutableFloatStateOf(widthPx) }
+        // Возврат: экран-родитель уже был под пальцем — стартуем сразу «на
+        // месте» (0), иначе — въезд из-за правого края. Флаг читаем в момент
+        // композиции: LaunchedEffect сработал бы кадром позже и новый экран
+        // успевал мигнуть «за пределами» (баг на подстраницах 2-го уровня).
+        val layerX = remember(screen) { mutableFloatStateOf(if (isBackTransition) 0f else widthPx) }
 
         val back: (Float) -> Unit = { initialVelocity ->
             committed = true
@@ -86,8 +90,7 @@ fun LayeredNavHost(
 
         LaunchedEffect(screen) {
             if (isBackTransition) {
-                // Родитель уже под пальцем был виден — новой анимации входа нет.
-                layerX.floatValue = 0f
+                // Возврат: экран уже на месте, только сбрасываем флаг.
                 isBackTransition = false
             } else {
                 animate(
