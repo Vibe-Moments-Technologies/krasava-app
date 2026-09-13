@@ -65,7 +65,7 @@ import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.model.GitHubContributor
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kmp_app_template.shared.generated.resources.Res
-import kmp_app_template.shared.generated.resources.app_icon
+import kmp_app_template.shared.generated.resources.appicon_new_light
 import org.jetbrains.compose.resources.painterResource
 
 @Composable
@@ -130,7 +130,7 @@ fun AboutScreen(
 
             // Real App Icon from Resources
             Image(
-                painter = painterResource(Res.drawable.app_icon),
+                painter = painterResource(Res.drawable.appicon_new_light),
                 contentDescription = "Иконка приложения",
                 modifier = Modifier
                     .size(80.dp)

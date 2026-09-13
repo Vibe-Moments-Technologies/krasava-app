@@ -95,7 +95,7 @@ def build_source(repo, channel, version, ipa_url):
             "bundleIdentifier": BUNDLE_ID,
             "developerName": "l1ratch",
             "localizedDescription": description,
-            "iconURL": f"https://raw.githubusercontent.com/{repo}/main/shared/src/commonMain/composeResources/drawable/app_icon.png",
+            "iconURL": f"https://raw.githubusercontent.com/{repo}/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
             "version": version,
             "versionDate": now.isoformat(),
             "downloadURL": ipa_url,
