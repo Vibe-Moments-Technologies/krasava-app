@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material3.AlertDialog
@@ -64,6 +65,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,13 +99,14 @@ fun NotesScreen(viewModel: NotesViewModel) {
     val pages by viewModel.pages.collectAsState()
     val currentPage by viewModel.currentPage.collectAsState()
     val askBeforeNoteDelete by viewModel.askBeforeNoteDelete.collectAsState()
+    val focusManager = LocalFocusManager.current
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp)
             .statusBarsPadding()
-            .imePadding()
+            // imePadding НЕ здесь: шапка не должна уезжать за клавиатуру.
             .padding(bottom = 104.dp)
     ) {
         PageHeader(
@@ -118,7 +121,7 @@ fun NotesScreen(viewModel: NotesViewModel) {
         )
 
         HorizontalDivider(
-            modifier = Modifier.padding(vertical = 8.dp),
+            modifier = Modifier.padding(vertical = 6.dp),
             thickness = 0.5.dp
         )
 
@@ -137,7 +140,7 @@ fun NotesScreen(viewModel: NotesViewModel) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -154,52 +157,72 @@ fun NotesScreen(viewModel: NotesViewModel) {
                 )
             }
         }
-        Spacer(modifier = Modifier.size(4.dp))
 
-        LazyColumn(
+        // С клавиатурой едет только контент и панель внизу — шапка и палитра
+        // остаются на месте, место для конспекта не сжимается в «мизер».
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .weight(1f)
+                .imePadding()
         ) {
-            itemsIndexed(
-                items = current.sections,
-                key = { index, _ -> "$current.id-s$index" }
-            ) { index, section ->
-                SectionCard(
-                    section = section,
-                    isActive = index == activeSection,
-                    askBeforeNoteDelete = askBeforeNoteDelete,
-                    onActivate = { activeSection = index },
-                    onTextChange = { text -> viewModel.setSectionText(current.id, index, text) },
-                    onRemove = { viewModel.removeSection(current.id, index) }
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            AssistChip(
-                onClick = { viewModel.addSection(current.id) },
-                label = { Text("Добавить поле") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                itemsIndexed(
+                    items = current.sections,
+                    key = { index, _ -> "$current.id-s$index" }
+                ) { index, section ->
+                    SectionCard(
+                        section = section,
+                        isActive = index == activeSection,
+                        askBeforeNoteDelete = askBeforeNoteDelete,
+                        onActivate = { activeSection = index },
+                        onTextChange = { text -> viewModel.setSectionText(current.id, index, text) },
+                        onRemove = { viewModel.removeSection(current.id, index) }
                     )
                 }
-            )
-            Text(
-                text = "Сохраняется автоматически",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AssistChip(
+                    onClick = { viewModel.addSection(current.id) },
+                    label = { Text("Добавить поле") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                )
+                Text(
+                    text = "Сохраняется на устройстве",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.End
+                )
+                IconButton(
+                    onClick = { focusManager.clearFocus() }
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.KeyboardArrowDown,
+                        contentDescription = "Скрыть клавиатуру",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

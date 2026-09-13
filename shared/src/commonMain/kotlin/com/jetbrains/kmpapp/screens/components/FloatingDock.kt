@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CompareArrows
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.EditNote
@@ -25,6 +27,7 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TaskAlt
+import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.EditNote
@@ -62,8 +65,15 @@ enum class AppTab(
     MAP("Карта", Icons.Filled.Map, Icons.Filled.Map, isFixed = false),
     NOTES("Конспекты", Icons.Filled.EditNote, Icons.Outlined.EditNote, isFixed = false),
     COMPARE("Сравнение", Icons.Filled.CompareArrows, Icons.Outlined.CompareArrows, isFixed = false),
+    // Раздел-концентратор сервисов: сам не экран приложения, а «папка» —
+    // по умолчанию скрыт, добавляется в док как обычная вкладка.
+    SERVICES("Сервисы", Icons.Filled.Apps, Icons.Outlined.Apps, isFixed = false),
     OTHER("Другое", Icons.Filled.Settings, Icons.Outlined.Settings, isFixed = true)
 }
+
+/** Сервисные вкладки, открываемые внутри раздела «Сервисы» / блока в «Другом». */
+val AppTab.isService: Boolean
+    get() = !isFixed && this != AppTab.SERVICES
 
 @Composable
 fun FloatingDock(
@@ -71,6 +81,9 @@ fun FloatingDock(
     onTabSelected: (AppTab) -> Unit,
     onTabReselected: ((AppTab) -> Unit)? = null,
     tabs: List<AppTab> = AppTab.entries,
+    // Вкладка с открытым сервисом: её иконка превращается в стрелку «назад»,
+    // тап по ней = возврат к списку сервисов (через onTabReselected).
+    backModeTab: AppTab? = null,
     modifier: Modifier = Modifier
 ) {
     val powerManager: PlatformPowerManager = koinInject()
@@ -151,8 +164,14 @@ fun FloatingDock(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = if (isSelected) tab.selectedIcon else tab.unselectedIcon,
-                            contentDescription = tab.title,
+                            imageVector = if (tab == backModeTab) {
+                                Icons.AutoMirrored.Filled.ArrowBack
+                            } else if (isSelected) {
+                                tab.selectedIcon
+                            } else {
+                                tab.unselectedIcon
+                            },
+                            contentDescription = if (tab == backModeTab) "Назад" else tab.title,
                             tint = contentColor,
                             modifier = Modifier
                                 .size(24.dp)

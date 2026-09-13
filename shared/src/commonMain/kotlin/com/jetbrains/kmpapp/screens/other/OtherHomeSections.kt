@@ -5,8 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +12,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -43,7 +43,6 @@ import com.jetbrains.kmpapp.data.update.UpdateUrgency
 import com.jetbrains.kmpapp.screens.components.AppTab
 
 /** Концентратор вкладок, спрятанных из дока (виден только если такие есть). */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun HiddenTabsCard(
     hiddenTabs: List<AppTab>,
@@ -76,12 +75,13 @@ internal fun HiddenTabsCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            FlowRow(
+            // Горизонтальная галерея: блок не растягивается вниз с ростом
+            // числа сервисов, лишние листаются вбок.
+            androidx.compose.foundation.lazy.LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                for (tab in hiddenTabs) {
+                items(hiddenTabs) { tab ->
                     Surface(
                         onClick = { onNavigateToTab(tab) },
                         shape = RoundedCornerShape(14.dp),

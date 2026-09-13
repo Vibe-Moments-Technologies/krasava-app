@@ -43,7 +43,13 @@ enum class OtherSubScreen(val depth: Int) {
     ABOUT(1),
     DEBUG_SETTINGS(2),
     EXPERIMENTAL_SETTINGS(3),
-    ICON_PICKER(2)
+    ICON_PICKER(2),
+    // Сервисы, открытые через блок «Сервисы» на главной «Другого».
+    SERVICE_ROOMS(1),
+    SERVICE_TASKS(1),
+    SERVICE_MAP(1),
+    SERVICE_NOTES(1),
+    SERVICE_COMPARE(1)
 }
 
 /** Родитель подстраницы для послойной навигации (null = корень). */
@@ -57,11 +63,36 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.DEBUG_SETTINGS to OtherSubScreen.ABOUT,
     OtherSubScreen.EXPERIMENTAL_SETTINGS to OtherSubScreen.DEBUG_SETTINGS,
-    OtherSubScreen.ICON_PICKER to OtherSubScreen.SETTINGS
+    OtherSubScreen.ICON_PICKER to OtherSubScreen.SETTINGS,
+    OtherSubScreen.SERVICE_ROOMS to OtherSubScreen.ROOT,
+    OtherSubScreen.SERVICE_TASKS to OtherSubScreen.ROOT,
+    OtherSubScreen.SERVICE_MAP to OtherSubScreen.ROOT,
+    OtherSubScreen.SERVICE_NOTES to OtherSubScreen.ROOT,
+    OtherSubScreen.SERVICE_COMPARE to OtherSubScreen.ROOT
 )
 
 fun OtherSubScreen.parent(): OtherSubScreen? =
     if (this == OtherSubScreen.ROOT) null else SUB_SCREEN_PARENT[this]
+
+/** Сервисная подстраница для вкладки дока (null — не сервис). */
+fun AppTab.toServiceSubScreen(): OtherSubScreen? = when (this) {
+    AppTab.FREE_ROOMS -> OtherSubScreen.SERVICE_ROOMS
+    AppTab.TASKS -> OtherSubScreen.SERVICE_TASKS
+    AppTab.MAP -> OtherSubScreen.SERVICE_MAP
+    AppTab.NOTES -> OtherSubScreen.SERVICE_NOTES
+    AppTab.COMPARE -> OtherSubScreen.SERVICE_COMPARE
+    else -> null
+}
+
+/** Открыт ли в «Другом» сервис (для стрелки «назад» в доке). */
+val OtherSubScreen.isServiceScreen: Boolean
+    get() = this in setOf(
+        OtherSubScreen.SERVICE_ROOMS,
+        OtherSubScreen.SERVICE_TASKS,
+        OtherSubScreen.SERVICE_MAP,
+        OtherSubScreen.SERVICE_NOTES,
+        OtherSubScreen.SERVICE_COMPARE
+    )
 
 class OtherViewModel(
     private val repository: ScheduleRepository,

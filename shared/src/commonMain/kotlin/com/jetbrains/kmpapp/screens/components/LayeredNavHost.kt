@@ -51,6 +51,8 @@ fun LayeredNavHost(
     // Возврат из другой вкладки с уже открытой подстраницей: показать её
     // сразу, без повторной анимации въезда («настройки сами открываются»).
     initiallyRevealed: Boolean = false,
+    // Свайп-назад не для всех экранов: карта управляет жестом сама.
+    swipeGestureEnabled: (screen: Any?) -> Boolean = { true },
     modifier: Modifier = Modifier,
     rootContent: @Composable () -> Unit,
     screenContent: @Composable (screen: Any?, back: () -> Unit) -> Unit
@@ -139,6 +141,7 @@ fun LayeredNavHost(
                     // иначе после возврата свайп пишет в мёртвый слой
                     // (баг «после выхода жест не работает»).
                     restartKey = screen,
+                    gestureEnabled = swipeGestureEnabled(screen),
                     isCommitted = { committed },
                     onCommit = { velocity -> back(velocity) }
                 )
@@ -157,6 +160,7 @@ private fun Modifier.swipeBackLayer(
     layerX: androidx.compose.runtime.MutableFloatState,
     widthPx: Float,
     restartKey: Any?,
+    gestureEnabled: Boolean,
     isCommitted: () -> Boolean,
     onCommit: (velocityPxPerSec: Float) -> Unit
 ): Modifier = composed {
@@ -165,7 +169,10 @@ private fun Modifier.swipeBackLayer(
     val scope = rememberCoroutineScope()
     val flingVelocityPx = with(LocalDensity.current) { 800.dp.toPx() }
 
-    pointerInput(restartKey) {
+    // gestureEnabled в ключе: смена экрана или включенность жеста
+    // перезапускают узел (карта жест отключает насовсем).
+    pointerInput(restartKey, gestureEnabled) {
+        if (!gestureEnabled) return@pointerInput
         detectHorizontalDragGestures(
             onDragStart = { offset ->
                 startedAtEdge = offset.x <= 200f

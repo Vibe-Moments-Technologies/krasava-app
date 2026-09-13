@@ -24,6 +24,7 @@ import com.jetbrains.kmpapp.data.sync.UnifiedSyncManager
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
 import com.jetbrains.kmpapp.screens.notes.NotesViewModel
+import com.jetbrains.kmpapp.screens.services.ServicesViewModel
 
 import com.jetbrains.kmpapp.data.power.PlatformPowerManager
 import io.ktor.client.plugins.HttpTimeout
@@ -64,6 +65,7 @@ val viewModelModule = module {
     factoryOf(::TasksViewModel)
     factoryOf(::CompareScheduleViewModel)
     factoryOf(::NotesViewModel)
+    factoryOf(::ServicesViewModel)
 }
 
 fun initKoin() {

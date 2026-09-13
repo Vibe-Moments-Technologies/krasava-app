@@ -58,6 +58,9 @@ import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 fun OtherScreen(
     viewModel: OtherViewModel,
     tasksViewModel: com.jetbrains.kmpapp.screens.tasks.TasksViewModel = org.koin.compose.viewmodel.koinViewModel(),
+    freeRoomsViewModel: com.jetbrains.kmpapp.screens.rooms.FreeRoomsViewModel = org.koin.compose.viewmodel.koinViewModel(),
+    compareViewModel: com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel = org.koin.compose.viewmodel.koinViewModel(),
+    notesViewModel: com.jetbrains.kmpapp.screens.notes.NotesViewModel = org.koin.compose.viewmodel.koinViewModel(),
     onNavigateToTab: (AppTab) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -76,6 +79,8 @@ fun OtherScreen(
         },
         // Возврат из другой вкладки с открытой подстраницей — показать сразу.
         initiallyRevealed = remember { activeSubScreen != OtherSubScreen.ROOT },
+        // Карта управляет горизонтальными жестами сама — свайп-назад не вешаем.
+        swipeGestureEnabled = { it != OtherSubScreen.SERVICE_MAP },
         rootContent = {
             OtherMainContent(
                 viewModel = viewModel,
@@ -131,6 +136,34 @@ fun OtherScreen(
                 OtherSubScreen.EXPERIMENTAL_SETTINGS -> {
                     ExperimentalSettingsScreen(viewModel = viewModel, onBack = back)
                 }
+                // Сервисы из блока «Сервисы»: те же экраны, что и вкладками,
+                // но подстраницами «Другого» — назад: свайп, система и
+                // стрелка на иконке «Другое» в доке.
+                OtherSubScreen.SERVICE_ROOMS -> {
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
+                        com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen(viewModel = freeRoomsViewModel)
+                    }
+                }
+                OtherSubScreen.SERVICE_TASKS -> {
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
+                        com.jetbrains.kmpapp.screens.tasks.TasksScreen(viewModel = tasksViewModel)
+                    }
+                }
+                OtherSubScreen.SERVICE_MAP -> {
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
+                        com.jetbrains.kmpapp.screens.map.MapScreen()
+                    }
+                }
+                OtherSubScreen.SERVICE_NOTES -> {
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
+                        com.jetbrains.kmpapp.screens.notes.NotesScreen(viewModel = notesViewModel)
+                    }
+                }
+                OtherSubScreen.SERVICE_COMPARE -> {
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
+                        com.jetbrains.kmpapp.screens.compare.CompareScheduleScreen(viewModel = compareViewModel)
+                    }
+                }
             }
         },
         modifier = modifier
@@ -150,7 +183,19 @@ private fun OtherMainContent(
     val dockTabs by viewModel.dockTabs.collectAsState()
     val uriHandler = LocalUriHandler.current
     val hiddenTabs = remember(dockTabs) {
-        AppTab.entries.filter { it != AppTab.OTHER && it !in dockTabs.take(5) }
+        // Если раздел «Сервисы» в доке — блок в «Другом» скрыт целиком
+        // (правило владельца), вне зависимости от остальных вкладок.
+        if (dockTabs.take(5).contains(AppTab.SERVICES)) {
+            emptyList()
+        } else {
+            AppTab.entries.filter { it != AppTab.OTHER && it !in dockTabs.take(5) }
+        }
+    }
+    // Сервис из блока открывается подстраницей «Другого» (назад — свайп и
+    // стрелка на иконке дока); сам раздел «Сервисы» — вкладкой.
+    val openHiddenTab: (AppTab) -> Unit = { tab ->
+        if (tab == AppTab.SERVICES) onNavigateToTab(tab)
+        else tab.toServiceSubScreen()?.let { onNavigate(it) }
     }
 
     Scaffold(
@@ -193,7 +238,7 @@ private fun OtherMainContent(
             if (hiddenTabs.isNotEmpty()) {
                 HiddenTabsCard(
                     hiddenTabs = hiddenTabs,
-                    onNavigateToTab = onNavigateToTab
+                    onNavigateToTab = openHiddenTab
                 )
             }
             // 1. University resources card

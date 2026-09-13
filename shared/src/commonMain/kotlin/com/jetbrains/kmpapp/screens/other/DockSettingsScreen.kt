@@ -38,6 +38,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -57,6 +60,12 @@ fun DockSettingsScreen(
 
     val dockTabs by viewModel.dockTabs.collectAsState()
     val availableHiddenTabs = AppTab.entries.filter { it !in dockTabs }
+    // Сервисы закреплены, если в доке нет ни одного другого скрываемого
+    // раздела: минус по ним не работает, показывает подсказку.
+    val isServicesLocked =
+        AppTab.SERVICES in dockTabs &&
+            dockTabs.none { !it.isFixed && it != AppTab.SERVICES }
+    var showServicesLockInfo by remember { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -145,8 +154,12 @@ fun DockSettingsScreen(
                             viewModel.setDockTabs(mutable)
                         },
                         onRemove = {
-                            val updated = dockTabs.filter { it != tab }
-                            viewModel.setDockTabs(updated)
+                            if (tab == AppTab.SERVICES && isServicesLocked) {
+                                showServicesLockInfo = true
+                            } else {
+                                val updated = dockTabs.filter { it != tab }
+                                viewModel.setDockTabs(updated)
+                            }
                         }
                     )
                 }
@@ -223,6 +236,23 @@ fun DockSettingsScreen(
 
             Spacer(modifier = Modifier.height(80.dp))
         }
+    }
+
+    if (showServicesLockInfo) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showServicesLockInfo = false },
+            title = { Text("Раздел закреплён") },
+            text = {
+                Text("«Сервисы» не дают убрать из дока, пока в нём нет ни одного другого раздела. Сначала добавьте хотя бы один сервис в док — затем «Сервисы» можно будет скрыть.")
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = { showServicesLockInfo = false }
+                ) {
+                    Text("Понятно")
+                }
+            }
+        )
     }
 }
 

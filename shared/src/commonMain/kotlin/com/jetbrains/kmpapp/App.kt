@@ -41,6 +41,9 @@ import com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen
 import com.jetbrains.kmpapp.screens.rooms.FreeRoomsViewModel
 import com.jetbrains.kmpapp.screens.schedule.ScheduleScreen
 import com.jetbrains.kmpapp.screens.schedule.ScheduleViewModel
+import com.jetbrains.kmpapp.screens.services.ServicesScreen
+import com.jetbrains.kmpapp.screens.services.ServicesViewModel
+import com.jetbrains.kmpapp.screens.other.isServiceScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import com.jetbrains.kmpapp.theme.CyberpunkDarkColors
@@ -115,6 +118,7 @@ fun App() {
     val tasksViewModel: TasksViewModel = koinViewModel()
     val compareViewModel: CompareScheduleViewModel = koinViewModel()
     val notesViewModel: NotesViewModel = koinViewModel()
+    val servicesViewModel: ServicesViewModel = koinViewModel()
 
     val betaChannel by otherViewModel.betaChannel.collectAsState()
 
@@ -283,6 +287,12 @@ fun App() {
                         AppTab.COMPARE -> {
                             CompareScheduleScreen(viewModel = compareViewModel)
                         }
+                        AppTab.SERVICES -> {
+                            ServicesScreen(
+                                viewModel = servicesViewModel,
+                                dockTabs = dockTabs
+                            )
+                        }
                         AppTab.OTHER -> {
                             OtherScreen(
                                 viewModel = otherViewModel,
@@ -296,6 +306,15 @@ fun App() {
                 val isImeVisible = WindowInsets.ime.getBottom(density) > 0
 
                 if (!isImeVisible) {
+                    // Стрелка «назад» в доке: у вкладки с открытым сервисом
+                    // иконка раздела меняется на «назад» (тап = возврат).
+                    val servicesActiveService by servicesViewModel.activeService.collectAsState()
+                    val otherSubScreen by otherViewModel.activeSubScreen.collectAsState()
+                    val backModeTab = when {
+                        currentTab == AppTab.SERVICES && servicesActiveService != null -> AppTab.SERVICES
+                        currentTab == AppTab.OTHER && otherSubScreen.isServiceScreen -> AppTab.OTHER
+                        else -> null
+                    }
                     FloatingDock(
                         currentTab = currentTab,
                         onTabSelected = {
@@ -314,12 +333,16 @@ fun App() {
                                 AppTab.MAP -> {}
                                 AppTab.NOTES -> {}
                                 AppTab.COMPARE -> {}
+                                AppTab.SERVICES -> {
+                                    servicesViewModel.closeService()
+                                }
                                 AppTab.OTHER -> {
                                     otherViewModel.resetToRoot()
                                 }
                             }
                         },
                         tabs = dockTabs,
+                        backModeTab = backModeTab,
                         modifier = Modifier.align(Alignment.BottomCenter)
                     )
                 }
