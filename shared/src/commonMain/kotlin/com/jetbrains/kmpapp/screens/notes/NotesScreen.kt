@@ -104,6 +104,10 @@ fun NotesScreen(viewModel: NotesViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            // Экран-вкладка без своего Scaffold: единственный из сервисов
+            // без фона — как подстраница просвечивал и «склеивался» с
+            // родителем. Фон даём локально, а не в хосте навигации.
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp)
             .statusBarsPadding()
             // imePadding НЕ здесь: шапка не должна уезжать за клавиатуру.
