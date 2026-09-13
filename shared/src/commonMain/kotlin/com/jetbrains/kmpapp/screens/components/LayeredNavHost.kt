@@ -134,11 +134,12 @@ fun LayeredNavHost(
         androidx.compose.foundation.layout.Box(
             Modifier
                 .fillMaxSize()
+                .graphicsLayer { translationX = layerX.floatValue.coerceIn(0f, widthPx) }
                 // Экраны-вкладки (Конспекты, Задачи и др.) собраны без фона —
                 // как подстраницы они «просвечивали» и склеивались с родителем.
-                // Непрозрачный фон в одном месте лечит их все.
+                // Фон строго ПОСЛЕ graphicsLayer: иначе он не едет вместе со
+                // слоем — на месте остаётся серый прямоугольник («однотон»).
                 .background(MaterialTheme.colorScheme.background)
-                .graphicsLayer { translationX = layerX.floatValue.coerceIn(0f, widthPx) }
                 .swipeBackLayer(
                     layerX = layerX,
                     widthPx = widthPx,
