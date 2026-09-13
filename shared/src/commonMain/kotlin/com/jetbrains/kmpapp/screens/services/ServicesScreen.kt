@@ -138,19 +138,24 @@ fun ServicesScreen(
         },
         screenContent = { service, back ->
             when (service as AppTab) {
-                AppTab.FREE_ROOMS -> PlatformBackHandler(onBack = back) {
+                AppTab.FREE_ROOMS -> {
+                    PlatformBackHandler(onBack = back)
                     FreeRoomsScreen(viewModel = freeRoomsViewModel)
                 }
-                AppTab.TASKS -> PlatformBackHandler(onBack = back) {
+                AppTab.TASKS -> {
+                    PlatformBackHandler(onBack = back)
                     TasksScreen(viewModel = tasksViewModel)
                 }
-                AppTab.MAP -> PlatformBackHandler(onBack = back) {
+                AppTab.MAP -> {
+                    PlatformBackHandler(onBack = back)
                     MapScreen()
                 }
-                AppTab.NOTES -> PlatformBackHandler(onBack = back) {
+                AppTab.NOTES -> {
+                    PlatformBackHandler(onBack = back)
                     NotesScreen(viewModel = notesViewModel)
                 }
-                AppTab.COMPARE -> PlatformBackHandler(onBack = back) {
+                AppTab.COMPARE -> {
+                    PlatformBackHandler(onBack = back)
                     CompareScheduleScreen(viewModel = compareViewModel)
                 }
                 else -> {}

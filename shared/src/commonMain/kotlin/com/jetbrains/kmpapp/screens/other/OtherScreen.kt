@@ -140,29 +140,24 @@ fun OtherScreen(
                 // но подстраницами «Другого» — назад: свайп, система и
                 // стрелка на иконке «Другое» в доке.
                 OtherSubScreen.SERVICE_ROOMS -> {
-                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
-                        com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen(viewModel = freeRoomsViewModel)
-                    }
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)
+                    com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen(viewModel = freeRoomsViewModel)
                 }
                 OtherSubScreen.SERVICE_TASKS -> {
-                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
-                        com.jetbrains.kmpapp.screens.tasks.TasksScreen(viewModel = tasksViewModel)
-                    }
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)
+                    com.jetbrains.kmpapp.screens.tasks.TasksScreen(viewModel = tasksViewModel)
                 }
                 OtherSubScreen.SERVICE_MAP -> {
-                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
-                        com.jetbrains.kmpapp.screens.map.MapScreen()
-                    }
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)
+                    com.jetbrains.kmpapp.screens.map.MapScreen()
                 }
                 OtherSubScreen.SERVICE_NOTES -> {
-                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
-                        com.jetbrains.kmpapp.screens.notes.NotesScreen(viewModel = notesViewModel)
-                    }
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)
+                    com.jetbrains.kmpapp.screens.notes.NotesScreen(viewModel = notesViewModel)
                 }
                 OtherSubScreen.SERVICE_COMPARE -> {
-                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back) {
-                        com.jetbrains.kmpapp.screens.compare.CompareScheduleScreen(viewModel = compareViewModel)
-                    }
+                    com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)
+                    com.jetbrains.kmpapp.screens.compare.CompareScheduleScreen(viewModel = compareViewModel)
                 }
             }
         },
