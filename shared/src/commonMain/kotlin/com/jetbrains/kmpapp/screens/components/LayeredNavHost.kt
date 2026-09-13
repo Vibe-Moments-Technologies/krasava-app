@@ -36,7 +36,7 @@ import kotlin.math.max
  *  - вперёд — мягкий въезд справа (280 мс), назад — продолжение жеста
  *    (350 мс, линейный старт → плавное торможение);
  *  - быстрый короткий флик — сразу назад; медленный малый сдвиг —
- *    отскок; дотянул четверть экрана — назад.
+ *    отскок; дотянул четверть экрана и отпустил — назад.
  *
  * `screen == null` — корень; иначе сверху дочерний слой, под ним
  * `parentScreen` (или корень). Все кнопки «назад» зову́т один и тот же
@@ -77,7 +77,7 @@ fun LayeredNavHost(
             scope.launch {
                 animate(
                     layerX.floatValue, widthPx, initialVelocity,
-                    animationSpec = tween(300, easing = LinearOutSlowInEasing)
+                    animationSpec = tween(350, easing = LinearOutSlowInEasing)
                 ) { v, _ -> layerX.floatValue = v }
                 isBackTransition = true
                 onBackToParent()
@@ -137,17 +137,19 @@ private fun Modifier.swipeBackLayer(
             },
             onHorizontalDrag = { change, dragAmount ->
                 if (startedAtEdge && !isCommitted()) {
+                    // Экран следует за пальцем до самого отпускания — коммита
+                    // «на лету» нет, решение принимается в onDragEnd.
                     layerX.floatValue = (layerX.floatValue + dragAmount).coerceIn(0f, widthPx)
                     velocityTracker.addPosition(change.uptimeMillis, change.position)
-                    if (layerX.floatValue >= max(120f, widthPx * 0.25f)) {
-                        onCommit(0f)
-                    }
                 }
             },
             onDragEnd = {
                 if (startedAtEdge && !isCommitted()) {
                     val vx = velocityTracker.calculateVelocity().x
-                    if (vx >= flingVelocityPx) {
+                    // Назад: быстрый флик ИЛИ дотянул четверть экрана.
+                    // Скорость жеста передаётся в анимацию — страница уходит
+                    // с той же скоростью, с которой её отпустили (без рывка).
+                    if (vx >= flingVelocityPx || layerX.floatValue >= max(120f, widthPx * 0.25f)) {
                         onCommit(vx)
                     } else {
                         scope.launch {

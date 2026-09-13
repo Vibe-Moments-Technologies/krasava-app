@@ -67,8 +67,10 @@ fun OtherScreen(
 
     val childScreen = activeSubScreen.takeIf { it != OtherSubScreen.ROOT }
     LayeredNavHost(
+        // ROOT в слоте родителя хост понимает как «подложка — корень»
+        // (иначе под подстраницами первого уровня был бы пустой однотон).
         screen = childScreen,
-        parentScreen = childScreen?.parent(),
+        parentScreen = childScreen?.parent()?.takeIf { it != OtherSubScreen.ROOT },
         onBackToParent = {
             viewModel.navigateToSubScreen(activeSubScreen.parent() ?: OtherSubScreen.ROOT)
         },
