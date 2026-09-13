@@ -51,7 +51,33 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
     }
 
     func cancelAll() {
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+        // Снимаем только партию занятий (идентификаторы lesson-…):
+        // removeAllPendingNotificationRequests сносил бы и тестовые
+        // уведомления, поставленные из отладки.
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let lessonIds = requests.map(\.identifier).filter { $0.hasPrefix("lesson-") }
+            center.removePendingNotificationRequests(withIdentifiers: lessonIds)
+        }
+    }
+}
+
+/// Показ уведомлений, когда приложение открыто: без делегата iOS молча
+/// гасит баннер в форграунде (тест из отладки «не приходил», хотя
+/// напоминания о парах в фоне доставлялись).
+final class NotificationPresenter: NSObject, UNUserNotificationCenterDelegate {
+    static let shared = NotificationPresenter()
+
+    func attach() {
+        UNUserNotificationCenter.current().delegate = self
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .list, .sound])
     }
 }
 

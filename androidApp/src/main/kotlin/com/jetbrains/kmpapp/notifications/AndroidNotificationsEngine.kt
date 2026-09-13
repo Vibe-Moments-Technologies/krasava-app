@@ -30,15 +30,33 @@ object AndroidNotificationsEngine : NotificationsManager.NotificationEngine {
 
     override fun schedule(id: String, title: String, body: String, dateEpochMillis: Long) {
         val ctx = context ?: return
-        val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
-            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dateEpochMillis, pendingIntent(ctx, id, title, body))
-        } else {
-            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dateEpochMillis, pendingIntent(ctx, id, title, body))
+        val intent = alarmIntent(ctx, id, title, body)
+        // Ближний тест из отладки: без разрешения на точные будильники
+        // системный fallback может задержать сигнал на минуты, а приложение
+        // и так открыто — шлём получателю сразу.
+        if (dateEpochMillis - System.currentTimeMillis() <= 3_000L) {
+            ctx.sendBroadcast(intent)
+            return
         }
-        val p = prefs(ctx)
-        val ids = (p.getStringSet(KEY_SCHEDULED_IDS, emptySet()) ?: emptySet()) + id
-        p.edit().putStringSet(KEY_SCHEDULED_IDS, ids).apply()
+        val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val pi = PendingIntent.getBroadcast(
+            ctx,
+            id.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dateEpochMillis, pi)
+        } else {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, dateEpochMillis, pi)
+        }
+        // Ведомость — только партия занятий: cancelAll не должен сносить
+        // тестовые будильники из отладки.
+        if (id.startsWith(LESSON_ID_PREFIX)) {
+            val p = prefs(ctx)
+            val ids = (p.getStringSet(KEY_SCHEDULED_IDS, emptySet()) ?: emptySet()) + id
+            p.edit().putStringSet(KEY_SCHEDULED_IDS, ids).apply()
+        }
     }
 
     override fun cancelAll() {
@@ -51,24 +69,27 @@ object AndroidNotificationsEngine : NotificationsManager.NotificationEngine {
         p.edit().putStringSet(KEY_SCHEDULED_IDS, emptySet()).apply()
     }
 
-    private fun pendingIntent(ctx: Context, id: String, title: String, body: String): PendingIntent {
-        val intent = Intent(ctx, LessonAlarmReceiver::class.java).apply {
+    private fun alarmIntent(ctx: Context, id: String, title: String, body: String) =
+        Intent(ctx, LessonAlarmReceiver::class.java).apply {
             action = "$ACTION_PREFIX$id"
             putExtra(LessonAlarmReceiver.EXTRA_ID, id)
             putExtra(LessonAlarmReceiver.EXTRA_TITLE, title)
             putExtra(LessonAlarmReceiver.EXTRA_BODY, body)
         }
-        return PendingIntent.getBroadcast(
+
+    private fun pendingIntent(ctx: Context, id: String, title: String, body: String): PendingIntent =
+        PendingIntent.getBroadcast(
             ctx,
             id.hashCode(),
-            intent,
+            alarmIntent(ctx, id, title, body),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-    }
 
     private fun prefs(ctx: Context): SharedPreferences =
         ctx.getSharedPreferences("lesson_notifications", Context.MODE_PRIVATE)
 
     private const val KEY_SCHEDULED_IDS = "scheduled_ids"
     private const val ACTION_PREFIX = "com.jetbrains.kmpapp.LESSON_ALARM."
+    /** Идентификаторы партии занятий: "lesson-<дата>-<номер>". */
+    private const val LESSON_ID_PREFIX = "lesson-"
 }

@@ -12,6 +12,7 @@ struct iOSApp: App {
         AppAnalytics.shared.setEngine(engine: AppMetricaEngine())
         AppIconManager.shared.setEngine(newEngine: AppIconEngine())
         NotificationsManager.shared.setEngine(newEngine: NotificationsEngine())
+        NotificationPresenter.shared.attach()
         VpnStatus.shared.setEngine(newEngine: VpnEngine())
     }
 
