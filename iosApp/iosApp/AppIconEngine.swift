@@ -29,13 +29,18 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }
 
+    /// Идентификаторы, поставленные этой партией занятий: помним сами, чтобы
+    /// отменять синхронно, без асинхронного запроса к системе.
+    private var scheduledLessonIds: Set<String> = []
+
     func schedule(id: String, title: String, body: String, dateEpochMillis: Int64) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
-        // Тестовые уведомления: огонь по секундам, календарь округляет
-        // до минут (dateComponents без секунд) и убивал бы их пачками.
+        // Ближние уведомления (тест из отладки) — интервальный триггер:
+        // календарный округляет до минут и «съедает» секунды. Минимум 1 c:
+        // на нулевом интервале iOS молча отбрасывает запрос.
         let interval = TimeInterval(dateEpochMillis) / 1000 - Date().timeIntervalSince1970
         let trigger: UNNotificationTrigger
         if interval <= 90 {
@@ -46,18 +51,37 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
                 [.year, .month, .day, .hour, .minute], from: date)
             trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         }
+        if id.hasPrefix("lesson-") {
+            scheduledLessonIds.insert(id)
+        }
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: id, content: content, trigger: trigger))
     }
 
     func cancelAll() {
-        // Снимаем только партию занятий (идентификаторы lesson-…):
-        // removeAllPendingNotificationRequests сносил бы и тестовые
-        // уведомления, поставленные из отладки.
+        // Синхронно: снимаем запомненную партию занятий ПЕРЕД постановкой
+        // новой (reschedule зовёт cancelAll, затем schedule). Асинхронный
+        // getPendingNotificationRequests давал гонку — отмена приходила
+        // после новой партии и сносила её: напоминания переставали приходить.
+        // Тестовые уведомления (test-now/test-delayed) не в этом списке
+        // и потому отменой не затрагиваются.
+        let ids = Array(scheduledLessonIds)
+        scheduledLessonIds.removeAll()
+        if !ids.isEmpty {
+            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        }
+    }
+
+    /// Разовая уборка при старте: снимает партию занятий, оставшуюся с
+    /// прошлого запуска (её id в памяти не сохранились). Вызывается до
+    /// первого планирования, поэтому гонки с новой партией не создаёт.
+    func sweepStaleLessonReminders() {
         let center = UNUserNotificationCenter.current()
         center.getPendingNotificationRequests { requests in
-            let lessonIds = requests.map(\.identifier).filter { $0.hasPrefix("lesson-") }
-            center.removePendingNotificationRequests(withIdentifiers: lessonIds)
+            let stale = requests.map(\.identifier).filter { $0.hasPrefix("lesson-") }
+            if !stale.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: stale)
+            }
         }
     }
 }
