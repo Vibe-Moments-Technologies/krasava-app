@@ -113,6 +113,7 @@ fun AddScheduleBottomSheet(
                 .fillMaxWidth()
                 .fillMaxHeight(0.85f)
                 .navigationBarsPadding()
+                .imePadding()
                 .padding(horizontal = 20.dp, vertical = 4.dp)
         ) {
             Row(

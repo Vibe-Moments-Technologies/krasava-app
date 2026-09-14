@@ -124,7 +124,7 @@ fun ServicesScreen(
                 )
                 if (services.isEmpty()) {
                     Text(
-                        text = "Все разделы уже добавлены в док — управляйте ими в «Настройках дока».",
+                        text = "Все разделы уже добавлены на панель — управляйте ими в «Настройках панели страниц».",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

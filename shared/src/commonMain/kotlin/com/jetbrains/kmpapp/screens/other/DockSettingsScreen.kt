@@ -86,7 +86,7 @@ fun DockSettingsScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Настройка дока",
+                    text = "Настройка панели страниц",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -110,7 +110,7 @@ fun DockSettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Настройте состав и порядок кнопок в нижнем меню. Разделы «Расписание» и «Другое» являются базовыми и закреплены на первом и последнем местах.",
+                    text = "Настройте состав и порядок кнопок в нижней панели. Разделы «Расписание» и «Другое» являются базовыми и закреплены на первом и последнем местах.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp)
@@ -120,7 +120,7 @@ fun DockSettingsScreen(
             // Section 1: Active in Dock
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Отображаются в доке (${dockTabs.size})",
+                    text = "Отображаются на панели (${dockTabs.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary,
@@ -185,7 +185,7 @@ fun DockSettingsScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "В доке может быть максимум 5 разделов. Чтобы добавить раздел, сначала уберите один из текущих.",
+                            text = "На панели может быть максимум 5 разделов. Чтобы добавить раздел, сначала уберите один из текущих.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                             modifier = Modifier.padding(12.dp)
@@ -243,7 +243,7 @@ fun DockSettingsScreen(
             onDismissRequest = { showServicesLockInfo = false },
             title = { Text("Раздел закреплён") },
             text = {
-                Text("Раздел «Сервисы» закреплён, пока в доке нет ни одного другого раздела. Добавьте любой сервис в док — после этого «Сервисы» можно будет скрыть.")
+                Text("Раздел «Сервисы» закреплён, пока на панели нет ни одного другого раздела. Добавьте любой сервис на панель — после этого «Сервисы» можно будет скрыть.")
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(
@@ -371,7 +371,7 @@ private fun ActiveTabItemCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Remove,
-                            contentDescription = "Убрать из дока",
+                            contentDescription = "Убрать с панели",
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -427,7 +427,7 @@ private fun HiddenTabItemCard(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = if (canAdd) "Нажмите +, чтобы добавить в док" else "Лимит 5 разделов достигнут",
+                        text = if (canAdd) "Нажмите +, чтобы добавить на панель" else "Лимит 5 разделов достигнут",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (canAdd) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
                     )
@@ -447,7 +447,7 @@ private fun HiddenTabItemCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Добавить в док",
+                    contentDescription = "Добавить на панель",
                     modifier = Modifier.size(20.dp)
                 )
             }
