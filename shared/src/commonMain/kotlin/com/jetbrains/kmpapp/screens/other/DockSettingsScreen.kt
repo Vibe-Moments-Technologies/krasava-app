@@ -206,7 +206,7 @@ fun DockSettingsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "Все доступные разделы уже добавлены на панель"
+                                text = "Все доступные разделы уже добавлены на панель",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
