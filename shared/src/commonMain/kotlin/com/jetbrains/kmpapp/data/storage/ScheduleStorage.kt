@@ -693,7 +693,6 @@ class ScheduleStorage(
             AppTab.SCHEDULE,
             AppTab.MAP,
             AppTab.SERVICES,
-            AppTab.FREE_ROOMS,
             AppTab.OTHER
         )
     }
