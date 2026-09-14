@@ -29,23 +29,18 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-        <!-- MainActivity сохраняет MAIN/LAUNCHER: запуск не должен зависеть
-             от состояния алиасов (иначе на части лаунчеров «нет иконки»). -->
+        <!-- Точка входа — алиасы (классическая схема смены иконки): у самой
+             активности фильтра нет, иначе в лаунчере было бы две иконки.
+             Ровно один алиас включён всегда: светлый по умолчанию, тёмный
+             подхватывает ThemeIconSwitcher при ночной теме. -->
         <activity
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
-            android:name=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:name=".MainActivity" />
 
-        <!-- Алиасы для автоподстройки иконки под тему. Оба выключены по
-             умолчанию: включаются ThemeIconSwitcher'ом, когда тема известна. -->
         <activity-alias
             android:name=".AliasLight"
-            android:enabled="false"
+            android:enabled="true"
             android:exported="true"
             android:icon="@mipmap/ic_launcher"
             android:roundIcon="@mipmap/ic_launcher_round"

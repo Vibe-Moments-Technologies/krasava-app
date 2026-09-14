@@ -15,6 +15,12 @@ import android.content.res.Configuration
  */
 object ThemeIconSwitcher {
 
+    // Компоненты манифеста живут в namespace (com.jetbrains.kmpapp), а НЕ в
+    // applicationId (ru.l1ratch.mireaschedule): context.packageName вернул бы
+    // имя несуществующего класса, переключение молча уходило в пустоту и
+    // иконка пропадала (оба алиаса выключены по умолчанию).
+    private const val NS = "com.jetbrains.kmpapp"
+
     fun apply(context: Context) {
         // Смена иконки — косметика: ни при каких обстоятельствах она не
         // должна ронять запуск приложения (был краш на части прошивок).
@@ -22,10 +28,8 @@ object ThemeIconSwitcher {
             val night = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
             val pm = context.packageManager
-            // applicationId (ru.l1ratch.mireaschedule) не равен namespace Kotlin:
-            // имя компонента резолвим по packageName, а не хардкодом.
-            val light = ComponentName(context, "${context.packageName}.AliasLight")
-            val dark = ComponentName(context, "${context.packageName}.AliasDark")
+            val light = ComponentName(NS, "$NS.AliasLight")
+            val dark = ComponentName(NS, "$NS.AliasDark")
             val enable = PackageManager.COMPONENT_ENABLED_STATE_ENABLED
             val disable = PackageManager.COMPONENT_ENABLED_STATE_DISABLED
             val lightWanted = if (night) disable else enable
@@ -38,9 +42,9 @@ object ThemeIconSwitcher {
             if (pm.getComponentEnabledSetting(dark) != darkWanted) {
                 pm.setComponentEnabledSetting(dark, darkWanted, PackageManager.DONT_KILL_APP)
             }
-            // Сама MainActivity — точка запуска: её держим включённой всегда,
-            // иначе при выключенных алиасах приложение пропадает из лаунчера.
-            val main = ComponentName(context, "${context.packageName}.MainActivity")
+            // MainActivity держим включённой: она цель алиасов, при её
+            // выключении лаунчер потеряет точку входа.
+            val main = ComponentName(NS, "$NS.MainActivity")
             if (pm.getComponentEnabledSetting(main) != enable) {
                 pm.setComponentEnabledSetting(main, enable, PackageManager.DONT_KILL_APP)
             }
