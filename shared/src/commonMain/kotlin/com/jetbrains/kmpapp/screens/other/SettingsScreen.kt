@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -91,6 +92,8 @@ fun SettingsScreen(
     var sakuraTapCount by remember { mutableIntStateOf(0) }
     var lastSakuraTapMark by remember { mutableStateOf<kotlin.time.TimeMark?>(null) }
     var showSakuraDialog by remember { mutableStateOf(false) }
+    var showCustomMinutesDialog by remember { mutableStateOf(false) }
+    var customMinutesDraft by remember { mutableStateOf("") }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -237,7 +240,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Порядок и состав кнопок навигации",
+                            text = "Порядок и состав страниц на панели",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -474,9 +477,6 @@ fun SettingsScreen(
                     if (notificationsEnabled) {
                         val presets = listOf(5, 10, 15)
                         val isCustom = notifyMinutesBefore !in presets
-                        var customText by remember(notificationsEnabled) {
-                            mutableStateOf(if (isCustom) notifyMinutesBefore.toString() else "")
-                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
@@ -508,10 +508,8 @@ fun SettingsScreen(
                             FilterChip(
                                 selected = isCustom,
                                 onClick = {
-                                    // Свой вариант: берём последнее валидное или 20
-                                    val value = customText.toIntOrNull()?.takeIf { it in 1..120 } ?: 20
-                                    customText = value.toString()
-                                    viewModel.setNotifyMinutesBefore(value)
+                                    customMinutesDraft = if (isCustom) notifyMinutesBefore.toString() else "20"
+                                    showCustomMinutesDialog = true
                                 },
                                 label = {
                                     Text(
@@ -528,20 +526,25 @@ fun SettingsScreen(
 
                         if (isCustom) {
                             Spacer(modifier = Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = customText,
-                                onValueChange = { text ->
-                                    val digits = text.filter { it.isDigit() }.take(3)
-                                    customText = digits
-                                    digits.toIntOrNull()?.let { value ->
-                                        if (value in 1..120) viewModel.setNotifyMinutesBefore(value)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Своё: $notifyMinutesBefore мин",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                IconButton(
+                                    onClick = {
+                                        customMinutesDraft = notifyMinutesBefore.toString()
+                                        showCustomMinutesDialog = true
                                     }
-                                },
-                                label = { Text("Минут до пары (1–120)") },
-                                singleLine = true,
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                modifier = Modifier.fillMaxWidth()
-                            )
+                                ) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Изменить время")
+                                }
+                            }
                         }
                     }
                 }
@@ -611,6 +614,42 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(80.dp))
         }
+    }
+
+    if (showCustomMinutesDialog) {
+        AlertDialog(
+            onDismissRequest = { showCustomMinutesDialog = false },
+            title = { Text("Своё время") },
+            text = {
+                OutlinedTextField(
+                    value = customMinutesDraft,
+                    onValueChange = { text ->
+                        customMinutesDraft = text.filter { it.isDigit() }.take(3)
+                    },
+                    label = { Text("Минут до пары (1–120)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        customMinutesDraft.toIntOrNull()
+                            ?.takeIf { it in 1..120 }
+                            ?.let(viewModel::setNotifyMinutesBefore)
+                        showCustomMinutesDialog = false
+                    }
+                ) {
+                    Text("Сохранить")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCustomMinutesDialog = false }) {
+                    Text("Отменить")
+                }
+            }
+        )
     }
 
     if (showSakuraDialog) {

@@ -52,9 +52,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import androidx.lifecycle.ViewModel
 
 /**
- * Раздел «Сервисы»: страница-концентратор вкладок, не добавленных в док.
+ * Раздел «Сервисы»: страница-концентратор страниц, не добавленных на панель.
  * Сервис открывается поверх списка (послойная навигация): назад — свайп,
- * системная кнопка или стрелка на иконке «Сервисы» в доке. Карта — без
+ * системная кнопка или стрелка на иконке «Сервисы» на панели. Карта — без
  * свайпа (жестами управляет сама).
  */
 class ServicesViewModel : ViewModel() {
@@ -95,7 +95,7 @@ fun ServicesScreen(
     modifier: Modifier = Modifier
 ) {
     val activeService by viewModel.activeService.collectAsState()
-    // Показываем сервисы, которых нет в доке (в доке они и так под рукой).
+    // Показываем сервисы, которых нет на панели (на панели они и так под рукой).
     val services = remember(dockTabs) {
         AppTab.entries.filter { it.isService && it !in dockTabs.take(5) }
     }
@@ -131,7 +131,7 @@ fun ServicesScreen(
                 } else {
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
-                        // Свободное место под плавающий док.
+                        // Свободное место под плавающую панель страниц.
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 110.dp)
                     ) {
                         items(services, key = { it.name }) { tab ->
