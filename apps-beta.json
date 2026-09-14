@@ -7,11 +7,11 @@
       "name": "Расписание МИРЭА",
       "bundleIdentifier": "ru.l1ratch.mireaschedule",
       "developerName": "l1ratch",
-      "localizedDescription": "Расписание пар РТУ МИРЭА: поиск свободных аудиторий, интерактивные карты корпусов, задачи и офлайн-кеш.\n\nСборка: 26.2.0-beta.3\nОбновлено: 2026-09-14 09:56 UTC",
+      "localizedDescription": "Расписание пар РТУ МИРЭА: поиск свободных аудиторий, интерактивные карты корпусов, задачи и офлайн-кеш.\n\nСборка: 26.2.0-dev.47\nОбновлено: 2026-09-14 09:57 UTC",
       "iconURL": "https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
-      "version": "26.2.0-beta.3",
-      "versionDate": "2026-09-14T09:56:42.848506+00:00",
-      "downloadURL": "https://github.com/l1ratch/MIREA-Schedule/releases/download/v26.2.0-beta.3/Schedule-MIREA-v26.2.0-beta.3.ipa",
+      "version": "26.2.0-dev.47",
+      "versionDate": "2026-09-14T09:57:56.707392+00:00",
+      "downloadURL": "https://github.com/l1ratch/MIREA-Schedule/releases/download/preview/MIREA-Schedule-preview.ipa",
       "tintColor": "4F46E5"
     }
   ]
