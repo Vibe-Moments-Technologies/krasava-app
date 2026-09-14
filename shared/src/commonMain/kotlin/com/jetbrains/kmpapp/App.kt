@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
+import com.jetbrains.kmpapp.data.analytics.platformName
+import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.update.startPlatformUpdate
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
@@ -126,13 +128,19 @@ fun App() {
     // dock_config — каждый слот отдельным параметром: в панели Metrica
     // такое строится в графики, в отличие от строки через запятую.
     LaunchedEffect(Unit) {
-        AppAnalytics.logEvent(
-            "app_open",
-            mapOf(
-                "target_type" to (selectedTarget?.type?.name ?: "none"),
-                "beta_channel" to betaChannel.toString()
-            )
+        val params = mutableMapOf(
+            "target_type" to (selectedTarget?.type?.name ?: "none"),
+            "beta_channel" to betaChannel.toString()
         )
+        // Срез по версиям: видно, на чём сидит аудитория. dev/contrib не
+        // шлём — статистику иначе забивают наши же тестовые сборки;
+        // stable/beta/rc различимы суффиксом версии.
+        val channel = AppVersion.BUILD_CHANNEL
+        if (channel == "stable" || channel == "beta" || channel == "rc") {
+            params["version"] = AppVersion.VERSION_NAME
+            params["platform"] = platformName()
+        }
+        AppAnalytics.logEvent("app_open", params)
     }
     LaunchedEffect(dockTabs) {
         val params = mutableMapOf("count" to dockTabs.size.toString())

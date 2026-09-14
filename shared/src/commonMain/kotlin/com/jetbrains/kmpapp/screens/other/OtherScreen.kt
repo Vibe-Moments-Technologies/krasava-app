@@ -285,6 +285,10 @@ private fun OtherMainContent(
 
             // 5. GitHub Issues Feedback Card
             GitHubIssuesCard()
+
+            // 6. Ссылки на соцсети проекта — намеренно без рамок и фона.
+            Spacer(modifier = Modifier.height(2.dp))
+            ProjectSocialLinks()
         }
     }
 }

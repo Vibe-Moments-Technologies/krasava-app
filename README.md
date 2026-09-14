@@ -14,10 +14,9 @@
 
 **Скачать:** [APK (Android, стабильная версия)](https://github.com/l1ratch/MIREA-Schedule/releases/latest/download/Schedule-MIREA.apk) · [IPA (iOS, без подписи)](https://github.com/l1ratch/MIREA-Schedule/releases/latest/download/Schedule-MIREA.ipa) · [Все релизы](https://github.com/l1ratch/MIREA-Schedule/releases)
 
----
+**Сообщество:** [Telegram](https://t.me/MIREA_Schedule) · [GitHub](https://github.com/l1ratch/MIREA-Schedule)
 
-> [!CAUTION]
-> Если установлена версия **26.9.0–26.9.4**: нумерация версий изменилась, автоматическое обновление не сработает. Установите свежую версию вручную: [APK](https://github.com/l1ratch/MIREA-Schedule/releases/latest/download/Schedule-MIREA.apk) · [IPA](https://github.com/l1ratch/MIREA-Schedule/releases/latest/download/Schedule-MIREA.ipa).
+---
 
 ## Возможности
 
@@ -28,6 +27,10 @@
 - Сохранение нескольких расписаний с переключением между ними.
 - Подсветка изменений при обновлении расписания.
 - Локальный кэш: расписание доступно без сети.
+- Напоминания о занятиях (локальные уведомления, настраиваемое время).
+
+**Сравнение расписаний**
+- Две и более групп рядом, подсветка различий, поиск по сохранённым целям.
 
 **Свободные аудитории**
 - Список аудиторий, свободных на выбранной паре или в интервале.
@@ -40,9 +43,15 @@
 **Задачи**
 - Учёт задач по предметам: категории (лабораторные, практики, домашние задания, курсовые и др.), приоритеты, статусы, чеклисты подзадач.
 
+**Конспекты**
+- Страницы заметок с цветными полями, поиск, автопереименование и подтверждение удаления.
+- Хранятся локально на устройстве, никуда не отправляются.
+
 **Интерфейс**
-- Темы: светлая, тёмная, системная.
+- Темы: светлая, тёмная, системная; оформления (в т.ч. тематические).
 - Настраиваемый плавающий док: порядок и видимость разделов.
+- Раздел «Сервисы»: доступ к вкладкам, не добавленным в док.
+- Иконка приложения подстраивается под тему системы; на iOS — выбор между новым и старым дизайном.
 - Встроенная проверка обновлений.
 
 ---
@@ -61,6 +70,12 @@ IPA собирается без подписи (unsigned) — для устан�
 
 ```
 https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/gh-pages/apps.json
+```
+
+Тестовые сборки (обновляются на каждый push в main, стабильнее не гарантируются):
+
+```
+https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/gh-pages/apps-beta.json
 ```
 
 ---
@@ -85,7 +100,7 @@ xcodebuild -scheme iosApp -configuration Release -sdk iphoneos \
 
 Тесты общего кода: `./gradlew :shared:allTests`.
 
-Стек: Kotlin Multiplatform, Compose Multiplatform, Ktor Client, kotlinx.serialization, Room/SQLite, Multiplatform Settings.
+Стек: Kotlin Multiplatform, Compose Multiplatform, Ktor Client, kotlinx.serialization, Multiplatform Settings, Koin, Яндекс AppMetrica.
 
 ---
 
@@ -95,6 +110,7 @@ xcodebuild -scheme iosApp -configuration Release -sdk iphoneos \
 - **Свободные аудитории:** собственная база, собираемая CI из расписания ([FREE_ROOMS_API.md](FREE_ROOMS_API.md)).
 - **Карты корпусов:** официальные схемы [pulse.mirea.ru](https://pulse.mirea.ru/services/maps) и векторные схемы проекта [university-app](https://github.com/0niel/university-app) ([0niel](https://github.com/0niel)).
 - Приложение не отправляет данные пользователей: сетевые запросы — только чтение (API расписания и GitHub: проверка обновлений, база свободных аудиторий, список контрибьюторов).
+- Анонимная статистика (AppMetrica) передаёт только события использования: разделы, ошибки загрузки, платформу и версию приложения. Без имён, групп, текстов конспектов и иных персональных данных — и отключается в настройках.
 
 ## Лицензия
 
