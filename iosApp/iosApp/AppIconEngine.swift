@@ -26,7 +26,9 @@ final class AppIconEngine: AppIconManagerIconEngine {
 /// Разрешение запрашивается только в момент включения тумблера в настройках.
 final class NotificationsEngine: NotificationsManagerNotificationEngine {
     func requestAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
+        // Без .badge: красный кружок с цифрой на иконке не используем,
+        // просить на него разрешение — лишняя галочка в системном окне.
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
     /// Идентификаторы, поставленные этой партией занятий: помним сами, чтобы
