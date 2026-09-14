@@ -22,11 +22,6 @@ class ScheduleApp : Application() {
         // Движок напоминаний: секция «Уведомления» в настройках видна там,
         // где движок зарегистрирован (Android и iOS симметричны).
         NotificationsManager.setEngine(AndroidNotificationsEngine)
-        // Иконку под тему переключаем вне критического пути старта: сбой
-        // косметики не должен мешать запуску приложения.
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            ThemeIconSwitcher.apply(this)
-        }, 1500L)
 
         // Pre-warm Android InputMethodManager and Compose text classes on main thread idle
         android.os.Looper.myQueue().addIdleHandler {

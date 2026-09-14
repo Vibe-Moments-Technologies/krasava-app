@@ -29,39 +29,18 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
-        <!-- Точка входа — алиасы (классическая схема смены иконки): у самой
-             активности фильтра нет, иначе в лаунчере было бы две иконки.
-             Ровно один алиас включён всегда: светлый по умолчанию, тёмный
-             подхватывает ThemeIconSwitcher при ночной теме. -->
+        <!-- Одна иконка, без алиасов и автоадаптации: набор смены иконки
+             по теме оказался хрупким (краш на старте, пропажа иконки),
+             а выгода не стоила риска. -->
         <activity
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
-            android:name=".MainActivity" />
-
-        <activity-alias
-            android:name=".AliasLight"
-            android:enabled="true"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher"
-            android:roundIcon="@mipmap/ic_launcher_round"
-            android:targetActivity=".MainActivity">
+            android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity-alias>
-        <activity-alias
-            android:name=".AliasDark"
-            android:enabled="false"
-            android:exported="true"
-            android:icon="@mipmap/ic_launcher_dark"
-            android:roundIcon="@mipmap/ic_launcher_dark"
-            android:targetActivity=".MainActivity">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
+        </activity>
 
         <receiver
             android:name=".notifications.LessonAlarmReceiver"

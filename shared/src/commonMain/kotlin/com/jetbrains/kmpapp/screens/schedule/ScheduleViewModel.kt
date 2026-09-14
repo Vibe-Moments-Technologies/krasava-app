@@ -39,8 +39,24 @@ class ScheduleViewModel(
     private var lastAutoScrolledDate: LocalDate? = null
     private var lastAutoScrolledTargetId: Int? = null
 
+    /**
+     * Позиция скролла дня по дате: живёт в ViewModel, а не в композиции.
+     * Страница пейджера и весь экран расписания пересоздаются (в т.ч. когда
+     * сверху открывается карточка пары), и позиция дня «прыгала» к первой
+     * паре. Здесь она переживает любые пересборки.
+     */
+    private val dayScrollPositions = mutableMapOf<LocalDate, Int>()
+
+    fun scrollPositionFor(date: LocalDate): Int = dayScrollPositions[date] ?: 0
+
+    fun saveScrollPosition(date: LocalDate, index: Int) {
+        dayScrollPositions[date] = index
+    }
+
     fun canAutoScroll(date: LocalDate, targetId: Int?): Boolean {
-        return date != lastAutoScrolledDate || targetId != lastAutoScrolledTargetId
+        // Автоскролл только один раз на дату: повторные пересборки не должны
+        // заново подбрасывать день к текущей паре.
+        return lastAutoScrolledDate != date || lastAutoScrolledTargetId != targetId
     }
 
     fun markAutoScrolled(date: LocalDate, targetId: Int?) {

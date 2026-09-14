@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -272,10 +272,22 @@ private fun ScheduleMainContent(
                         val pageDate = today.plus(DatePeriod(days = page - basePage))
                         val pageSlots = viewModel.slotsForDate(pageDate, currentLessons, showEmptyLessons)
                         key(pageDate) {
+                            // Стартуем с сохранённой позиции дня и пишем её
+                            // обратно: открытие подстраницы больше не сбрасывает
+                            // день к первой паре.
+                            val pageListState = remember(pageDate) {
+                                LazyListState(
+                                    firstVisibleItemIndex = viewModel.scrollPositionFor(pageDate)
+                                )
+                            }
+                            LaunchedEffect(pageListState) {
+                                snapshotFlow { pageListState.firstVisibleItemIndex }
+                                    .collect { viewModel.saveScrollPosition(pageDate, it) }
+                            }
                             DaySchedulePage(
                                 date = pageDate,
                                 slots = pageSlots,
-                                listState = rememberLazyListState(),
+                                listState = pageListState,
                                 errorMessage = errorMessage,
                                 currentMinutesState = currentMinutesState,
                                 showLessonProgress = showLessonProgress,

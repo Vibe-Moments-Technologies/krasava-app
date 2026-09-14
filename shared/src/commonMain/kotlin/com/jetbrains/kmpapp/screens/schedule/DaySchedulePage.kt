@@ -66,7 +66,11 @@ internal fun DaySchedulePage(
     onLessonClick: (Lesson) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LaunchedEffect(date, slots, autoScrollToCurrentLesson) {
+    // Ключи — только дата и настройка: список slots пересоздаётся при каждой
+    // пересборке (в т.ч. когда поверх открывается подстраница), и по нему в
+    // ключах эффект перезапускался, подбрасывая день к первой паре.
+    // Один автоскролл на дату уже гарантирует canAutoScroll/markAutoScrolled.
+    LaunchedEffect(date, autoScrollToCurrentLesson) {
         if (date != com.jetbrains.kmpapp.data.model.DateUtils.today() ||
             !autoScrollToCurrentLesson || !canAutoScroll(date) || slots.isEmpty()
         ) return@LaunchedEffect
