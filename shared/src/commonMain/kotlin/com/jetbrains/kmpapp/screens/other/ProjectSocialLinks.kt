@@ -52,7 +52,8 @@ internal fun ProjectSocialLinks() {
             onClick = {
                 AppAnalytics.logEvent("social_open", mapOf("network" to "github"))
                 uriHandler.openUri(AppVersion.GITHUB_REPO_URL)
-            }
+            },
+            modifier = Modifier.weight(1f)
         )
         SocialButton(
             icon = TelegramMark,
@@ -61,7 +62,8 @@ internal fun ProjectSocialLinks() {
             onClick = {
                 AppAnalytics.logEvent("social_open", mapOf("network" to "telegram"))
                 uriHandler.openUri(TELEGRAM_URL)
-            }
+            },
+            modifier = Modifier.weight(1f)
         )
     }
 }
@@ -71,11 +73,11 @@ private fun SocialButton(
     icon: ImageVector,
     label: String,
     tint: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
-            .weight(1f)
+        modifier = modifier
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick)
