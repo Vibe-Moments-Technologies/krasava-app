@@ -57,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +66,7 @@ import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.model.GitHubContributor
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kmp_app_template.shared.generated.resources.Res
+import kmp_app_template.shared.generated.resources.appicon_new_dark
 import kmp_app_template.shared.generated.resources.appicon_new_light
 import org.jetbrains.compose.resources.painterResource
 
@@ -128,9 +130,15 @@ fun AboutScreen(
         ) {
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Real App Icon from Resources
+            // Иконка приложения — тот же вариант, что выбрала бы система по
+            // теме: в тёмной теме тёмная, в светлой светлая. Тему берём по
+            // фактической яркости фона, поэтому это работает и для «как в
+            // системе», и для тематических оформлений.
+            val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
             Image(
-                painter = painterResource(Res.drawable.appicon_new_light),
+                painter = painterResource(
+                    if (isDarkTheme) Res.drawable.appicon_new_dark else Res.drawable.appicon_new_light
+                ),
                 contentDescription = "Иконка приложения",
                 modifier = Modifier
                     .size(80.dp)
