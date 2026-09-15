@@ -150,6 +150,7 @@ class ScheduleRepository(
                         NotificationsManager.reschedule(emptyList(), p.minutes) { "" } // снимает всё
                     }
                 }
+            }
         }
     }
 
