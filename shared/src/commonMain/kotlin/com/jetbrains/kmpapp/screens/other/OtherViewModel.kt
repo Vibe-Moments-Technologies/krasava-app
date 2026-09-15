@@ -120,6 +120,8 @@ class OtherViewModel(
     val appIcon: StateFlow<String> = repository.appIcon
     val notificationsEnabled: StateFlow<Boolean> = repository.notificationsEnabled
     val notifyMinutesBefore: StateFlow<Int> = repository.notifyMinutesBefore
+    val notificationsTargetId: StateFlow<Int?> = repository.notificationsTargetId
+    val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
     val askBeforeNoteDelete: StateFlow<Boolean> = repository.askBeforeNoteDelete
 
     fun setShowLessonProgress(enabled: Boolean) {
@@ -149,6 +151,8 @@ class OtherViewModel(
     fun setAppIcon(name: String) = repository.setAppIcon(name)
     fun setNotificationsEnabled(enabled: Boolean) = repository.setNotificationsEnabled(enabled)
     fun setNotifyMinutesBefore(minutes: Int) = repository.setNotifyMinutesBefore(minutes)
+    fun setNotificationsTargetId(targetId: Int?) = repository.setNotificationsTargetId(targetId)
+    fun setVpnWarningEnabled(enabled: Boolean) = repository.setVpnWarningEnabled(enabled)
     fun setAskBeforeNoteDelete(ask: Boolean) = repository.setAskBeforeNoteDelete(ask)
 
     fun setDockTabs(tabs: List<AppTab>) {

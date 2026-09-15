@@ -35,6 +35,7 @@ class ScheduleViewModel(
     val showLessonProgress: StateFlow<Boolean> = repository.showLessonProgress
     val autoScrollToCurrentLesson: StateFlow<Boolean> = repository.autoScrollToCurrentLesson
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
+    val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
 
     private var lastAutoScrolledDate: LocalDate? = null
     private var lastAutoScrolledTargetId: Int? = null

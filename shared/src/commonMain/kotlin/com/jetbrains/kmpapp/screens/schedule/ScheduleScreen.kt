@@ -30,6 +30,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.VpnKey
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Surface
 import com.jetbrains.kmpapp.data.model.Lesson
@@ -51,6 +52,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -116,6 +118,8 @@ private fun ScheduleMainContent(
     // «сегодня» (см. LessonCard).
     val currentMinutesState = viewModel.currentMinutes.collectAsState()
     val isVpnActive by viewModel.isVpnActive.collectAsState()
+    val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
+    var isVpnBannerDismissed by remember(isVpnActive) { mutableStateOf(false) }
 
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -229,33 +233,45 @@ private fun ScheduleMainContent(
 
                 // Серверы МИРЭА доступны только с IP России: при включённом
                 // VPN расписание не обновится — предупреждаем заранее.
-                if (isVpnActive) {
+                if (isVpnActive && vpnWarningEnabled && !isVpnBannerDismissed) {
                     LaunchedEffect(Unit) {
                         AppAnalytics.logEvent("vpn_banner_shown")
                     }
                     Surface(
                         shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.errorContainer,
+                        color = Color(0xFFFFE0B2),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 12.dp, vertical = 2.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Icon(
                                 imageVector = Icons.Default.VpnKey,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                tint = Color(0xFF8A4B08),
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Включён VPN — серверы МИРЭА доступны только из РФ, расписание может не обновляться",
+                                text = "Включён VPN — расписание может не обновиться",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onErrorContainer
+                                color = Color(0xFF5D3508),
+                                modifier = Modifier.weight(1f)
                             )
+                            IconButton(
+                                onClick = { isVpnBannerDismissed = true },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Скрыть предупреждение",
+                                    tint = Color(0xFF8A4B08),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }

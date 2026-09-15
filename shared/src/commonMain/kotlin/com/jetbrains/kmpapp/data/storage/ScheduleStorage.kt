@@ -88,6 +88,12 @@ class ScheduleStorage(
     private val _notificationsEnabled = MutableStateFlow(false)
     val notificationsEnabled: StateFlow<Boolean> = _notificationsEnabled.asStateFlow()
 
+    private val _notificationsTargetId = MutableStateFlow<Int?>(null)
+    val notificationsTargetId: StateFlow<Int?> = _notificationsTargetId.asStateFlow()
+
+    private val _vpnWarningEnabled = MutableStateFlow(true)
+    val vpnWarningEnabled: StateFlow<Boolean> = _vpnWarningEnabled.asStateFlow()
+
     private val _notifyMinutesBefore = MutableStateFlow(15)
     val notifyMinutesBefore: StateFlow<Int> = _notifyMinutesBefore.asStateFlow()
 
@@ -140,6 +146,8 @@ class ScheduleStorage(
             else -> AppIconManager.ICON_DEFAULT
         }
         _notificationsEnabled.value = loadBooleanFlag(KEY_NOTIFICATIONS_ENABLED, false)
+        _notificationsTargetId.value = platformStorage.getString(KEY_NOTIFICATIONS_TARGET_ID)?.toIntOrNull()
+        _vpnWarningEnabled.value = loadBooleanFlag(KEY_VPN_WARNING_ENABLED, true)
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
@@ -392,7 +400,13 @@ class ScheduleStorage(
     fun setNotificationsEnabled(enabled: Boolean) {
         val changed = _notificationsEnabled.value != enabled
         _notificationsEnabled.value = enabled
-        if (enabled) NotificationsManager.requestAuthorization()
+        if (enabled) {
+            if (_notificationsTargetId.value == null) {
+                _notificationsTargetId.value = _selectedTarget.value?.id
+                persistNotificationsTargetId(_notificationsTargetId.value)
+            }
+            NotificationsManager.requestAuthorization()
+        }
         scope.launch { platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, enabled.toString()) }
         if (changed) {
             AppAnalytics.logEvent("notifications_changed", mapOf(
@@ -403,8 +417,25 @@ class ScheduleStorage(
     }
 
     fun setNotifyMinutesBefore(minutes: Int) {
-        _notifyMinutesBefore.value = minutes
-        scope.launch { platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, minutes.toString()) }
+        _notifyMinutesBefore.value = minutes.coerceIn(1, 120)
+        scope.launch { platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, _notifyMinutesBefore.value.toString()) }
+    }
+
+    fun setNotificationsTargetId(targetId: Int?) {
+        _notificationsTargetId.value = targetId
+        persistNotificationsTargetId(targetId)
+    }
+
+    fun setVpnWarningEnabled(enabled: Boolean) {
+        _vpnWarningEnabled.value = enabled
+        scope.launch { platformStorage.saveString(KEY_VPN_WARNING_ENABLED, enabled.toString()) }
+    }
+
+    private fun persistNotificationsTargetId(targetId: Int?) {
+        scope.launch {
+            if (targetId == null) platformStorage.remove(KEY_NOTIFICATIONS_TARGET_ID)
+            else platformStorage.saveString(KEY_NOTIFICATIONS_TARGET_ID, targetId.toString())
+        }
     }
 
     fun setAskBeforeNoteDelete(ask: Boolean) {
@@ -486,6 +517,11 @@ class ScheduleStorage(
             persistSelectedTargetId(_selectedTarget.value?.id)
         }
         _cachedLessons.update { map -> map - targetId }
+        if (_notificationsTargetId.value == targetId) {
+            val fallback = _savedTargets.value.firstOrNull()?.id
+            _notificationsTargetId.value = fallback
+            persistNotificationsTargetId(fallback)
+        }
         lastSyncTimes.remove(targetId)
         platformStorage.remove(KEY_LESSONS_PREFIX + targetId)
         platformStorage.remove(KEY_LAST_SYNC_PREFIX + targetId)
@@ -684,6 +720,8 @@ class ScheduleStorage(
         private const val KEY_ANALYTICS_CONSENT = "mirea_analytics_consent"
         private const val KEY_APP_ICON = "mirea_app_icon"
         private const val KEY_NOTIFICATIONS_ENABLED = "mirea_notifications_enabled"
+        private const val KEY_NOTIFICATIONS_TARGET_ID = "mirea_notifications_target_id"
+        private const val KEY_VPN_WARNING_ENABLED = "mirea_vpn_warning_enabled"
         private const val KEY_NOTIFY_MINUTES_BEFORE = "mirea_notify_minutes_before"
         private const val KEY_ASK_BEFORE_NOTE_DELETE = "mirea_ask_before_note_delete"
         private const val KEY_NOTES = "mirea_notes_pages"

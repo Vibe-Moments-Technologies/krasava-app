@@ -23,6 +23,8 @@ import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.time.Clock
 
 class ScheduleRepository(
@@ -31,6 +33,7 @@ class ScheduleRepository(
     private val powerManager: com.jetbrains.kmpapp.data.power.PlatformPowerManager
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val notificationRescheduleMutex = Mutex()
 
     val isLowPowerMode: StateFlow<Boolean> = powerManager.isLowPowerMode
     val savedTargets: StateFlow<List<ScheduleTarget>> = storage.savedTargets
@@ -109,6 +112,8 @@ class ScheduleRepository(
     val appIcon: StateFlow<String> = storage.appIcon
     val notificationsEnabled: StateFlow<Boolean> = storage.notificationsEnabled
     val notifyMinutesBefore: StateFlow<Int> = storage.notifyMinutesBefore
+    val notificationsTargetId: StateFlow<Int?> = storage.notificationsTargetId
+    val vpnWarningEnabled: StateFlow<Boolean> = storage.vpnWarningEnabled
     val askBeforeNoteDelete: StateFlow<Boolean> = storage.askBeforeNoteDelete
 
     init {
@@ -121,28 +126,39 @@ class ScheduleRepository(
                 storage.cachedLessons,
                 storage.selectedTarget,
                 storage.notificationsEnabled,
-                storage.notifyMinutesBefore
-            ) { lessons, target, enabled, minutes ->
-                NotificationsPayload(lessons, target, enabled, minutes)
+                storage.notifyMinutesBefore,
+                storage.notificationsTargetId
+            ) { lessons, activeTarget, enabled, minutes, notificationTargetId ->
+                NotificationsPayload(lessons, activeTarget, enabled, minutes, notificationTargetId)
             }.collect { p ->
-                val targetLessons = p.target?.let { p.lessons[it.id] }.orEmpty()
-                if (p.enabled && p.target != null) {
-                    NotificationsManager.reschedule(targetLessons, p.minutes) { lesson ->
-                        val room = lesson.classrooms.firstOrNull()?.let { ", ауд. $it" } ?: ""
-                        "Через ${p.minutes} мин: ${lesson.subject}$room"
+                notificationRescheduleMutex.withLock {
+                    val target = p.notificationTargetId?.let { id ->
+                        p.activeTarget?.takeIf { it.id == id }
+                            ?: storage.savedTargets.value.firstOrNull { it.id == id }
+                    } ?: p.activeTarget?.also {
+                        // Миграция старых установок: раньше отдельной цели не было,
+                        // берём активное расписание и фиксируем его явно.
+                        storage.setNotificationsTargetId(it.id)
                     }
-                } else {
-                    NotificationsManager.reschedule(emptyList(), p.minutes) { "" } // снимает всё
+                    val targetLessons = target?.let { p.lessons[it.id] }.orEmpty()
+                    if (p.enabled && target != null) {
+                        NotificationsManager.reschedule(targetLessons, p.minutes) { lesson ->
+                            val room = lesson.classrooms.firstOrNull()?.let { ", ауд. $it" } ?: ""
+                            "Через ${p.minutes} мин: ${lesson.subject}$room"
+                        }
+                    } else {
+                        NotificationsManager.reschedule(emptyList(), p.minutes) { "" } // снимает всё
+                    }
                 }
-            }
         }
     }
 
     private data class NotificationsPayload(
         val lessons: Map<Int, List<Lesson>>,
-        val target: com.jetbrains.kmpapp.data.model.ScheduleTarget?,
+        val activeTarget: com.jetbrains.kmpapp.data.model.ScheduleTarget?,
         val enabled: Boolean,
-        val minutes: Int
+        val minutes: Int,
+        val notificationTargetId: Int?
     )
 
     fun setThemeOverlay(overlay: ThemeOverlay) = storage.setThemeOverlay(overlay)
@@ -155,6 +171,8 @@ class ScheduleRepository(
     fun setAppIcon(name: String) = storage.setAppIcon(name)
     fun setNotificationsEnabled(enabled: Boolean) = storage.setNotificationsEnabled(enabled)
     fun setNotifyMinutesBefore(minutes: Int) = storage.setNotifyMinutesBefore(minutes)
+    fun setNotificationsTargetId(targetId: Int?) = storage.setNotificationsTargetId(targetId)
+    fun setVpnWarningEnabled(enabled: Boolean) = storage.setVpnWarningEnabled(enabled)
     fun setAskBeforeNoteDelete(ask: Boolean) = storage.setAskBeforeNoteDelete(ask)
 
     fun setSakuraTheme(enabled: Boolean) {

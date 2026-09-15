@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.Card
@@ -87,6 +88,9 @@ fun SettingsScreen(
     val analyticsEnabled by viewModel.analyticsEnabled.collectAsState()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
     val notifyMinutesBefore by viewModel.notifyMinutesBefore.collectAsState()
+    val notificationsTargetId by viewModel.notificationsTargetId.collectAsState()
+    val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
+    val savedTargets by viewModel.savedTargets.collectAsState()
     val askBeforeNoteDelete by viewModel.askBeforeNoteDelete.collectAsState()
 
     var sakuraTapCount by remember { mutableIntStateOf(0) }
@@ -94,6 +98,7 @@ fun SettingsScreen(
     var showSakuraDialog by remember { mutableStateOf(false) }
     var showCustomMinutesDialog by remember { mutableStateOf(false) }
     var customMinutesDraft by remember { mutableStateOf("") }
+    var showNotificationsTargetDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -443,7 +448,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Section: Lesson notifications (iOS only — платформенный движок)
+            // Section: Lesson notifications (платформенный движок)
             if (NotificationsManager.supportsNotifications) {
                 SettingsSectionCard(
                     title = "Уведомления",
@@ -475,6 +480,35 @@ fun SettingsScreen(
                     }
 
                     if (notificationsEnabled) {
+                        val notificationTarget = savedTargets.firstOrNull { it.id == notificationsTargetId }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showNotificationsTargetDialog = true }
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Расписание для уведомлений",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = notificationTarget?.fullTitle ?: "Выберите расписание",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = "Выбрать расписание",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
                         val presets = listOf(5, 10, 15)
                         val isCustom = notifyMinutesBefore !in presets
 
@@ -550,6 +584,37 @@ fun SettingsScreen(
                 }
             }
 
+            // Section: Additional features
+            SettingsSectionCard(
+                title = "Дополнительный функционал",
+                icon = Icons.Default.Tune
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Предупреждения о VPN",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Показывать предупреждение, если VPN может помешать обновлению расписания",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = vpnWarningEnabled,
+                        onCheckedChange = { viewModel.setVpnWarningEnabled(it) }
+                    )
+                }
+            }
+
             // Section: Updates
             SettingsSectionCard(
                 title = "Обновления",
@@ -614,6 +679,57 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(80.dp))
         }
+    }
+
+    if (showNotificationsTargetDialog) {
+        AlertDialog(
+            onDismissRequest = { showNotificationsTargetDialog = false },
+            title = { Text("Расписание для уведомлений") },
+            text = {
+                if (savedTargets.isEmpty()) {
+                    Text("Сначала добавьте хотя бы одно расписание.")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        savedTargets.forEach { target ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.setNotificationsTargetId(target.id)
+                                        showNotificationsTargetDialog = false
+                                    }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = target.fullTitle,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        text = target.type.displayName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (target.id == notificationsTargetId) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Выбрано",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showNotificationsTargetDialog = false }) {
+                    Text("Закрыть")
+                }
+            }
+        )
     }
 
     if (showCustomMinutesDialog) {
