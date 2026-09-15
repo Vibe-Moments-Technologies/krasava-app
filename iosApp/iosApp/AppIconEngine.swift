@@ -36,6 +36,7 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
     /// старую партию без гонки с новой постановкой.
     private var scheduledLessonIds: Set<String>
     private let scheduledIdsKey = "mirea_scheduled_lesson_ids"
+    private let queue = DispatchQueue(label: "ru.l1ratch.mireaschedule.notifications")
 
     init() {
         scheduledLessonIds = Set(UserDefaults.standard.stringArray(forKey: scheduledIdsKey) ?? [])
@@ -59,12 +60,14 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
                 [.year, .month, .day, .hour, .minute], from: date)
             trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         }
-        if id.hasPrefix("lesson-") {
-            scheduledLessonIds.insert(id)
-            UserDefaults.standard.set(Array(scheduledLessonIds), forKey: scheduledIdsKey)
+        queue.sync {
+            if id.hasPrefix("lesson-") {
+                scheduledLessonIds.insert(id)
+                UserDefaults.standard.set(Array(scheduledLessonIds), forKey: scheduledIdsKey)
+            }
+            UNUserNotificationCenter.current().add(
+                UNNotificationRequest(identifier: id, content: content, trigger: trigger))
         }
-        UNUserNotificationCenter.current().add(
-            UNNotificationRequest(identifier: id, content: content, trigger: trigger))
     }
 
     func cancelAll() {
@@ -74,11 +77,13 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         // после новой партии и сносила её: напоминания переставали приходить.
         // Тестовые уведомления (test-now/test-delayed) не в этом списке
         // и потому отменой не затрагиваются.
-        let ids = Array(scheduledLessonIds)
-        scheduledLessonIds.removeAll()
-        UserDefaults.standard.removeObject(forKey: scheduledIdsKey)
-        if !ids.isEmpty {
-            UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+        queue.sync {
+            let ids = Array(scheduledLessonIds)
+            scheduledLessonIds.removeAll()
+            UserDefaults.standard.removeObject(forKey: scheduledIdsKey)
+            if !ids.isEmpty {
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
+            }
         }
     }
 
@@ -87,6 +92,14 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
     /// первого планирования, поэтому гонки с новой партией не создаёт.
     func sweepStaleLessonReminders() {
         let center = UNUserNotificationCenter.current()
+        queue.sync {
+            let stale = Array(scheduledLessonIds)
+            scheduledLessonIds.removeAll()
+            UserDefaults.standard.removeObject(forKey: scheduledIdsKey)
+            if !stale.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: stale)
+            }
+        }
         center.getPendingNotificationRequests { requests in
             let stale = requests.map(\.identifier).filter { $0.hasPrefix("lesson-") }
             if !stale.isEmpty {

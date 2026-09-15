@@ -122,6 +122,7 @@ class ScheduleRepository(
         // пересчитывают партию уведомлений. Лишние пересчёты дешёвые: движок
         // начинает с cancelAll.
         scope.launch {
+            var scheduledTargetId: Int? = null
             combine(
                 storage.cachedLessons,
                 storage.selectedTarget,
@@ -140,14 +141,25 @@ class ScheduleRepository(
                         // берём активное расписание и фиксируем его явно.
                         storage.setNotificationsTargetId(it.id)
                     }
-                    val targetLessons = target?.let { p.lessons[it.id] }.orEmpty()
-                    if (p.enabled && target != null) {
-                        NotificationsManager.reschedule(targetLessons, p.minutes) { lesson ->
-                            val room = lesson.classrooms.firstOrNull()?.let { ", ауд. $it" } ?: ""
-                            "Через ${p.minutes} мин: ${lesson.subject}$room"
+                    val targetLessons = target?.let { p.lessons[it.id] }
+                    when {
+                        !p.enabled || target == null -> {
+                            NotificationsManager.reschedule(emptyList(), p.minutes) { "" } // снимает всё
+                            scheduledTargetId = null
                         }
-                    } else {
-                        NotificationsManager.reschedule(emptyList(), p.minutes) { "" } // снимает всё
+                        targetLessons != null -> {
+                            NotificationsManager.reschedule(targetLessons, p.minutes) { lesson ->
+                                val room = lesson.classrooms.firstOrNull()?.let { ", ауд. $it" } ?: ""
+                                "Через ${p.minutes} мин: ${lesson.subject}$room"
+                            }
+                            scheduledTargetId = target.id
+                        }
+                        scheduledTargetId != target.id -> {
+                            // Кэш ещё не загружен: не сносить рабочую партию при
+                            // временной ошибке, но при смене цели убрать старые напоминания.
+                            NotificationsManager.reschedule(emptyList(), p.minutes) { "" }
+                            scheduledTargetId = target.id
+                        }
                     }
                 }
             }
