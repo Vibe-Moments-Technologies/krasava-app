@@ -495,6 +495,10 @@ class ScheduleStorage(
             else list + target
         }
         selectTarget(target)
+        if (_notificationsEnabled.value && _notificationsTargetId.value == null) {
+            _notificationsTargetId.value = target.id
+            persistNotificationsTargetId(target.id)
+        }
         persistTargets()
         // Аналитика: только тип (GROUP/TEACHER/AUDITORIUM) и количество —
         // ни id, ни название группы/преподавателя наружу не уходят.

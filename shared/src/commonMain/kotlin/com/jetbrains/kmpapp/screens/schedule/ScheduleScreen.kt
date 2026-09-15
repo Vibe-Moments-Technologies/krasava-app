@@ -119,7 +119,7 @@ private fun ScheduleMainContent(
     val currentMinutesState = viewModel.currentMinutes.collectAsState()
     val isVpnActive by viewModel.isVpnActive.collectAsState()
     val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
-    var isVpnBannerDismissed by remember(isVpnActive) { mutableStateOf(false) }
+    var isVpnBannerDismissed by remember(isVpnActive, vpnWarningEnabled) { mutableStateOf(false) }
 
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
