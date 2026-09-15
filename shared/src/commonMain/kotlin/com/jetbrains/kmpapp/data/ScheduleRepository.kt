@@ -123,6 +123,7 @@ class ScheduleRepository(
         // начинает с cancelAll.
         scope.launch {
             var scheduledTargetId: Int? = null
+            var notificationStateInitialized = false
             combine(
                 storage.cachedLessons,
                 storage.selectedTarget,
@@ -156,11 +157,15 @@ class ScheduleRepository(
                         }
                         scheduledTargetId != target.id -> {
                             // Кэш ещё не загружен: не сносить рабочую партию при
-                            // временной ошибке, но при смене цели убрать старые напоминания.
-                            NotificationsManager.reschedule(emptyList(), p.minutes) { "" }
+                            // временной ошибке. При смене цели после инициализации
+                            // убираем старые напоминания, чтобы не оставить чужую цель.
+                            if (notificationStateInitialized) {
+                                NotificationsManager.reschedule(emptyList(), p.minutes) { "" }
+                            }
                             scheduledTargetId = target.id
                         }
                     }
+                    notificationStateInitialized = true
                 }
             }
         }

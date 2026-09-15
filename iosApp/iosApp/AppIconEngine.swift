@@ -100,10 +100,16 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
                 center.removePendingNotificationRequests(withIdentifiers: stale)
             }
         }
-        center.getPendingNotificationRequests { requests in
-            let stale = requests.map(\.identifier).filter { $0.hasPrefix("lesson-") }
-            if !stale.isEmpty {
-                center.removePendingNotificationRequests(withIdentifiers: stale)
+        center.getPendingNotificationRequests { [weak self] requests in
+            guard let self = self else { return }
+            self.queue.sync {
+                let activeIds = self.scheduledLessonIds
+                let stale = requests.map(\.identifier).filter {
+                    $0.hasPrefix("lesson-") && !activeIds.contains($0)
+                }
+                if !stale.isEmpty {
+                    center.removePendingNotificationRequests(withIdentifiers: stale)
+                }
             }
         }
     }
