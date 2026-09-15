@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +10,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
@@ -70,6 +73,8 @@ import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.update.UpdateUrgency
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+
+private const val DOCS_BASE = "https://github.com/l1ratch/MIREA-Schedule/blob/main"
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF1E5BB0),
@@ -356,23 +361,47 @@ fun App() {
                 }
             }
 
-            // Информационное сообщение при первом запуске. Сбор включён по
-            // умолчанию, а выключить его всегда можно в настройках.
+            // Единый гейт при первом запуске. Без подтверждения приложением
+            // пользоваться нельзя — поэтому у диалога нет кнопки отказа.
             if (analyticsConsent == null) {
+                val uriHandler = LocalUriHandler.current
+                val docs = listOf(
+                    "Соглашение" to "$DOCS_BASE/TERMS.md",
+                    "Конфиденциальность" to "$DOCS_BASE/PRIVACY.md",
+                    "Обработка ПДн" to "$DOCS_BASE/PDP_POLICY.md",
+                )
                 AlertDialog(
                     onDismissRequest = { },
-                    title = { Text("Анонимная техническая статистика") },
+                    title = { Text("Прежде чем начать") },
                     text = {
-                        Text(
-                            "Мы собираем анонимную техническую статистику: какие разделы открывают, " +
-                                "какие ошибки возникают, на какой версии что-то сломалось. Это не аккаунты, " +
-                                "не имена, не группы и не тексты — только безликие события для быстрой реакции " +
-                                "на проблемы. Вы всегда можете отключить сбор анонимной статистики в настройках."
-                        )
+                        Column {
+                            Text(
+                                "Приложение бесплатное, неофициальное и с открытым кодом. Оно не связано " +
+                                    "с администрацией РТУ МИРЭА и не является его сервисом. Для пользования " +
+                                    "нужен возраст 18 лет и старше.\n\n" +
+                                    "Расписание и карты хранятся на вашем устройстве. Для диагностики " +
+                                    "сбоев собирается обезличенная статистика: какие разделы открывают " +
+                                    "и какие ошибки возникают. Аккаунты, имена, группы, номера студентов " +
+                                    "и тексты ваших записей не передаются. Сбор можно выключить в настройках.\n\n" +
+                                    "Продолжая, вы принимаете условия документов ниже.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Spacer(Modifier.height(8.dp))
+                            docs.forEach { (label, url) ->
+                                Text(
+                                    label,
+                                    modifier = Modifier
+                                        .clickable { uriHandler.openUri(url) }
+                                        .padding(vertical = 4.dp),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
                     },
                     confirmButton = {
                         TextButton(onClick = { repository.setAnalyticsConsent(true) }) {
-                            Text("Понятно")
+                            Text("Принимаю")
                         }
                     }
                 )
