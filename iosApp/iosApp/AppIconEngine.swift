@@ -31,9 +31,15 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
-    /// Идентификаторы, поставленные этой партией занятий: помним сами, чтобы
-    /// отменять синхронно, без асинхронного запроса к системе.
-    private var scheduledLessonIds: Set<String> = []
+    /// Идентификаторы, поставленные этой партией занятий. Храним их в
+    /// UserDefaults, чтобы после перезапуска можно было синхронно снять
+    /// старую партию без гонки с новой постановкой.
+    private var scheduledLessonIds: Set<String>
+    private let scheduledIdsKey = "mirea_scheduled_lesson_ids"
+
+    init() {
+        scheduledLessonIds = Set(UserDefaults.standard.stringArray(forKey: scheduledIdsKey) ?? [])
+    }
 
     func schedule(id: String, title: String, body: String, dateEpochMillis: Int64) {
         let content = UNMutableNotificationContent()
@@ -55,6 +61,7 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         }
         if id.hasPrefix("lesson-") {
             scheduledLessonIds.insert(id)
+            UserDefaults.standard.set(Array(scheduledLessonIds), forKey: scheduledIdsKey)
         }
         UNUserNotificationCenter.current().add(
             UNNotificationRequest(identifier: id, content: content, trigger: trigger))
@@ -69,6 +76,7 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         // и потому отменой не затрагиваются.
         let ids = Array(scheduledLessonIds)
         scheduledLessonIds.removeAll()
+        UserDefaults.standard.removeObject(forKey: scheduledIdsKey)
         if !ids.isEmpty {
             UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ids)
         }
