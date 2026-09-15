@@ -621,6 +621,8 @@ class ScheduleStorage(
         _analyticsEnabled.value = analyticsEnabledBefore
         _analyticsConsent.value = analyticsConsentBefore
         _notificationsEnabled.value = notificationsEnabledBefore
+        _notificationsTargetId.value = null
+        _vpnWarningEnabled.value = true
         _notifyMinutesBefore.value = notifyMinutesBeforeBefore
         _askBeforeNoteDelete.value = askBeforeNoteDeleteBefore
         _notePages.value = com.jetbrains.kmpapp.data.model.defaultNotePages()
@@ -634,6 +636,8 @@ class ScheduleStorage(
             if (analyticsConsentBefore == null) platformStorage.remove(KEY_ANALYTICS_CONSENT)
             else platformStorage.saveString(KEY_ANALYTICS_CONSENT, analyticsConsentBefore.toString())
             platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, notificationsEnabledBefore.toString())
+            platformStorage.remove(KEY_NOTIFICATIONS_TARGET_ID)
+            platformStorage.saveString(KEY_VPN_WARNING_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, notifyMinutesBeforeBefore.toString())
             platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, askBeforeNoteDeleteBefore.toString())
             platformStorage.saveString(KEY_NOTES, json.encodeToString(_notePages.value))
