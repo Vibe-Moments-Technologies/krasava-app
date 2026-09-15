@@ -51,6 +51,9 @@ release_notes.md
 *.apk
 *.aab
 *.ipa
+
+# Local asset stock (icon renders, source images — never committed)
+images/
 # Local Repowise index and generated local integration files
 .repowise/
 
