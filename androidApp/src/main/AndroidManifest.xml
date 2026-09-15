@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
@@ -9,6 +10,11 @@
         android:name="android.permission.SCHEDULE_EXACT_ALARM"
         android:maxSdkVersion="32"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+
+    <!-- Блокируем AD_ID пермишен, который транзитивно тянет AppMetrica SDK через
+         play-services-ads-identifier. Нам не нужен рекламный идентификатор. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"
+        tools:node="remove"/>
 
     <application
         android:allowBackup="true"
