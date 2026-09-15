@@ -37,19 +37,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
-            implementation(libs.appmetrica.analytics) {
-                // Исключаем модули, которые не используются: рекламная выручка,
-                // покупки, геолокация, детект скриншотов, синхронизация ID.
-                // play-services-ads-identifier тянется через analytics-identifiers
-                // и объявляет com.google.android.gms.permission.AD_ID — нам не нужен.
-                exclude(group = "io.appmetrica.analytics", module = "analytics-ad-revenue")
-                exclude(group = "io.appmetrica.analytics", module = "analytics-billing")
-                exclude(group = "io.appmetrica.analytics", module = "analytics-location")
-                exclude(group = "io.appmetrica.analytics", module = "analytics-screenshot")
-                exclude(group = "io.appmetrica.analytics", module = "analytics-id-sync")
-                exclude(group = "io.appmetrica.analytics", module = "analytics-identifiers")
-                exclude(group = "com.google.android.gms", module = "play-services-ads-identifier")
-            }
+            implementation(libs.appmetrica.analytics)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -84,4 +72,15 @@ kotlin {
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
+}
+
+// AppMetrica optional modules are not used by this app.
+configurations.configureEach {
+    exclude(group = "io.appmetrica.analytics", module = "analytics-ad-revenue")
+    exclude(group = "io.appmetrica.analytics", module = "analytics-billing")
+    exclude(group = "io.appmetrica.analytics", module = "analytics-location")
+    exclude(group = "io.appmetrica.analytics", module = "analytics-screenshot")
+    exclude(group = "io.appmetrica.analytics", module = "analytics-id-sync")
+    exclude(group = "io.appmetrica.analytics", module = "analytics-identifiers")
+    exclude(group = "com.google.android.gms", module = "play-services-ads-identifier")
 }
