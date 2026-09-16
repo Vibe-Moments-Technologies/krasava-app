@@ -1,5 +1,6 @@
 package com.jetbrains.kmpapp.data.model
 
+import kotlin.concurrent.Volatile
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
