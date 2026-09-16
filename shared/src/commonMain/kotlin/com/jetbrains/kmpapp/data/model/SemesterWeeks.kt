@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.data.model
 import kotlin.concurrent.Volatile
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import kotlinx.serialization.Serializable
 
@@ -23,7 +24,13 @@ object SemesterWeeks {
     private var markers: List<WeekMarker> = emptyList()
 
     fun set(list: List<WeekMarker>) {
-        markers = list.sortedBy { it.monday }
+        // Фид может начинать неделю не с понедельника («1 неделя» осени 2026 —
+        // вторник 01.09), а UI спрашивает номер по понедельнику. Приводим к
+        // понедельнику недели, иначе день до старта маркера улетает в фолбэк.
+        markers = list
+            .map { it.copy(monday = it.monday.minus(DatePeriod(days = it.monday.dayOfWeek.ordinal))) }
+            .distinctBy { it.monday }
+            .sortedBy { it.monday }
     }
 
     fun get(): List<WeekMarker> = markers

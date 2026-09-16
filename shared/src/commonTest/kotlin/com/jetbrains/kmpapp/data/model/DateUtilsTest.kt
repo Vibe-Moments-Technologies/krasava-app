@@ -40,4 +40,23 @@ class DateUtilsTest {
         // фолбэк снова работает
         assertEquals(3, DateUtils.getWeekInfo(LocalDate(2026, 9, 16)).weekNumber)
     }
+
+    // Осень 2026: маркер «1 неделя» в фиде начинается со вторника 01.09,
+    // но понедельник 31.08 той же недели тоже должен давать неделю 1.
+    @Test
+    fun markerStartingMidWeekCoversWholeWeek() {
+        SemesterWeeks.set(
+            listOf(
+                WeekMarker(1, LocalDate(2026, 9, 1)),
+                WeekMarker(2, LocalDate(2026, 9, 7))
+            )
+        )
+        try {
+            assertEquals(1, DateUtils.getWeekInfo(LocalDate(2026, 8, 31)).weekNumber)
+            assertEquals(1, DateUtils.getWeekInfo(LocalDate(2026, 9, 1)).weekNumber)
+            assertEquals(2, DateUtils.getWeekInfo(LocalDate(2026, 9, 7)).weekNumber)
+        } finally {
+            SemesterWeeks.set(emptyList())
+        }
+    }
 }
