@@ -1,5 +1,6 @@
 package com.jetbrains.kmpapp.screens.other
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -178,7 +179,7 @@ private fun LicenseItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
-            .then(onClick?.let { androidx.compose.foundation.clickable(onClick = it) } ?: Modifier)
+            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
             .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
