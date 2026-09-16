@@ -123,8 +123,16 @@ fun OtherScreen(
                     AboutScreen(
                         viewModel = viewModel,
                         onBack = back,
-                        onOpenDebugMenu = { viewModel.navigateToSubScreen(OtherSubScreen.DEBUG_SETTINGS) }
+                        onOpenDebugMenu = { viewModel.navigateToSubScreen(OtherSubScreen.DEBUG_SETTINGS) },
+                        onOpenTeam = { viewModel.navigateToSubScreen(OtherSubScreen.TEAM) },
+                        onOpenLicenses = { viewModel.navigateToSubScreen(OtherSubScreen.LICENSES) }
                     )
+                }
+                OtherSubScreen.TEAM -> {
+                    TeamScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.LICENSES -> {
+                    LicensesScreen(onBack = back)
                 }
                 OtherSubScreen.DEBUG_SETTINGS -> {
                     DebugSettingsScreen(

@@ -1,13 +1,9 @@
 package com.jetbrains.kmpapp.screens.other
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,50 +16,39 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.BugReport
-import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import com.jetbrains.kmpapp.data.model.AppVersion
-import com.jetbrains.kmpapp.data.model.GitHubContributor
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kmp_app_template.shared.generated.resources.Res
 import kmp_app_template.shared.generated.resources.appicon_new_dark
@@ -75,21 +60,16 @@ fun AboutScreen(
     viewModel: OtherViewModel,
     onBack: () -> Unit,
     onOpenDebugMenu: () -> Unit,
+    onOpenTeam: () -> Unit,
+    onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
     val uriHandler = LocalUriHandler.current
 
-    val contributors by viewModel.contributors.collectAsState()
-    val isLoadingContributors by viewModel.isLoadingContributors.collectAsState()
-
-    // Easter Egg: 8 taps on version text to unlock debug menu
+    // Easter Egg: 8 тапов по блоку версии — вход в отладочное меню
     var tapCount by remember { mutableIntStateOf(0) }
     var lastTapMark by remember { mutableStateOf<kotlin.time.TimeMark?>(null) }
-
-    LaunchedEffect(Unit) {
-        viewModel.loadContributors()
-    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -116,24 +96,17 @@ fun AboutScreen(
                 )
             }
         },
-        modifier = modifier
-            .fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Иконка приложения — тот же вариант, что выбрала бы система по
-            // теме: в тёмной теме тёмная, в светлой светлая. Тему берём по
-            // фактической яркости фона, поэтому это работает и для «как в
-            // системе», и для тематических оформлений.
             val isDarkTheme = MaterialTheme.colorScheme.background.luminance() < 0.5f
             Image(
                 painter = painterResource(
@@ -141,14 +114,15 @@ fun AboutScreen(
                 ),
                 contentDescription = "Иконка приложения",
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(84.dp)
                     .clip(RoundedCornerShape(20.dp))
             )
 
+            // Блок версии с easter egg на 8 тапов
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.clickable(
-                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {
                     val mark = lastTapMark
@@ -176,282 +150,108 @@ fun AboutScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            // Project Repository Card
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Проект на GitHub",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Verified,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Открытый исходный код, документация и релизы приложения.",
-                        style = MaterialTheme.typography.bodySmall,
+                        text = "Неофициальное приложение · © 2026 l1ratch",
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedButton(
-                        onClick = { uriHandler.openUri(AppVersion.GITHUB_REPO_URL) },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = AppVersion.GITHUB_REPO,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
                 }
             }
 
-            // Contributors Card (Replacing tech block)
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth()
+            // Два пункта: команда и лицензии
+            NavCard(
+                icon = Icons.Default.Group,
+                title = "Команда проекта",
+                subtitle = "Разработчики и контрибьюторы",
+                onClick = onOpenTeam
+            )
+            NavCard(
+                icon = Icons.Default.Description,
+                title = "Лицензии и источники",
+                subtitle = "GPL v3, библиотеки, данные, документы",
+                onClick = onOpenLicenses
+            )
+
+            // Ссылка на GitHub — одна строка, не карточка
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { uriHandler.openUri(AppVersion.GITHUB_REPO_URL) }
+                    .padding(vertical = 10.dp, horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Group,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Участники проекта",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-
-                        if (isLoadingContributors) {
-                            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    contributors.forEachIndexed { index, contributor ->
-                        if (index > 0) {
-                            androidx.compose.material3.HorizontalDivider(
-                                modifier = Modifier.padding(vertical = 10.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                            )
-                        }
-
-                        ContributorRow(
-                            contributor = contributor,
-                            onClick = { uriHandler.openUri(contributor.htmlUrl) }
-                        )
-                    }
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = "Исходный код на GitHub",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
-            // Resources and Acknowledgments Card
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Favorite,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Используемые ресурсы и благодарности",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // 1. Map credit
-                    AcknowledgmentItem(
-                        title = "Схемы и карты корпусов",
-                        description = "pulse.mirea.ru и проект university-app (0niel)",
-                        onClick = { uriHandler.openUri("https://pulse.mirea.ru/services/maps") }
-                    )
-
-                    androidx.compose.material3.HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                    )
-
-                    // 2. Schedule API credit
-                    AcknowledgmentItem(
-                        title = "Данные расписания занятий",
-                        description = "РТУ МИРЭА Schedule API"
-                    )
-
-                    androidx.compose.material3.HorizontalDivider(
-                        modifier = Modifier.padding(vertical = 10.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
-                    )
-
-                    // 3. Open Source
-                    Column {
-                        Text(
-                            text = "Технологии с открытым кодом",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Compose Multiplatform, Kotlin Coroutines, Ktor Client, Coil 3, Material Design 3",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 11.5.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(48.dp))
         }
     }
 }
 
 @Composable
-private fun AcknowledgmentItem(
+private fun NavCard(
+    icon: ImageVector,
     title: String,
-    description: String,
-    onClick: (() -> Unit)? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 11.5.sp
-            )
-        }
-        if (onClick != null) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                contentDescription = "Открыть",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun ContributorRow(
-    contributor: GitHubContributor,
+    subtitle: String,
     onClick: () -> Unit
 ) {
-    Row(
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            if (contributor.avatarUrl != null) {
-                AsyncImage(
-                    model = contributor.avatarUrl,
-                    contentDescription = contributor.login,
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = contributor.login.take(1).uppercase(),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
+        Row(
+            modifier = Modifier.padding(18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = contributor.login,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = contributor.role ?: "Контрибьютор (${contributor.contributions} коммитов)",
-                    fontSize = 11.sp,
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
+            )
         }
-
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-            contentDescription = "Открыть профиль",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            modifier = Modifier.size(16.dp)
-        )
     }
 }
