@@ -1,13 +1,56 @@
-﻿package com.jetbrains.kmpapp.data.parser
+package com.jetbrains.kmpapp.data.parser
 
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonType
+import com.jetbrains.kmpapp.data.model.WeekMarker
 import com.jetbrains.kmpapp.data.model.defaultBells
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.plus
 
 object MireaICalParser {
+
+    private val WEEK_SUMMARY_REGEX = Regex("""^(\d+)\s+недел""", RegexOption.IGNORE_CASE)
+
+    /**
+     * Маркеры недель из фида: события «N неделя» (VALUE=DATE, TRANSP:TRANSPARENT),
+     * DTSTART всегда понедельник. Источник истины для нумерации недель.
+     */
+    fun parseWeekMarkers(rawIcal: String): List<WeekMarker> {
+        val markers = mutableListOf<WeekMarker>()
+        var inEvent = false
+        var summary: String? = null
+        var dtStart: String? = null
+        var transparent = false
+        for (line in unfoldLines(rawIcal)) {
+            val trimmed = line.trim()
+            when {
+                trimmed == "BEGIN:VEVENT" -> {
+                    inEvent = true; summary = null; dtStart = null; transparent = false
+                }
+                trimmed == "END:VEVENT" -> {
+                    if (inEvent && transparent && summary != null && dtStart != null) {
+                        val number = WEEK_SUMMARY_REGEX.find(summary)?.groupValues?.get(1)?.toIntOrNull()
+                        val date = parseDate(dtStart)
+                        if (number != null && date != null) {
+                            markers.add(WeekMarker(number, date))
+                        }
+                    }
+                    inEvent = false
+                }
+                inEvent -> {
+                    val key = trimmed.substringBefore(':', "").split(';')[0].uppercase()
+                    val value = trimmed.substringAfter(':', "")
+                    when (key) {
+                        "SUMMARY" -> summary = value
+                        "DTSTART" -> dtStart = value
+                        "TRANSP" -> transparent = value.equals("TRANSPARENT", ignoreCase = true)
+                    }
+                }
+            }
+        }
+        return markers.sortedBy { it.monday }
+    }
 
     fun parse(rawIcal: String): List<Lesson> {
         val unfolded = unfoldLines(rawIcal)

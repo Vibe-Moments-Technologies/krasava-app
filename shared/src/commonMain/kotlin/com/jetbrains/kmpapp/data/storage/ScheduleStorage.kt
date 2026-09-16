@@ -235,6 +235,9 @@ class ScheduleStorage(
             val activeId = activeIdStr?.toIntOrNull()
             val selected = targets.firstOrNull { it.id == activeId } ?: targets.firstOrNull()
             _selectedTarget.value = selected
+            selected?.let {
+                com.jetbrains.kmpapp.data.model.SemesterWeeks.set(loadWeekMarkers(it.id))
+            }
         } catch (_: Throwable) {}
     }
 
@@ -529,6 +532,10 @@ class ScheduleStorage(
         lastSyncTimes.remove(targetId)
         platformStorage.remove(KEY_LESSONS_PREFIX + targetId)
         platformStorage.remove(KEY_LAST_SYNC_PREFIX + targetId)
+        platformStorage.remove(KEY_WEEK_MARKERS_PREFIX + targetId)
+        _selectedTarget.value?.let {
+            com.jetbrains.kmpapp.data.model.SemesterWeeks.set(loadWeekMarkers(it.id))
+        }
         persistTargets()
         if (removed != null) {
             AppAnalytics.logEvent(
@@ -544,6 +551,9 @@ class ScheduleStorage(
     fun selectTarget(target: ScheduleTarget?) {
         _selectedTarget.value = target
         persistSelectedTargetId(target?.id)
+        com.jetbrains.kmpapp.data.model.SemesterWeeks.set(
+            target?.let { loadWeekMarkers(it.id) } ?: emptyList()
+        )
     }
 
     fun selectTargetById(targetId: Int) {
@@ -564,6 +574,29 @@ class ScheduleStorage(
                 println("Failed to persist lessons for $targetId: ${e.message}")
             }
         }
+    }
+
+    /** Маркеры недель из iCal-фида: активная цель определяет нумерацию в UI. */
+    fun saveWeekMarkers(targetId: Int, markers: List<com.jetbrains.kmpapp.data.model.WeekMarker>) {
+        if (markers.isEmpty()) return
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_WEEK_MARKERS_PREFIX + targetId, json.encodeToString(markers))
+            } catch (e: Exception) {
+                println("Failed to persist week markers for $targetId: ${e.message}")
+            }
+        }
+        if (_selectedTarget.value?.id == targetId) {
+            com.jetbrains.kmpapp.data.model.SemesterWeeks.set(markers)
+        }
+    }
+
+    fun loadWeekMarkers(targetId: Int): List<com.jetbrains.kmpapp.data.model.WeekMarker> = try {
+        val s = platformStorage.getString(KEY_WEEK_MARKERS_PREFIX + targetId)
+        if (s.isNullOrBlank()) emptyList()
+        else try { json.decodeFromString(s) } catch (_: Throwable) { emptyList() }
+    } catch (_: Throwable) {
+        emptyList()
     }
 
     fun getLessons(targetId: Int): List<Lesson>? {
@@ -596,7 +629,9 @@ class ScheduleStorage(
         for (target in _savedTargets.value) {
             platformStorage.remove(KEY_LESSONS_PREFIX + target.id)
             platformStorage.remove(KEY_LAST_SYNC_PREFIX + target.id)
+            platformStorage.remove(KEY_WEEK_MARKERS_PREFIX + target.id)
         }
+        com.jetbrains.kmpapp.data.model.SemesterWeeks.set(emptyList())
     }
 
     fun resetAllData() {
@@ -631,6 +666,7 @@ class ScheduleStorage(
         _askBeforeNoteDelete.value = askBeforeNoteDeleteBefore
         _notePages.value = com.jetbrains.kmpapp.data.model.defaultNotePages()
         lastSyncTimes.clear()
+        com.jetbrains.kmpapp.data.model.SemesterWeeks.set(emptyList())
         scope.launch {
             if (cheatsAgreedBefore == null) platformStorage.remove(KEY_CHEATS_AGREED)
             else platformStorage.saveString(KEY_CHEATS_AGREED, cheatsAgreedBefore.toString())
@@ -710,6 +746,7 @@ class ScheduleStorage(
         private const val KEY_SAVED_TARGETS = "mirea_saved_targets"
         private const val KEY_SELECTED_TARGET_ID = "mirea_selected_target_id"
         private const val KEY_LESSONS_PREFIX = "mirea_lessons_"
+        private const val KEY_WEEK_MARKERS_PREFIX = "mirea_week_markers_"
         private const val KEY_LAST_SYNC_PREFIX = "mirea_last_sync_"
         private const val KEY_SHOW_EMPTY_LESSONS = "mirea_show_empty_lessons"
         private const val KEY_SHOW_LESSON_PROGRESS = "mirea_show_lesson_progress"

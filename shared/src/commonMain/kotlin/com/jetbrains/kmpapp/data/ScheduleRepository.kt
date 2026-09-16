@@ -284,6 +284,7 @@ class ScheduleRepository(
             val parsedLessons = MireaICalParser.parse(ical)
             val oldLessons = storage.getLessons(target.id)
             storage.saveLessons(target.id, parsedLessons)
+            storage.saveWeekMarkers(target.id, MireaICalParser.parseWeekMarkers(ical))
             val now = Clock.System.now().toEpochMilliseconds()
             storage.setLastSyncTime(target.id, now)
             _errorMessage.value = null

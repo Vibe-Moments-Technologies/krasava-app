@@ -33,6 +33,16 @@ object DateUtils {
     }
 
     fun getWeekInfo(date: LocalDate): SemesterWeekInfo {
+        // Источник истины — маркеры недель из iCal-фида; расчёт ниже — фолбэк,
+        // пока фид не загружен или не покрывает дату.
+        val weekNumber = SemesterWeeks.weekNumberFor(date) ?: computedWeekNumber(date)
+        return SemesterWeekInfo(
+            weekNumber = weekNumber.coerceAtLeast(1),
+            isEven = weekNumber % 2 == 0
+        )
+    }
+
+    private fun computedWeekNumber(date: LocalDate): Int {
         val monthNum = date.month.ordinal + 1
         val semesterStart = if (monthNum in 2..8) {
             LocalDate(date.year, 2, 9)
@@ -46,13 +56,7 @@ object DateUtils {
         val dayOfWeekIndex = semesterStart.dayOfWeek.ordinal // MONDAY=0 в kotlinx.datetime
         val firstWeekMonday = semesterStart.minus(DatePeriod(days = dayOfWeekIndex))
         val daysBetween = firstWeekMonday.daysUntil(date)
-        val weekNumber = if (daysBetween >= 0) (daysBetween / 7) + 1 else 1
-        val isEven = weekNumber % 2 == 0
-
-        return SemesterWeekInfo(
-            weekNumber = weekNumber.coerceAtLeast(1),
-            isEven = isEven
-        )
+        return if (daysBetween >= 0) (daysBetween / 7) + 1 else 1
     }
 
     fun formatDayOfWeekShort(dayOfWeek: DayOfWeek): String {

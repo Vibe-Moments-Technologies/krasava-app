@@ -28,4 +28,16 @@ class DateUtilsTest {
         assertTrue(DateUtils.getWeekInfo(LocalDate(2026, 9, 7)).isEven)
         assertFalse(DateUtils.getWeekInfo(LocalDate(2026, 9, 16)).isEven)
     }
+
+    @Test
+    fun feedMarkersTakePrecedenceOverCalculation() {
+        SemesterWeeks.set(listOf(WeekMarker(5, LocalDate(2026, 9, 14))))
+        try {
+            assertEquals(5, DateUtils.getWeekInfo(LocalDate(2026, 9, 16)).weekNumber)
+        } finally {
+            SemesterWeeks.set(emptyList())
+        }
+        // фолбэк снова работает
+        assertEquals(3, DateUtils.getWeekInfo(LocalDate(2026, 9, 16)).weekNumber)
+    }
 }
