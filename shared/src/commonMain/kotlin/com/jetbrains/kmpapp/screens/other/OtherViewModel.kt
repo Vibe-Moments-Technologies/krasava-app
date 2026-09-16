@@ -186,61 +186,9 @@ class OtherViewModel(
         _storageStats.value = repository.getStorageStats()
     }
 
-    private val _contributors = MutableStateFlow<List<com.jetbrains.kmpapp.data.model.GitHubContributor>>(
-        listOf(
-            com.jetbrains.kmpapp.data.model.GitHubContributor(
-                login = "l1ratch",
-                htmlUrl = "https://github.com/l1ratch",
-                avatarUrl = "https://avatars.githubusercontent.com/u/103525164?v=4",
-                contributions = 14,
-                role = "Создатель и ведущий разработчик"
-            ),
-            com.jetbrains.kmpapp.data.model.GitHubContributor(
-                login = "prosto-max",
-                htmlUrl = "https://github.com/prosto-max",
-                avatarUrl = "https://avatars.githubusercontent.com/u/151039381?v=4",
-                contributions = 5,
-                role = "Соавтор и разработчик"
-            )
-        )
-    )
-    val contributors: StateFlow<List<com.jetbrains.kmpapp.data.model.GitHubContributor>> = _contributors.asStateFlow()
-
-    private val _isLoadingContributors = MutableStateFlow(false)
-    val isLoadingContributors: StateFlow<Boolean> = _isLoadingContributors.asStateFlow()
-
-    fun loadContributors() {
-        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                _isLoadingContributors.value = true
-                val fetched = updateChecker.fetchContributors(forceRefresh = true)
-                val l1ratchFromApi = fetched.find { it.login.equals("l1ratch", ignoreCase = true) }
-                val prostoMaxFromApi = fetched.find { it.login.equals("prosto-max", ignoreCase = true) }
-                val staticLead = com.jetbrains.kmpapp.data.model.GitHubContributor(
-                    login = "l1ratch",
-                    htmlUrl = "https://github.com/l1ratch",
-                    avatarUrl = l1ratchFromApi?.avatarUrl ?: "https://avatars.githubusercontent.com/u/103525164?v=4",
-                    contributions = l1ratchFromApi?.contributions ?: 14,
-                    role = "Создатель и ведущий разработчик"
-                )
-                val coAuthor = com.jetbrains.kmpapp.data.model.GitHubContributor(
-                    login = "prosto-max",
-                    htmlUrl = "https://github.com/prosto-max",
-                    avatarUrl = prostoMaxFromApi?.avatarUrl ?: "https://github.com/prosto-max.png",
-                    contributions = prostoMaxFromApi?.contributions ?: 5,
-                    role = "Соавтор и разработчик"
-                )
-                val otherContributors = fetched.filterNot {
-                    it.login.equals("l1ratch", ignoreCase = true) || it.login.equals("prosto-max", ignoreCase = true)
-                }
-                _contributors.value = listOf(staticLead, coAuthor) + otherContributors
-            } catch (t: Throwable) {
-                println("Failed to load contributors: ${t.message}")
-            } finally {
-                _isLoadingContributors.value = false
-            }
-        }
-    }
+    // Команда проекта показывается из захардкоженного списка TeamMembers
+    // (аватарки — в ресурсах); подгрузка контрибьюторов из GitHub удалена,
+    // чтобы экран не зависел от сети.
 
     private val _updateResult = MutableStateFlow<UpdateCheckResult?>(null)
     val updateResult: StateFlow<UpdateCheckResult?> = _updateResult.asStateFlow()

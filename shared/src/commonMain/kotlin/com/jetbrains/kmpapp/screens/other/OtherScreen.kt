@@ -121,7 +121,6 @@ fun OtherScreen(
                 }
                 OtherSubScreen.ABOUT -> {
                     AboutScreen(
-                        viewModel = viewModel,
                         onBack = back,
                         onOpenDebugMenu = { viewModel.navigateToSubScreen(OtherSubScreen.DEBUG_SETTINGS) },
                         onOpenTeam = { viewModel.navigateToSubScreen(OtherSubScreen.TEAM) },
@@ -129,7 +128,7 @@ fun OtherScreen(
                     )
                 }
                 OtherSubScreen.TEAM -> {
-                    TeamScreen(viewModel = viewModel, onBack = back)
+                    TeamScreen(onBack = back)
                 }
                 OtherSubScreen.LICENSES -> {
                     LicensesScreen(onBack = back)

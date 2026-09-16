@@ -1,30 +1,42 @@
 package com.jetbrains.kmpapp.screens.other
 
+import org.jetbrains.compose.resources.DrawableResource
+import kmp_app_template.shared.generated.resources.Res
+import kmp_app_template.shared.generated.resources.team_l1ratch
+import kmp_app_template.shared.generated.resources.team_prosto_max
+
 /**
  * Команда проекта — декларативный список в коде (не «конструктор»):
- * новые участники = одна строка в списке ниже.
+ * новый участник = строка в [projectTeam]. Аватарки захардкожены
+ * ресурсами, чтобы не тянуть их с сети при каждом открытии экрана.
  */
-enum class TeamRank(val label: String) {
-    OWNER("Владелец"),
-    CORE("Команда"),
-    CONTRIBUTOR("Контрибьютор"),
-    ALUMNI("Участник прошлого"),
-    THANKS("Благодарности")
-}
-
 data class TeamMember(
     val name: String,
     val role: String,
-    val rank: TeamRank,
+    val department: String,
     val description: String? = null,
+    val avatar: DrawableResource? = null,
     val githubUrl: String? = null
 )
 
+/** Отделы для будущей группировки; карточки выводятся по этому порядку. */
+val teamDepartments = listOf("Разработка")
+
 val projectTeam = listOf(
     TeamMember(
-        name = "l1ratch",
-        role = "Разработка и поддержка",
-        rank = TeamRank.OWNER,
+        name = "Линк (l1ratch)",
+        role = "Разработчик",
+        department = "Разработка",
+        description = "Создание и поддержка приложения, архитектура, релизы.",
+        avatar = Res.drawable.team_l1ratch,
         githubUrl = "https://github.com/l1ratch"
+    ),
+    TeamMember(
+        name = "prosto-max",
+        role = "Разработчик",
+        department = "Разработка",
+        description = "Разработка функций и улучшения приложения.",
+        avatar = Res.drawable.team_prosto_max,
+        githubUrl = "https://github.com/prosto-max"
     )
 )
