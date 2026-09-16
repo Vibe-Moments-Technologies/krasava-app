@@ -40,6 +40,7 @@ import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.update.UpdateCheckResult
 import com.jetbrains.kmpapp.data.update.UpdateUrgency
+import com.jetbrains.kmpapp.data.update.startPlatformUpdate
 import com.jetbrains.kmpapp.screens.components.AppTab
 
 /** Концентратор вкладок, спрятанных из дока (виден только если такие есть). */
@@ -119,8 +120,6 @@ internal fun UpdateStatusCard(
     isCheckingUpdate: Boolean,
     onCheckForUpdates: () -> Unit
 ) {
-    val uriHandler = LocalUriHandler.current
-
     val urgency = updateResult?.urgency ?: UpdateUrgency.UP_TO_DATE
     val hasUpdate = updateResult?.hasUpdate == true
     val isPrereleaseUpdate = updateResult?.isPrerelease == true
@@ -185,10 +184,13 @@ internal fun UpdateStatusCard(
                         "update_open",
                         mapOf("version" to (updateResult?.latestVersion ?: "?"))
                     )
-                    val url = updateResult?.downloadUrl
-                        ?: updateResult?.releaseUrl
-                        ?: AppVersion.GITHUB_REPO_URL
-                    uriHandler.openUri(url)
+                    // Платформенное обновление: Android качает APK сам,
+                    // iOS открывает страницу релиза (download_url в старых
+                    // фидах мог быть папкой releases/download/ → 404)
+                    startPlatformUpdate(
+                        browserUrl = updateResult?.releaseUrl ?: AppVersion.GITHUB_REPO_URL,
+                        apkUrl = updateResult?.apkUrl
+                    )
                 } else {
                     onCheckForUpdates()
                 }

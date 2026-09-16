@@ -86,12 +86,12 @@ class AppUpdateChecker(
     }
 
     suspend fun checkForUpdates(includeBeta: Boolean = false): UpdateCheckResult? = withContext(Dispatchers.IO) {
-        if (AppVersion.isTestBuild && !includeBeta) {
-            return@withContext upToDateResult()
-        }
+        // Тестовые (dev/beta/rc) сборки живут в бета-канале: им проверка нужна
+        // всегда, иначе без тумблера «Бета-канал» кнопка проверки мертва.
+        val checkBeta = includeBeta || AppVersion.isTestBuild
 
         val stableResult = fetchFeedResult(AppVersion.UPDATE_FEED_URL, channel = "stable", isPrerelease = false)
-        val betaResult = if (includeBeta) {
+        val betaResult = if (checkBeta) {
             fetchFeedResult(AppVersion.BETA_FEED_URL, channel = "beta", isPrerelease = true)
         } else {
             null
@@ -199,18 +199,6 @@ class AppUpdateChecker(
             null
         }
     }
-
-    private fun upToDateResult() = UpdateCheckResult(
-        urgency = UpdateUrgency.UP_TO_DATE,
-        latestVersion = AppVersion.VERSION_NAME,
-        latestBuild = AppVersion.BUILD_NUMBER,
-        currentVersion = AppVersion.VERSION_NAME,
-        currentBuild = AppVersion.BUILD_NUMBER,
-        downloadUrl = "https://github.com/$GITHUB_REPO/releases/latest",
-        releaseUrl = "https://github.com/$GITHUB_REPO/releases/latest",
-        channel = AppVersion.BUILD_CHANNEL,
-        isPrerelease = AppVersion.isTestBuild
-    )
 
     suspend fun fetchContributors(forceRefresh: Boolean = false): List<com.jetbrains.kmpapp.data.model.GitHubContributor> = withContext(Dispatchers.IO) {
         try {

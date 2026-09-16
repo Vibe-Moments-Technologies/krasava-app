@@ -62,7 +62,8 @@ def asset_urls(repo, channel, version):
     if channel in ("beta", "rc"):
         base = f"https://github.com/{repo}/releases/download/v{version}"
         return {
-            "download_url": base,
+            # Страница релиза, а не папка download/ (она отдаёт 404)
+            "download_url": f"https://github.com/{repo}/releases/tag/v{version}",
             "apk_url": f"{base}/Schedule-MIREA-v{version}.apk",
             "ipa_url": f"{base}/Schedule-MIREA-v{version}.ipa",
         }
