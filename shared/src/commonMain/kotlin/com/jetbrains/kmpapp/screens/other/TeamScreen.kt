@@ -112,11 +112,14 @@ fun TeamScreen(
 
 @Composable
 private fun TeamMemberCard(member: TeamMember, onClick: (() -> Unit)?) {
+    // clip ДО clickable — иначе ripple рисуется по прямоугольнику и
+    // его углы вылезают за скругление карточки
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
             .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
     ) {
         Row(

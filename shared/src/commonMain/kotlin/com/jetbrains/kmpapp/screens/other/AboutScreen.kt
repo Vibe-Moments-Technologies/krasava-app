@@ -147,9 +147,16 @@ fun AboutScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "© 2026 l1ratch · Расписание РТУ МИРЭА",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "© 2026 Vibe Moments Technologies",
+                    fontSize = 12.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Наши права защищены",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
@@ -193,6 +200,7 @@ private fun NavCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
     ) {
         Row(

@@ -114,14 +114,12 @@ fun LicensesScreen(
             SectionCard(title = "Данные и карты") {
                 LicenseItem(
                     title = "Данные расписания занятий",
-                    description = "РТУ МИРЭА Schedule API (schedule-of.mirea.ru).",
-                    onClick = { uriHandler.openUri("https://schedule-of.mirea.ru") }
+                    description = "Официальный Schedule API университета."
                 )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
                 LicenseItem(
                     title = "Схемы и карты корпусов",
-                    description = "pulse.mirea.ru и проект university-app (0niel).",
-                    onClick = { uriHandler.openUri("https://pulse.mirea.ru/services/maps") }
+                    description = "Студенческие сервисы университета."
                 )
             }
 
