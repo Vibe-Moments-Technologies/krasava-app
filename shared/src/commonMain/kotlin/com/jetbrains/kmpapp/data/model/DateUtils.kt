@@ -41,7 +41,11 @@ object DateUtils {
             LocalDate(startYear, 9, 1)
         }
 
-        val daysBetween = semesterStart.daysUntil(date)
+        // Отсчёт недель — от понедельника недели начала семестра, иначе
+        // неполная первая неделя съедает номер у всех последующих (сентябрь 2026: 1-е — вторник).
+        val dayOfWeekIndex = semesterStart.dayOfWeek.ordinal // MONDAY=0 в kotlinx.datetime
+        val firstWeekMonday = semesterStart.minus(DatePeriod(days = dayOfWeekIndex))
+        val daysBetween = firstWeekMonday.daysUntil(date)
         val weekNumber = if (daysBetween >= 0) (daysBetween / 7) + 1 else 1
         val isEven = weekNumber % 2 == 0
 
