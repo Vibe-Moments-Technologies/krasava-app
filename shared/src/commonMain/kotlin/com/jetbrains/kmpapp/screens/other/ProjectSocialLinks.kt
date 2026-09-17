@@ -158,14 +158,16 @@ private fun SocialIcon(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // Широкие лого (Discord 640×512) впишем высотой 18dp — иначе
-        // квадратная Icon-рамка их сплющит
+        // Широкие лого (Discord 640×512): оба размера явно из пропорции
+        // вьюпорта, иначе Icon сплющивает по одному измерению
         val isWide = icon.viewportWidth > icon.viewportHeight * 1.1f
+        val h = if (isWide) 18.dp else 20.dp
+        val w = if (isWide) h * icon.viewportWidth / icon.viewportHeight else h
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint,
-            modifier = if (isWide) Modifier.height(18.dp) else Modifier.size(20.dp)
+            modifier = Modifier.size(width = w, height = h)
         )
     }
 }
