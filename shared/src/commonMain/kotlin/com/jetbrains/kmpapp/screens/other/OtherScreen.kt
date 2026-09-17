@@ -290,10 +290,9 @@ private fun OtherMainContent(
                 onCheckForUpdates = { viewModel.checkForUpdates() }
             )
 
-            // 5. GitHub Issues Feedback Card
-            GitHubIssuesCard()
-
-            // 6. Ссылки на соцсети проекта — намеренно без рамок и фона.
+            // 5. Ссылки на соцсети проекта — намеренно без рамок и фона.
+            // «Есть проблема или идея?» живёт в «О программе» — дубль с
+            // главной убран ради вертикального бюджета страницы.
             Spacer(modifier = Modifier.height(2.dp))
             ProjectSocialLinks()
         }
