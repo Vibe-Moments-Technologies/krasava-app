@@ -1,23 +1,26 @@
 package com.jetbrains.kmpapp.screens.other
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,30 +29,31 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.AppVersion
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 /** Канал проекта в Telegram. */
 private const val TELEGRAM_URL = "https://t.me/MIREA_Schedule"
 
 /**
- * Блок-ссылки на соцсети проекта: квадратные кнопки-иконки без подписей
- * (по иконкам и так понятно). Discord и Boosty — заглушки «скоро».
+ * Блок-ссылки на соцсети проекта: квадратные кнопки-иконки без подписей.
+ * Discord и Boosty — заглушки: показывают тематический тост «скоро».
  */
 @Composable
 internal fun ProjectSocialLinks() {
     val uriHandler = LocalUriHandler.current
-    val snackbar = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+    var toastMessage by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            IconButton(
+            SocialIcon(
                 icon = GitHubMark,
                 tint = MaterialTheme.colorScheme.onSurface,
                 contentDescription = "GitHub",
@@ -59,7 +63,7 @@ internal fun ProjectSocialLinks() {
                 },
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
+            SocialIcon(
                 icon = TelegramMark,
                 tint = Color(0xFF29A9EB),
                 contentDescription = "Telegram",
@@ -69,38 +73,76 @@ internal fun ProjectSocialLinks() {
                 },
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
+            SocialIcon(
                 icon = DiscordMark,
                 tint = Color(0xFF5865F2),
                 contentDescription = "Discord",
                 onClick = {
                     AppAnalytics.logEvent("social_open", mapOf("network" to "discord"))
-                    scope.launch { snackbar.showSnackbar("Discord-сервер скоро появится") }
+                    toastMessage = "Discord-сервер скоро появится"
                 },
                 modifier = Modifier.weight(1f)
             )
-            IconButton(
+            SocialIcon(
                 icon = BoostyMark,
                 tint = Color(0xFFF15F2F),
                 contentDescription = "Boosty",
                 onClick = {
                     AppAnalytics.logEvent("social_open", mapOf("network" to "boosty"))
-                    scope.launch { snackbar.showSnackbar("Поддержка разработчиков скоро появится") }
+                    toastMessage = "Поддержка разработчиков скоро появится"
                 },
                 modifier = Modifier.weight(1f)
             )
         }
-        // снекбар поверх кнопок: экран не скроллится, обычный Scaffold-хост
-        // снизу перекрыт доком
-        SnackbarHost(
-            hostState = snackbar,
+        ComingSoonToast(
+            message = toastMessage,
+            onDismiss = { toastMessage = null },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
 }
 
+/**
+ * Лёгкий тост в теме приложения: fade-анимация, автоскрытие ~2.5с, тап
+ * закрывает. Проще и тише системного снекбара, который рвёт тему.
+ */
 @Composable
-private fun IconButton(
+private fun ComingSoonToast(
+    message: String?,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LaunchedEffect(message) {
+        if (message != null) {
+            delay(2500)
+            onDismiss()
+        }
+    }
+    AnimatedVisibility(
+        visible = message != null,
+        enter = fadeIn(),
+        exit = fadeOut(),
+        modifier = modifier
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                .clickable(onClick = onDismiss)
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+        ) {
+            Text(
+                text = message ?: "",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun SocialIcon(
     icon: ImageVector,
     tint: Color,
     contentDescription: String,
@@ -109,7 +151,7 @@ private fun IconButton(
 ) {
     Box(
         modifier = modifier
-            .height(44.dp)
+            .size(44.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(MaterialTheme.colorScheme.surfaceContainer)
             .clickable(onClick = onClick),
@@ -205,7 +247,7 @@ private val TelegramMark: ImageVector by lazy {
     }.build()
 }
 
-/** Логотип Discord (Simple Icons, 24×24). */
+/** Логотип Discord (Simple Icons, 24×24 — точный путь). */
 private val DiscordMark: ImageVector by lazy {
     ImageVector.Builder(
         name = "DiscordMark",
@@ -216,54 +258,54 @@ private val DiscordMark: ImageVector by lazy {
     ).apply {
         path(fill = SolidColor(Color(0xFF5865F2))) {
             moveTo(20.317f, 4.3698f)
-            curveTo(19.788f, 4.1283f, 19.231f, 3.9273f, 18.654f, 3.7723f)
-            curveTo(18.596f, 3.7608f, 18.538f, 3.7878f, 18.508f, 3.8408f)
-            curveTo(18.443f, 3.9568f, 18.371f, 4.1038f, 18.321f, 4.2223f)
-            curveTo(17.7f, 4.1293f, 17.054f, 4.0758f, 16.4f, 4.0758f)
-            curveTo(15.746f, 4.0758f, 15.1f, 4.1293f, 14.479f, 4.2223f)
-            curveTo(14.429f, 4.1013f, 14.355f, 3.9568f, 14.29f, 3.8408f)
-            curveTo(14.26f, 3.7883f, 14.202f, 3.7613f, 14.144f, 3.7723f)
-            curveTo(13.568f, 3.9268f, 13.011f, 4.1278f, 12.481f, 4.3698f)
-            curveTo(12.457f, 4.3798f, 12.436f, 4.3983f, 12.423f, 4.4223f)
-            curveTo(11.398f, 5.9558f, 10.895f, 7.4898f, 10.821f, 9.0088f)
-            curveTo(10.819f, 9.0363f, 10.832f, 9.0628f, 10.853f, 9.0793f)
-            curveTo(11.377f, 9.4648f, 11.885f, 9.7053f, 12.383f, 9.8648f)
-            curveTo(12.428f, 9.8783f, 12.476f, 9.8623f, 12.505f, 9.8233f)
-            curveTo(12.645f, 9.6323f, 12.770f, 9.4313f, 12.877f, 9.2203f)
-            curveTo(12.908f, 9.1588f, 12.877f, 9.0868f, 12.812f, 9.0623f)
-            curveTo(12.619f, 8.9893f, 12.435f, 8.9013f, 12.258f, 8.8033f)
-            curveTo(12.186f, 8.7613f, 12.181f, 8.6583f, 12.248f, 8.6103f)
-            curveTo(12.284f, 8.5838f, 12.32f, 8.5563f, 12.355f, 8.5288f)
-            curveTo(13.635f, 9.9383f, 15.014f, 10.6358f, 16.4f, 10.6358f)
-            curveTo(17.786f, 10.6358f, 19.165f, 9.9383f, 20.445f, 8.5288f)
-            curveTo(20.481f, 8.5563f, 20.516f, 8.5838f, 20.552f, 8.6103f)
-            curveTo(20.619f, 8.6583f, 20.615f, 8.7613f, 20.542f, 8.8033f)
-            curveTo(20.365f, 8.9013f, 20.181f, 8.9893f, 19.988f, 9.0623f)
-            curveTo(19.923f, 9.0868f, 19.892f, 9.1588f, 19.923f, 9.2203f)
-            curveTo(20.031f, 9.4313f, 20.155f, 9.6323f, 20.295f, 9.8233f)
-            curveTo(20.324f, 9.8623f, 20.373f, 9.8783f, 20.418f, 9.8648f)
-            curveTo(20.918f, 9.7053f, 21.426f, 9.4648f, 21.949f, 9.0793f)
-            curveTo(21.97f, 9.0628f, 21.983f, 9.0358f, 21.981f, 9.0083f)
-            curveTo(21.911f, 7.4898f, 21.408f, 5.9558f, 20.382f, 4.4223f)
-            curveTo(20.37f, 4.3983f, 20.349f, 4.3798f, 20.325f, 4.3698f)
+            curveTo(19.481f, 3.9763f, 18.6063f, 3.6952f, 17.699f, 3.5093f)
+            curveTo(17.6129f, 3.4946f, 17.5404f, 3.5405f, 17.5066f, 3.6193f)
+            curveTo(17.2956f, 3.9946f, 17.0619f, 4.4841f, 16.8983f, 4.8688f)
+            curveTo(15.0536f, 4.5926f, 13.2183f, 4.5926f, 11.4115f, 4.8688f)
+            curveTo(11.2479f, 4.4755f, 11.0057f, 3.9946f, 10.7938f, 3.6193f)
+            curveTo(10.7679f, 3.5523f, 10.6953f, 3.5093f, 10.6093f, 3.5093f)
+            curveTo(9.7019f, 3.6942f, 8.8282f, 3.9753f, 7.9914f, 4.3698f)
+            curveTo(7.972f, 4.3778f, 7.9554f, 4.3914f, 7.9473f, 4.4097f)
+            curveTo(5.7359f, 7.71f, 5.1299f, 10.9219f, 5.4234f, 14.0955f)
+            curveTo(5.4273f, 14.1149f, 5.4371f, 14.1341f, 5.4525f, 14.1462f)
+            curveTo(6.5434f, 14.9467f, 7.6006f, 15.4294f, 8.6415f, 15.7493f)
+            curveTo(8.7276f, 15.7749f, 8.8165f, 15.7424f, 8.8637f, 15.6671f)
+            curveTo(9.239f, 15.0673f, 9.5717f, 14.4324f, 9.8541f, 13.7661f)
+            curveTo(9.8961f, 13.682f, 9.8541f, 13.5838f, 9.768f, 13.5504f)
+            curveTo(9.1496f, 13.3157f, 8.5609f, 13.0294f, 7.9931f, 12.7042f)
+            curveTo(7.8978f, 12.6482f, 7.8902f, 12.513f, 7.9772f, 12.448f)
+            curveTo(8.0862f, 12.3669f, 8.196f, 12.2824f, 8.3004f, 12.1987f)
+            curveTo(8.3496f, 12.1588f, 8.4181f, 12.1506f, 8.4752f, 12.1767f)
+            curveTo(10.7527f, 13.2164f, 13.2208f, 13.2164f, 15.4625f, 12.1767f)
+            curveTo(15.5196f, 12.1497f, 15.5881f, 12.1579f, 15.6383f, 12.1971f)
+            curveTo(15.7427f, 12.2808f, 15.8525f, 12.3669f, 15.9624f, 12.4471f)
+            curveTo(16.0494f, 12.5121f, 16.0428f, 12.6473f, 15.9465f, 12.7033f)
+            curveTo(15.3787f, 13.0343f, 14.7891f, 13.3196f, 14.1716f, 13.5534f)
+            curveTo(14.0855f, 13.5868f, 14.0435f, 13.686f, 14.0865f, 13.7691f)
+            curveTo(14.3779f, 14.4344f, 14.7106f, 15.0693f, 15.0769f, 15.6682f)
+            curveTo(15.1241f, 15.7435f, 15.214f, 15.7759f, 15.3001f, 15.7493f)
+            curveTo(16.348f, 15.4294f, 17.4062f, 14.9467f, 18.4961f, 14.1462f)
+            curveTo(18.5137f, 14.1332f, 18.5247f, 14.1158f, 18.5287f, 14.0955f)
+            curveTo(18.8212f, 10.9229f, 18.2152f, 7.711f, 16.0037f, 4.4107f)
+            curveTo(16.0037f, 4.4107f, 15.9961f, 4.3975f, 15.9811f, 4.3917f)
             close()
-            moveTo(14.521f, 8.0588f)
-            curveTo(14.521f, 8.4783f, 14.215f, 8.8188f, 13.835f, 8.8188f)
-            curveTo(13.455f, 8.8188f, 13.149f, 8.4783f, 13.149f, 8.0588f)
-            curveTo(13.149f, 7.6393f, 13.455f, 7.2988f, 13.835f, 7.2988f)
-            curveTo(14.215f, 7.2988f, 14.521f, 7.6393f, 14.521f, 8.0588f)
+            moveTo(8.02f, 15.3312f)
+            curveTo(7.2611f, 15.3312f, 6.642f, 14.6419f, 6.642f, 13.7906f)
+            curveTo(6.642f, 12.9393f, 7.248f, 12.25f, 8.02f, 12.25f)
+            curveTo(8.8001f, 12.25f, 9.407f, 12.9484f, 9.398f, 13.7906f)
+            curveTo(9.398f, 14.6419f, 8.792f, 15.3312f, 8.02f, 15.3312f)
             close()
-            moveTo(19.492f, 8.0588f)
-            curveTo(19.492f, 8.4783f, 19.186f, 8.8188f, 18.806f, 8.8188f)
-            curveTo(18.426f, 8.8188f, 18.12f, 8.4783f, 18.12f, 8.0588f)
-            curveTo(18.12f, 7.6393f, 18.426f, 7.2988f, 18.806f, 7.2988f)
-            curveTo(19.186f, 7.2988f, 19.492f, 7.6393f, 19.492f, 8.0588f)
+            moveTo(15.9918f, 15.3312f)
+            curveTo(15.233f, 15.3312f, 14.6139f, 14.6419f, 14.6139f, 13.7906f)
+            curveTo(14.6139f, 12.9393f, 15.2199f, 12.25f, 15.9918f, 12.25f)
+            curveTo(16.772f, 12.25f, 17.3789f, 12.9484f, 17.3699f, 13.7906f)
+            curveTo(17.3699f, 14.6419f, 16.7639f, 15.3312f, 15.9918f, 15.3312f)
             close()
         }
     }.build()
 }
 
-/** Логотип Boosty (Simple Icons, 24×24). */
+/** Логотип Boosty (Simple Icons, 24×24 — точный путь). */
 private val BoostyMark: ImageVector by lazy {
     ImageVector.Builder(
         name = "BoostyMark",
@@ -273,31 +315,23 @@ private val BoostyMark: ImageVector by lazy {
         viewportHeight = 24f
     ).apply {
         path(fill = SolidColor(Color(0xFFF15F2F))) {
-            moveTo(11.944f, 0f)
-            curveTo(5.799f, 0f, 1.276f, 2.442f, 1.276f, 2.442f)
-            curveTo(1.276f, 2.442f, 0.733f, 3.66f, 0.733f, 5.13f)
-            curveTo(0.733f, 6.6f, 1.247f, 7.73f, 2.229f, 8.657f)
-            curveTo(3.79f, 10.14f, 6.66f, 10.774f, 8.892f, 10.774f)
-            lineTo(6.646f, 12.636f)
-            curveTo(6.279f, 12.94f, 6.279f, 13.62f, 6.646f, 13.924f)
-            lineTo(7.926f, 14.992f)
-            curveTo(8.293f, 15.296f, 8.293f, 15.977f, 7.926f, 16.281f)
-            lineTo(6.646f, 17.349f)
-            curveTo(6.279f, 17.653f, 6.279f, 18.333f, 6.646f, 18.637f)
-            lineTo(7.926f, 19.705f)
-            curveTo(8.293f, 20.009f, 8.293f, 20.69f, 7.926f, 20.994f)
-            lineTo(6.468f, 22.211f)
-            curveTo(6.248f, 22.394f, 6.139f, 22.754f, 6.139f, 23.036f)
-            curveTo(6.139f, 23.59f, 6.59f, 24f, 7.16f, 24f)
-            lineTo(11.944f, 24f)
-            curveTo(18.46f, 24f, 23.0f, 18.75f, 23.0f, 12.25f)
-            curveTo(23.0f, 12.25f, 23.267f, 0f, 11.944f, 0f)
+            moveTo(2.661f, 14.337f)
+            lineTo(6.801f, 0f)
+            lineTo(13.163f, 0f)
+            lineTo(11.88f, 4.444f)
+            lineTo(11.842f, 4.521f)
+            lineTo(8.464f, 16.254f)
+            lineTo(11.614f, 16.254f)
+            curveTo(10.293f, 19.543f, 9.264f, 22.121f, 8.528f, 23.987f)
+            curveTo(2.712f, 23.924f, 1.086f, 19.759f, 2.508f, 14.832f)
             close()
-            moveTo(11.944f, 20.78f)
-            curveTo(8.2f, 20.78f, 5.75f, 17.4f, 5.75f, 12.25f)
-            curveTo(5.75f, 7.1f, 8.2f, 3.72f, 11.944f, 3.72f)
-            curveTo(15.688f, 3.72f, 18.138f, 7.1f, 18.138f, 12.25f)
-            curveTo(18.138f, 17.4f, 15.688f, 20.78f, 11.944f, 20.78f)
+            moveTo(8.554f, 24f)
+            lineTo(16.224f, 12.965f)
+            lineTo(12.974f, 12.965f)
+            lineTo(15.804f, 5.892f)
+            curveTo(20.656f, 6.4f, 22.941f, 10.222f, 21.595f, 14.844f)
+            curveTo(20.16f, 19.81f, 14.344f, 24f, 8.68f, 24f)
+            lineTo(8.553f, 24f)
             close()
         }
     }.build()
