@@ -4,26 +4,28 @@ object MapHtmlGenerator {
 
     fun generateHtml(
         svgContent: String,
-        isDark: Boolean = true,
+        palette: MapThemePalette,
         campusId: String = "",
         showStairs: Boolean = true,
         showLabels: Boolean = true,
         showCoordinatePlane: Boolean = false
     ): String {
+        // Room numbers are authored with tailored font-sizes (20, 24, 30, 38) that fit
+        // their room geometry. Scale them all up uniformly so they stay readable while
+        // keeping their relative sizes and staying inside their rooms.
+        val embeddedSvg = scaleRoomLabels(svgContent)
+
         // 1. Parse viewBox from SVG content to extract base coordinate space
         val vbRegex = Regex("""viewBox=["']\s*([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s*["']""")
-        val vbMatch = vbRegex.find(svgContent)
+        val vbMatch = vbRegex.find(embeddedSvg)
         val origX = vbMatch?.groupValues?.get(1)?.toDoubleOrNull() ?: 0.0
         val origY = vbMatch?.groupValues?.get(2)?.toDoubleOrNull() ?: 0.0
         val origW = vbMatch?.groupValues?.get(3)?.toDoubleOrNull() ?: 4000.0
         val origH = vbMatch?.groupValues?.get(4)?.toDoubleOrNull() ?: 4000.0
 
-        // Note: We intentionally preserve the author's tailored font-size (20, 24, 30, 38)
-        // on each SVG text element so labels fit cleanly inside their room geometry without collisions.
-
         // 2. Prepare SVG root tag: inject id="map-svg", width/height 100%, preserveAspectRatio
         val svgTagRegex = Regex("""<svg\b([^>]*)>""")
-        val firstSvgMatch = svgTagRegex.find(svgContent)
+        val firstSvgMatch = svgTagRegex.find(embeddedSvg)
         val preparedSvg = if (firstSvgMatch != null) {
             var tag = firstSvgMatch.value
             tag = tag.replace(Regex("""\bwidth=["'][^"']*["']"""), "")
@@ -32,143 +34,81 @@ object MapHtmlGenerator {
             tag = tag.replace(Regex("""\bpreserveAspectRatio=["'][^"']*["']"""), "")
             tag = tag.replace(Regex("""style=["'][^"']*["']"""), "")
             val newTag = tag.replace(">", """ id="map-svg" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;height:100%;touch-action:none;overflow:visible;">""")
-            svgContent.substring(0, firstSvgMatch.range.first) + newTag + svgContent.substring(firstSvgMatch.range.last + 1)
+            embeddedSvg.substring(0, firstSvgMatch.range.first) + newTag + embeddedSvg.substring(firstSvgMatch.range.last + 1)
         } else {
-            svgContent
+            embeddedSvg
         }
 
-        val themeStyles = if (isDark) {
-            """
-            /* Official pulse maps - Dark theme */
+        val themeStyles = """
+            /* Map colors follow the active app theme */
             g[role="button"] path {
-              fill: #222b3d !important;
-              stroke: #475569 !important;
+              fill: ${palette.roomFill} !important;
+              stroke: ${palette.roomStroke} !important;
               stroke-width: 1.5px !important;
               vector-effect: non-scaling-stroke !important;
               cursor: pointer;
               transition: fill 0.15s ease, stroke 0.15s ease;
             }
             g[style*="pointer-events: none"] > path {
-              fill: #151b26 !important;
-              stroke: #334155 !important;
+              fill: ${palette.outdoorFill} !important;
+              stroke: ${palette.outdoorStroke} !important;
               stroke-width: 1px !important;
               vector-effect: non-scaling-stroke !important;
             }
             .room-label {
-              fill: #f1f5f9 !important;
+              fill: ${palette.labelFill} !important;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
               font-weight: 700 !important;
               letter-spacing: 0.25px;
-              stroke: #0f141c !important;
+              stroke: ${palette.labelHalo} !important;
               stroke-width: 3px !important;
               paint-order: stroke fill !important;
               pointer-events: none;
             }
             #markers text {
-              fill: #60a5fa !important;
+              fill: ${palette.markerText} !important;
               font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-              stroke: #0f141c !important;
+              stroke: ${palette.labelHalo} !important;
               stroke-width: 3.5px !important;
               paint-order: stroke fill !important;
               font-weight: 700 !important;
               pointer-events: none;
             }
             #markers rect {
-              fill: #1e3a8a !important;
-              stroke: #60a5fa !important;
+              fill: ${palette.markerBg} !important;
+              stroke: ${palette.markerStroke} !important;
               vector-effect: non-scaling-stroke !important;
             }
             #markers path {
-              stroke: #60a5fa !important;
+              stroke: ${palette.markerStroke} !important;
               vector-effect: non-scaling-stroke !important;
             }
             .selected-room > path {
-              fill: #2563eb !important;
-              stroke: #93c5fd !important;
+              fill: ${palette.selectedFill} !important;
+              stroke: ${palette.selectedStroke} !important;
               stroke-width: 3px !important;
               vector-effect: non-scaling-stroke !important;
             }
 
-            /* Legacy MP-1 dark theme */
-            .BigAreaPath { fill: #151b26 !important; stroke: #334155 !important; vector-effect: non-scaling-stroke !important; }
-            rect[fill="#F8F8F8"] { fill: #151b26 !important; stroke: #334155 !important; vector-effect: non-scaling-stroke !important; }
-            rect[fill="#fff"], rect[fill="#FFFFFF"] { fill: #222b3d !important; stroke: #475569 !important; vector-effect: non-scaling-stroke !important; }
-            path[fill="#262A34"] { fill: #e6edf3 !important; }
-            path[fill="#000"], path[fill="#000000"] { fill: #cbd5e1 !important; }
-            .Room:hover rect, .Room:active rect { fill: #2563eb !important; }
+            /* Legacy MP-1 theme */
+            .BigAreaPath { fill: ${palette.outdoorFill} !important; stroke: ${palette.outdoorStroke} !important; vector-effect: non-scaling-stroke !important; }
+            rect[fill="#F8F8F8"] { fill: ${palette.outdoorFill} !important; stroke: ${palette.outdoorStroke} !important; vector-effect: non-scaling-stroke !important; }
+            rect[fill="#fff"], rect[fill="#FFFFFF"] { fill: ${palette.roomFill} !important; stroke: ${palette.roomStroke} !important; vector-effect: non-scaling-stroke !important; }
+            path[fill="#262A34"] { fill: ${palette.labelFill} !important; }
+            path[fill="#000"], path[fill="#000000"] { fill: ${palette.onSurface} !important; }
+            .Room:hover rect, .Room:active rect { fill: ${palette.selectedFill} !important; }
             """
-        } else {
-            """
-            /* Official pulse maps - Light theme */
-            g[role="button"] path {
-              fill: #ffffff !important;
-              stroke: #94a3b8 !important;
-              stroke-width: 1.5px !important;
-              vector-effect: non-scaling-stroke !important;
-              cursor: pointer;
-              transition: fill 0.15s ease, stroke 0.15s ease;
-            }
-            g[style*="pointer-events: none"] > path {
-              fill: #e2e8f0 !important;
-              stroke: #cbd5e1 !important;
-              stroke-width: 1px !important;
-              vector-effect: non-scaling-stroke !important;
-            }
-            .room-label {
-              fill: #0f172a !important;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-              font-weight: 700 !important;
-              letter-spacing: 0.25px;
-              stroke: #ffffff !important;
-              stroke-width: 3px !important;
-              paint-order: stroke fill !important;
-              pointer-events: none;
-            }
-            #markers text {
-              fill: #2563eb !important;
-              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-              stroke: #ffffff !important;
-              stroke-width: 3.5px !important;
-              paint-order: stroke fill !important;
-              font-weight: 700 !important;
-              pointer-events: none;
-            }
-            #markers rect {
-              fill: #eff6ff !important;
-              stroke: #2563eb !important;
-              vector-effect: non-scaling-stroke !important;
-            }
-            #markers path {
-              stroke: #2563eb !important;
-              vector-effect: non-scaling-stroke !important;
-            }
-            .selected-room > path {
-              fill: #bfdbfe !important;
-              stroke: #2563eb !important;
-              stroke-width: 3px !important;
-              vector-effect: non-scaling-stroke !important;
-            }
 
-            /* Legacy MP-1 light theme */
-            .BigAreaPath { fill: #e2e8f0 !important; stroke: #cbd5e1 !important; vector-effect: non-scaling-stroke !important; }
-            rect[fill="#F8F8F8"] { fill: #f1f5f9 !important; stroke: #cbd5e1 !important; vector-effect: non-scaling-stroke !important; }
-            rect[fill="#fff"], rect[fill="#FFFFFF"] { fill: #ffffff !important; stroke: #94a3b8 !important; vector-effect: non-scaling-stroke !important; }
-            path[fill="#262A34"] { fill: #1e293b !important; }
-            path[fill="#000"], path[fill="#000000"] { fill: #0f172a !important; }
-            .Room:hover rect, .Room:active rect { fill: #60a5fa !important; }
-            """
-        }
-
-        val cardBg = if (isDark) "rgba(22, 27, 34, 0.92)" else "rgba(255, 255, 255, 0.94)"
-        val cardBorder = if (isDark) "rgba(255, 255, 255, 0.12)" else "rgba(0, 0, 0, 0.08)"
-        val cardTitleColor = if (isDark) "#f0f6fc" else "#0f172a"
-        val cardSubColor = if (isDark) "#8b949e" else "#64748b"
+        val cardBg = cssRgba(palette.surface, 0.92)
+        val cardBorder = cssRgba(palette.outlineVariant, 0.6)
+        val cardTitleColor = palette.onSurface
+        val cardSubColor = palette.onSurfaceVariant
 
         // Coordinate plane (debug grid) themed colors
-        val gridLineStroke = if (isDark) "rgba(96, 165, 250, 0.35)" else "rgba(37, 99, 235, 0.35)"
-        val gridAxisStroke = if (isDark) "rgba(96, 165, 250, 0.95)" else "rgba(37, 99, 235, 0.9)"
-        val gridLabelFill = if (isDark) "#93c5fd" else "#1d4ed8"
-        val gridLabelYFill = if (isDark) "#34d399" else "#047857"
+        val gridLineStroke = cssRgba(palette.primary, 0.35)
+        val gridAxisStroke = cssRgba(palette.primary, 0.95)
+        val gridLabelFill = palette.primary
+        val gridLabelYFill = palette.secondary
 
         return """
 <!DOCTYPE html>
@@ -182,7 +122,7 @@ object MapHtmlGenerator {
     margin: 0; padding: 0; width: 100%; height: 100%; min-height: 100%;
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     overflow: hidden;
-    background-color: ${if (isDark) "#0b0f17" else "#f8fafc"}; user-select: none; -webkit-user-select: none;
+    background-color: ${palette.background}; user-select: none; -webkit-user-select: none;
     touch-action: none;
   }
   #viewport {
@@ -1017,5 +957,28 @@ object MapHtmlGenerator {
 </body>
 </html>
 """.trimIndent()
+    }
+
+    private const val ROOM_LABEL_SCALE = 1.15
+
+    private val roomLabelTagRegex = Regex("""<text\b[^>]*class=["'][^"']*room-label[^"']*["'][^>]*>""")
+    private val fontSizeAttrRegex = Regex("""font-size=["'](\d+(?:\.\d+)?)["']""")
+
+    private fun scaleRoomLabels(svg: String): String =
+        roomLabelTagRegex.replace(svg) { tag ->
+            fontSizeAttrRegex.replace(tag.value) { font ->
+                val scaled = font.groupValues[1].toDouble() * ROOM_LABEL_SCALE
+                val value = if (scaled % 1.0 == 0.0) scaled.toInt().toString() else scaled.toString()
+                """font-size="$value""""
+            }
+        }
+
+    private fun cssRgba(hex: String, alpha: Double): String {
+        val h = hex.removePrefix("#")
+        if (h.length < 6) return hex
+        val r = h.substring(0, 2).toInt(16)
+        val g = h.substring(2, 4).toInt(16)
+        val b = h.substring(4, 6).toInt(16)
+        return "rgba($r, $g, $b, $alpha)"
     }
 }

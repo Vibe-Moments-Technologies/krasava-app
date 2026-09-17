@@ -24,6 +24,27 @@ data class MapObjectsContainer(
     val objects: List<MapObject> = emptyList()
 )
 
+data class MapThemePalette(
+    val background: String,
+    val roomFill: String,
+    val roomStroke: String,
+    val outdoorFill: String,
+    val outdoorStroke: String,
+    val labelFill: String,
+    val labelHalo: String,
+    val markerText: String,
+    val markerBg: String,
+    val markerStroke: String,
+    val selectedFill: String,
+    val selectedStroke: String,
+    val surface: String,
+    val onSurface: String,
+    val onSurfaceVariant: String,
+    val outlineVariant: String,
+    val primary: String,
+    val secondary: String
+)
+
 data class RoomSearchResult(
     val id: String,
     val name: String,
