@@ -959,7 +959,7 @@ object MapHtmlGenerator {
 """.trimIndent()
     }
 
-    private const val ROOM_LABEL_SCALE = 1.15
+    private const val ROOM_LABEL_SCALE = 1.3
 
     private val roomLabelTagRegex = Regex("""<text\b[^>]*class=["'][^"']*room-label[^"']*["'][^>]*>""")
     private val fontSizeAttrRegex = Regex("""font-size=["'](\d+(?:\.\d+)?)["']""")
