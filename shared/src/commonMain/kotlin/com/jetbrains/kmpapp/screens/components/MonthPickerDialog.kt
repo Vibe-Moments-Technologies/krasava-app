@@ -159,7 +159,11 @@ fun MonthPickerDialog(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                val totalRows = (leadingEmptyDays + daysInMonth + 6) / 7
+                // Всегда 6 строк сетки (максимум для любого месяца): высота
+                // диалога постоянна при листании. На iOS окно диалога
+                // перекладывается под содержимое, и сжатие контента при
+                // возврате на более короткий месяц роняло приложение.
+                val totalRows = 6
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
