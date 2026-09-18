@@ -531,7 +531,9 @@ fun LessonBreakIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
                         .drawWithContent {
-                            clipRect(right = size.width * animatedProgress) { drawContent() }
+                            clipRect(right = size.width * animatedProgress) {
+                                this@drawWithContent.drawContent()
+                            }
                         }
                 )
             }
