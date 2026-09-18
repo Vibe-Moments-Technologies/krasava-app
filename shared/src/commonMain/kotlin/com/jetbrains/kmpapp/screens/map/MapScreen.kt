@@ -70,13 +70,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import com.jetbrains.kmpapp.data.DebugConfig
-import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
-import com.jetbrains.kmpapp.data.model.ThemeMode
+import kotlin.math.roundToInt
 
 @Composable
 fun MapScreen(
@@ -86,14 +84,29 @@ fun MapScreen(
     val controller = remember { CampusMapController() }
     val uriHandler = LocalUriHandler.current
     val platformStorage: PlatformStorage = koinInject()
-    val scheduleRepository: ScheduleRepository = koinInject()
 
-    val themeMode by scheduleRepository.themeMode.collectAsState()
-    val systemDark = isSystemInDarkTheme()
-    val isDark = when (themeMode) {
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-        else -> systemDark
+    val colorScheme = MaterialTheme.colorScheme
+    val mapPalette = remember(colorScheme) {
+        MapThemePalette(
+            background = colorScheme.background.toMapHex(),
+            roomFill = colorScheme.surfaceContainer.toMapHex(),
+            roomStroke = colorScheme.outlineVariant.toMapHex(),
+            outdoorFill = colorScheme.surfaceContainerHigh.toMapHex(),
+            outdoorStroke = colorScheme.outline.toMapHex(),
+            labelFill = colorScheme.onSurface.toMapHex(),
+            labelHalo = colorScheme.background.toMapHex(),
+            markerText = colorScheme.onPrimaryContainer.toMapHex(),
+            markerBg = colorScheme.primaryContainer.toMapHex(),
+            markerStroke = colorScheme.primary.toMapHex(),
+            selectedFill = colorScheme.primaryContainer.toMapHex(),
+            selectedStroke = colorScheme.primary.toMapHex(),
+            surface = colorScheme.surfaceContainer.toMapHex(),
+            onSurface = colorScheme.onSurface.toMapHex(),
+            onSurfaceVariant = colorScheme.onSurfaceVariant.toMapHex(),
+            outlineVariant = colorScheme.outlineVariant.toMapHex(),
+            primary = colorScheme.primary.toMapHex(),
+            secondary = colorScheme.secondary.toMapHex()
+        )
     }
 
     var showDisclaimerDialog by remember {
@@ -139,10 +152,10 @@ fun MapScreen(
         Box(modifier = Modifier.fillMaxSize()) {
             // 1. Campus Map WebView Canvas
             if (svgContent != null) {
-                val html = remember(svgContent, isDark, selectedCampus.id, showStairs, showRoomNumbers, mapCoordinatePlane) {
+                val html = remember(svgContent, mapPalette, selectedCampus.id, showStairs, showRoomNumbers, mapCoordinatePlane) {
                     MapHtmlGenerator.generateHtml(
                         svgContent = svgContent ?: "",
-                        isDark = isDark,
+                        palette = mapPalette,
                         campusId = selectedCampus.id,
                         showStairs = showStairs,
                         showLabels = showRoomNumbers,
@@ -530,4 +543,16 @@ private fun MapFilterRow(
         },
         onClick = { onCheckedChange(!checked) }
     )
+}
+
+private fun Color.toMapHex(): String {
+    val r = (red * 255f).roundToInt().coerceIn(0, 255)
+    val g = (green * 255f).roundToInt().coerceIn(0, 255)
+    val b = (blue * 255f).roundToInt().coerceIn(0, 255)
+    return "#" + r.toHexByte() + g.toHexByte() + b.toHexByte()
+}
+
+private fun Int.toHexByte(): String {
+    val hex = toString(16)
+    return if (hex.length == 1) "0$hex" else hex
 }
