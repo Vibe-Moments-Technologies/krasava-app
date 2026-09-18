@@ -35,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.clipRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
@@ -531,7 +530,14 @@ fun LessonBreakIndicator(
                     modifier = Modifier
                         .fillMaxWidth()
                         .drawWithContent {
-                            clipRect(right = size.width * animatedProgress)
+                            androidx.compose.ui.graphics.clip(
+                                androidx.compose.ui.geometry.Rect(
+                                    left = 0f,
+                                    top = 0f,
+                                    right = size.width * animatedProgress,
+                                    bottom = size.height
+                                )
+                            )
                             drawContent()
                         }
                 )
