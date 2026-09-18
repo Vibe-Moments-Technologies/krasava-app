@@ -163,62 +163,63 @@ fun MonthPickerDialog(
                 // диалога постоянна при листании. На iOS окно диалога
                 // перекладывается под содержимое, и сжатие контента при
                 // возврате на более короткий месяц роняло приложение.
-                val totalRows = 6
+                // Каждая ячейка — всегда Box (никаких Spacer↔Box подмен
+                // взвешенных детей при смене месяца): дерево компоновки
+                // статично, меняются только листья.
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    for (row in 0 until totalRows) {
+                    for (row in 0 until 6) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
                             for (col in 0 until 7) {
                                 val dayNumber = row * 7 + col - leadingEmptyDays + 1
-                                if (dayNumber !in 1..daysInMonth) {
-                                    Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
-                                } else {
-                                    val cellDate = LocalDate(displayedYear, displayedMonth, dayNumber)
-                                    val isSelected = cellDate == highlighted
-                                    val isToday = cellDate == today
-                                    val lessonTypes = lessonSummaries[cellDate]?.lessonTypes ?: emptyList()
+                                val inMonth = dayNumber in 1..daysInMonth
+                                val cellDate = if (inMonth) LocalDate(displayedYear, displayedMonth, dayNumber) else null
 
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .aspectRatio(1f)
-                                            .padding(1.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                when {
-                                                    isSelected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
-                                                    isToday -> Color.Transparent
-                                                    else -> Color.Transparent
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .padding(1.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (cellDate != null && cellDate == highlighted) {
+                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                                            } else Color.Transparent
+                                        )
+                                        .then(
+                                            if (cellDate == today) {
+                                                Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                            } else Modifier
+                                        )
+                                        .then(
+                                            if (cellDate != null) {
+                                                Modifier.clickable {
+                                                    onDatePicked(cellDate)
+                                                    onDismiss()
                                                 }
-                                            )
-                                            .then(
-                                                if (isToday) {
-                                                    Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                                } else Modifier
-                                            )
-                                            .clickable {
-                                                onDatePicked(cellDate)
-                                                onDismiss()
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
+                                            } else Modifier
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (cellDate != null) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Text(
-                                                text = dayNumber.toString(),
+                                                text = cellDate.dayOfMonth.toString(),
                                                 style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Normal,
+                                                fontWeight = if (cellDate == highlighted || cellDate == today) FontWeight.Bold else FontWeight.Normal,
                                                 color = when {
-                                                    isSelected -> MaterialTheme.colorScheme.primary
+                                                    cellDate == highlighted -> MaterialTheme.colorScheme.primary
                                                     col == 6 -> MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                                                     else -> MaterialTheme.colorScheme.onSurface
                                                 }
                                             )
                                             // Точки пар в две строки (до 5 в строке), как в ленточном календаре.
+                                            val lessonTypes = lessonSummaries[cellDate]?.lessonTypes ?: emptyList()
                                             if (lessonTypes.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.height(2.dp))
                                                 Column(
