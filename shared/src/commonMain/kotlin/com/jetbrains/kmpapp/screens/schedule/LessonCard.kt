@@ -39,7 +39,6 @@ import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -436,29 +435,33 @@ fun EmptyLessonCard(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 shape = RoundedCornerShape(12.dp)
             )
-            .padding(horizontal = 14.dp, vertical = 8.dp),
-        contentAlignment = Alignment.CenterStart
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
-            Text(
-                text = "$bellNumber пара • $startTime — $endTime",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
-            )
-            Text(
-                text = "Нет пары",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "$bellNumber пара • $startTime — $endTime",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                )
+                Text(
+                    text = "Нет пары",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+                )
+            }
         }
         if (progress != null) {
-            // Полоса поверх нижней грани, размер блока не меняется.
+            // Полоса в самом низу карточки, как у обычной пары; размер блока не меняется.
             val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
                 targetValue = progress,
                 animationSpec = androidx.compose.animation.core.tween(500)
@@ -493,58 +496,21 @@ fun LessonBreakIndicator(
 ) {
     if (breakMinutes <= 0) return
     val breakText = "••• перемена $breakMinutes мин •••"
-    if (isToday && showBreakProgress) {
-        // Надпись перемены — сам прогрессбар: пройденная часть перекрашена.
+    val progress = if (isToday && showBreakProgress) {
         val currentMinutes = currentMinutesState?.value
             ?: com.jetbrains.kmpapp.data.model.DateUtils.currentTimeMinutes()
-        val progress = com.jetbrains.kmpapp.data.model.DateUtils
+        com.jetbrains.kmpapp.data.model.DateUtils
             .getLessonProgress(breakStartTime, breakEndTime, currentMinutes)
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(vertical = 0.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = breakText,
-                fontSize = 12.5.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                letterSpacing = 0.2.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-            progress?.let {
-                val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = it,
-                    animationSpec = androidx.compose.animation.core.tween(500)
-                )
-                // Копия надписи цветом primary, обрезанная клипом рисования по
-                // пройденной части: текст одинаковой ширины лежит ровно поверх.
-                Text(
-                    text = breakText,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.primary,
-                    letterSpacing = 0.2.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .drawWithContent {
-                            clipRect(right = size.width * animatedProgress) {
-                                this@drawWithContent.drawContent()
-                            }
-                        }
-                )
-            }
-        }
-    } else {
-        Box(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(vertical = 0.dp),
-            contentAlignment = Alignment.Center
-        ) {
+    } else null
+
+    Box(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        // Внутренний Box — по размеру текста: клип прогресса считается от ширины
+        // самой надписи, а не от ширины строки (иначе первая половина перемены
+        // красила бы пустое поле слева и подсветка «не появлялась»).
+        Box {
             Text(
                 text = breakText,
                 fontSize = 12.5.sp,
@@ -552,6 +518,26 @@ fun LessonBreakIndicator(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 letterSpacing = 0.2.sp
             )
+            if (progress != null) {
+                val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = progress,
+                    animationSpec = androidx.compose.animation.core.tween(500)
+                )
+                // Копия надписи цветом primary, обрезанная клипом по пройденной
+                // части: тот же текст/стиль, поэтому буквы совпадают пиксель в пиксель.
+                Text(
+                    text = breakText,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 0.2.sp,
+                    modifier = Modifier.drawWithContent {
+                        clipRect(right = size.width * animatedProgress) {
+                            this@drawWithContent.drawContent()
+                        }
+                    }
+                )
+            }
         }
     }
 }
