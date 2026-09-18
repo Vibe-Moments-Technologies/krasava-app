@@ -7,8 +7,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -53,7 +51,6 @@ import kotlinx.datetime.minus
  * и выбранного дня, цветные точки пар под числом (легенда внизу), «Сегодня».
  * Общий для расписания и свободных аудиторий.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MonthPickerDialog(
     initialDate: LocalDate,
@@ -217,19 +214,27 @@ fun MonthPickerDialog(
                                                     else -> MaterialTheme.colorScheme.onSurface
                                                 }
                                             )
-                                            // До трёх точек — в ленточном календаре их больше
-                                            // и сетка «плывёт»; легенда ниже расшифровывает.
+                                            // Точки пар в две строки (до 5 в строке), как в ленточном календаре.
                                             if (lessonTypes.isNotEmpty()) {
                                                 Spacer(modifier = Modifier.height(2.dp))
-                                                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                                                    lessonTypes.take(3).forEach { type ->
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(3.5.dp)
-                                                                .clip(CircleShape)
-                                                                .background(getLessonDotColor(type, isDark))
-                                                        )
-                                                    }
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                                ) {
+                                                    listOf(lessonTypes.take(5), lessonTypes.drop(5).take(5))
+                                                        .filter { it.isNotEmpty() }
+                                                        .forEach { rowTypes ->
+                                                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                                rowTypes.forEach { type ->
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .size(3.5.dp)
+                                                                            .clip(CircleShape)
+                                                                            .background(getLessonDotColor(type, isDark))
+                                                                    )
+                                                                }
+                                                            }
+                                                        }
                                                 }
                                             }
                                         }
@@ -243,28 +248,36 @@ fun MonthPickerDialog(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Легенда типов пар (те же цвета, что в ленточном календаре).
-                FlowRow(
+                // Две фиксированные строки вместо FlowRow: экспериментальный
+                // FlowRow падал при переизмерении после смены месяца.
+                Column(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    LessonType.entries.forEachIndexed { idx, type ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(getLessonDotColor(type, isDark))
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            Text(
-                                text = type.displayName,
-                                fontSize = 9.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (idx != LessonType.entries.lastIndex) {
-                            Spacer(modifier = Modifier.width(10.dp))
+                    val legend = LessonType.entries.toList()
+                    listOf(legend.take(2), legend.drop(2)).forEach { rowTypes ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            rowTypes.forEachIndexed { idx, type ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(getLessonDotColor(type, isDark))
+                                )
+                                Spacer(modifier = Modifier.width(3.dp))
+                                Text(
+                                    text = type.displayName,
+                                    fontSize = 9.5.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                if (idx != rowTypes.lastIndex) {
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                }
+                            }
                         }
                     }
                 }
