@@ -247,37 +247,27 @@ fun MonthPickerDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Легенда типов пар (те же цвета, что в ленточном календаре).
-                // Две фиксированные строки вместо FlowRow: экспериментальный
-                // FlowRow падал при переизмерении после смены месяца.
-                Column(
+                // Легенда типов пар в одну строку — короткие названия, как на
+                // карточках пар (полные не влезают в ширину диалога).
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val legend = LessonType.entries.toList()
-                    listOf(legend.take(2), legend.drop(2)).forEach { rowTypes ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            rowTypes.forEachIndexed { idx, type ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(getLessonDotColor(type, isDark))
-                                )
-                                Spacer(modifier = Modifier.width(3.dp))
-                                Text(
-                                    text = type.displayName,
-                                    fontSize = 9.5.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                if (idx != rowTypes.lastIndex) {
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                }
-                            }
+                    LessonType.entries.forEach { type ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(getLessonDotColor(type, isDark))
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = type.shortName,
+                                fontSize = 9.5.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
