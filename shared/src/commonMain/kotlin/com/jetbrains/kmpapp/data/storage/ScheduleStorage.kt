@@ -52,6 +52,9 @@ class ScheduleStorage(
     private val _showBreakProgress = MutableStateFlow<Boolean>(true)
     val showBreakProgress: StateFlow<Boolean> = _showBreakProgress.asStateFlow()
 
+    private val _calendarCollapsed = MutableStateFlow(false)
+    val calendarCollapsed: StateFlow<Boolean> = _calendarCollapsed.asStateFlow()
+
     private val _autoScrollToCurrentLesson = MutableStateFlow<Boolean>(true)
     val autoScrollToCurrentLesson: StateFlow<Boolean> = _autoScrollToCurrentLesson.asStateFlow()
 
@@ -135,6 +138,7 @@ class ScheduleStorage(
         _showLessonProgress.value = loadBooleanFlag(KEY_SHOW_LESSON_PROGRESS, true)
         _showEmptyLessonProgress.value = loadBooleanFlag(KEY_SHOW_EMPTY_LESSON_PROGRESS, true)
         _showBreakProgress.value = loadBooleanFlag(KEY_SHOW_BREAK_PROGRESS, true)
+        _calendarCollapsed.value = loadBooleanFlag(KEY_CALENDAR_COLLAPSED, false)
         _autoScrollToCurrentLesson.value = loadBooleanFlag(KEY_AUTO_SCROLL_CURRENT_LESSON, true)
         _showAbbreviatedNames.value = loadBooleanFlag(KEY_SHOW_ABBREVIATED_NAMES, false)
         _themeOverlay.value = loadThemeOverlay()
@@ -332,6 +336,18 @@ class ScheduleStorage(
                 platformStorage.saveString(KEY_SHOW_BREAK_PROGRESS, enabled.toString())
             } catch (e: Exception) {
                 println("Failed to persist showBreakProgress: ${e.message}")
+            }
+        }
+    }
+
+    /** Свёрнута ли лента календаря на экране расписания. */
+    fun setCalendarCollapsed(collapsed: Boolean) {
+        _calendarCollapsed.value = collapsed
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_CALENDAR_COLLAPSED, collapsed.toString())
+            } catch (e: Exception) {
+                println("Failed to persist calendarCollapsed: ${e.message}")
             }
         }
     }
@@ -681,6 +697,7 @@ class ScheduleStorage(
         _showLessonProgress.value = true
         _showEmptyLessonProgress.value = true
         _showBreakProgress.value = true
+        _calendarCollapsed.value = false
         _autoScrollToCurrentLesson.value = true
         _showAbbreviatedNames.value = false
         _themeMode.value = ThemeMode.SYSTEM
@@ -784,6 +801,7 @@ class ScheduleStorage(
         private const val KEY_SHOW_LESSON_PROGRESS = "mirea_show_lesson_progress"
         private const val KEY_SHOW_EMPTY_LESSON_PROGRESS = "mirea_show_empty_lesson_progress"
         private const val KEY_SHOW_BREAK_PROGRESS = "mirea_show_break_progress"
+        private const val KEY_CALENDAR_COLLAPSED = "mirea_calendar_collapsed"
         private const val KEY_AUTO_SCROLL_CURRENT_LESSON = "mirea_auto_scroll_current_lesson"
         private const val KEY_SHOW_ABBREVIATED_NAMES = "mirea_show_abbreviated_names"
         private const val KEY_APP_THEME = "mirea_app_theme"

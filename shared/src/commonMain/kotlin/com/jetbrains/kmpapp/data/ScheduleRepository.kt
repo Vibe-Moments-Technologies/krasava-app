@@ -102,6 +102,12 @@ class ScheduleRepository(
         storage.setShowBreakProgress(enabled)
     }
 
+    val calendarCollapsed: StateFlow<Boolean> = storage.calendarCollapsed
+
+    fun setCalendarCollapsed(collapsed: Boolean) {
+        storage.setCalendarCollapsed(collapsed)
+    }
+
     val autoScrollToCurrentLesson: StateFlow<Boolean> = storage.autoScrollToCurrentLesson
 
     fun setAutoScrollToCurrentLesson(enabled: Boolean) {

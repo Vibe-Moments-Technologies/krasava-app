@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -40,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,7 +59,12 @@ fun ScheduleTopBar(
     onSelectTarget: (ScheduleTarget) -> Unit,
     onDiffClick: () -> Unit,
     onAddClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Видна, когда лента календаря свёрнута: число текущего дня расписания.
+    // Тап — развернуть ленту, долгое нажатие — месячный календарь.
+    calendarBadgeDay: Int? = null,
+    onCalendarBadgeClick: () -> Unit = {},
+    onCalendarBadgeLongClick: () -> Unit = {}
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
 
@@ -174,16 +182,42 @@ fun ScheduleTopBar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Right button: Add (+)
-        FilledIconButton(
-            onClick = onAddClick,
-            modifier = Modifier.size(40.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Добавить расписание",
-                modifier = Modifier.size(22.dp)
-            )
+        // Правая группа: кружок текущего дня (когда календарь свёрнут) + Add (+)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (calendarBadgeDay != null) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = { onCalendarBadgeClick() },
+                                onLongPress = { onCalendarBadgeLongClick() }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = calendarBadgeDay.toString(),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
+            FilledIconButton(
+                onClick = onAddClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Добавить расписание",
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
     }
 }

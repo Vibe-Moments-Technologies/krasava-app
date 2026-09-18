@@ -6,6 +6,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,10 +35,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.model.DateUtils
+import com.jetbrains.kmpapp.screens.components.getLessonDotColor
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -46,7 +49,6 @@ import kotlinx.datetime.plus
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.graphics.Color
 
 private const val BASE_PAGE = 1000
 
@@ -55,6 +57,8 @@ fun WeekCalendarStrip(
     selectedDate: LocalDate,
     onDateSelected: (LocalDate) -> Unit,
     lessonSummaries: Map<LocalDate, DayLessonSummary> = emptyMap(),
+    onTitleClick: () -> Unit = {},
+    onCollapse: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val today = DateUtils.today()
@@ -119,7 +123,11 @@ fun WeekCalendarStrip(
                     text = "$monthTitle $year • ${weekInfo.weekNumber} неделя",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onTitleClick() }
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
 
                 if (!todayInCurrentWeek) {
@@ -285,31 +293,36 @@ fun WeekCalendarStrip(
         }
 
         Spacer(modifier = Modifier.height(6.dp))
-        androidx.compose.material3.HorizontalDivider(
+        // Ручка сворачивания: свайп вверх по разделителю прячет ленту календаря.
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            thickness = 0.6.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-        )
+                .height(22.dp)
+                .pointerInput(Unit) {
+                    var accumulated = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { accumulated = 0f },
+                        onVerticalDrag = { change, dragAmount ->
+                            change.consume()
+                            accumulated -= dragAmount
+                            if (accumulated > 40f) {
+                                accumulated = 0f
+                                onCollapse()
+                            }
+                        }
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.HorizontalDivider(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                thickness = 0.6.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+            )
+        }
         Spacer(modifier = Modifier.height(2.dp))
     }
 }
 
-private fun getLessonDotColor(type: com.jetbrains.kmpapp.data.model.LessonType, isDark: Boolean): Color {
-    return if (isDark) {
-        when (type) {
-            com.jetbrains.kmpapp.data.model.LessonType.LECTURE -> Color(0xFF38BDF8)
-            com.jetbrains.kmpapp.data.model.LessonType.PRACTICE -> Color(0xFF4ADE80)
-            com.jetbrains.kmpapp.data.model.LessonType.LAB -> Color(0xFFFB923C)
-            com.jetbrains.kmpapp.data.model.LessonType.OTHER -> Color(0xFFC084FC)
-        }
-    } else {
-        when (type) {
-            com.jetbrains.kmpapp.data.model.LessonType.LECTURE -> Color(0xFF0284C7)
-            com.jetbrains.kmpapp.data.model.LessonType.PRACTICE -> Color(0xFF16A34A)
-            com.jetbrains.kmpapp.data.model.LessonType.LAB -> Color(0xFFEA580C)
-            com.jetbrains.kmpapp.data.model.LessonType.OTHER -> Color(0xFF9333EA)
-        }
-    }
-}

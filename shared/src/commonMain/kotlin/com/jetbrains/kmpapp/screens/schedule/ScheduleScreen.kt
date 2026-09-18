@@ -113,6 +113,7 @@ private fun ScheduleMainContent(
     val showLessonProgress by viewModel.showLessonProgress.collectAsState()
     val showEmptyLessonProgress by viewModel.showEmptyLessonProgress.collectAsState()
     val showBreakProgress by viewModel.showBreakProgress.collectAsState()
+    val calendarCollapsed by viewModel.calendarCollapsed.collectAsState()
     val autoScrollToCurrentLesson by viewModel.autoScrollToCurrentLesson.collectAsState()
     val showAbbreviatedNames by viewModel.showAbbreviatedNames.collectAsState()
     // Значение НЕ читаем здесь: тик раз в 30 секунд не должен пересобирать
@@ -125,6 +126,10 @@ private fun ScheduleMainContent(
 
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Месячный календарь: по тапу на «Сентябрь 2026 • N неделя» или долгому
+    // нажатию на кружок дня в топбаре (когда лента свёрнута).
+    var showMonthPicker by remember { mutableStateOf(false) }
 
     var showDiffSheet by remember { mutableStateOf(false) }
     val diffSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -168,7 +173,10 @@ private fun ScheduleMainContent(
                 activeDiff = activeDiff,
                 onSelectTarget = { viewModel.selectTarget(it) },
                 onDiffClick = { showDiffSheet = true },
-                onAddClick = { showAddSheet = true }
+                onAddClick = { showAddSheet = true },
+                calendarBadgeDay = if (selectedTarget != null && calendarCollapsed) selectedDate.day else null,
+                onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
+                onCalendarBadgeLongClick = { showMonthPicker = true }
             )
         },
         modifier = modifier.fillMaxSize()
@@ -226,12 +234,20 @@ private fun ScheduleMainContent(
                 }
             } else {
                 // Week calendar strip with navigation bar
-                WeekCalendarStrip(
-                    selectedDate = selectedDate,
-                    onDateSelected = { viewModel.selectDate(it) },
-                    lessonSummaries = dayLessonSummaries,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
-                )
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = !calendarCollapsed,
+                    enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+                ) {
+                    WeekCalendarStrip(
+                        selectedDate = selectedDate,
+                        onDateSelected = { viewModel.selectDate(it) },
+                        lessonSummaries = dayLessonSummaries,
+                        onTitleClick = { showMonthPicker = true },
+                        onCollapse = { viewModel.setCalendarCollapsed(true) },
+                        modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                    )
+                }
 
                 // Серверы МИРЭА доступны только с IP России: при включённом
                 // VPN расписание не обновится — предупреждаем заранее.
@@ -377,6 +393,15 @@ private fun ScheduleMainContent(
                 }
             }
         }
+    }
+
+    if (showMonthPicker) {
+        com.jetbrains.kmpapp.screens.components.MonthPickerDialog(
+            initialDate = selectedDate,
+            lessonSummaries = dayLessonSummaries,
+            onDatePicked = { viewModel.selectDate(it) },
+            onDismiss = { showMonthPicker = false }
+        )
     }
 
     if (showAddSheet) {

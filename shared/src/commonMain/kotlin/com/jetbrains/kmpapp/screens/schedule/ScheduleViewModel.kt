@@ -35,6 +35,7 @@ class ScheduleViewModel(
     val showLessonProgress: StateFlow<Boolean> = repository.showLessonProgress
     val showEmptyLessonProgress: StateFlow<Boolean> = repository.showEmptyLessonProgress
     val showBreakProgress: StateFlow<Boolean> = repository.showBreakProgress
+    val calendarCollapsed: StateFlow<Boolean> = repository.calendarCollapsed
     val autoScrollToCurrentLesson: StateFlow<Boolean> = repository.autoScrollToCurrentLesson
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
@@ -193,6 +194,10 @@ class ScheduleViewModel(
             _selectedDate.value = date
             resetAutoScroll()
         }
+    }
+
+    fun setCalendarCollapsed(collapsed: Boolean) {
+        repository.setCalendarCollapsed(collapsed)
     }
 
     fun nextDay() {
