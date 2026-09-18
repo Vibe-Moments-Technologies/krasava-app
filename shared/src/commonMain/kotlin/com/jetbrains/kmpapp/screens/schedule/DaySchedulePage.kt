@@ -57,6 +57,8 @@ internal fun DaySchedulePage(
     errorMessage: String?,
     currentMinutesState: State<Int>?,
     showLessonProgress: Boolean,
+    showEmptyLessonProgress: Boolean,
+    showBreakProgress: Boolean,
     showAbbreviatedNames: Boolean,
     scheduleTargetType: ScheduleTargetType,
     autoScrollToCurrentLesson: Boolean,
@@ -189,7 +191,16 @@ internal fun DaySchedulePage(
                 val previous = slots[index - 1]
                 val breakMinutes = com.jetbrains.kmpapp.data.model.calculateBreakMinutes(previous.endTime, slot.startTime)
                 if (breakMinutes > 0) {
-                    item(key = "break_${previous.bellNumber}_${slot.bellNumber}") { LessonBreakIndicator(breakMinutes) }
+                    item(key = "break_${previous.bellNumber}_${slot.bellNumber}") {
+                        LessonBreakIndicator(
+                            breakMinutes = breakMinutes,
+                            breakStartTime = previous.endTime,
+                            breakEndTime = slot.startTime,
+                            isToday = date == com.jetbrains.kmpapp.data.model.DateUtils.today(),
+                            currentMinutesState = currentMinutesState,
+                            showBreakProgress = showBreakProgress
+                        )
+                    }
                 }
             }
             val slotKey = when (slot) {
@@ -203,6 +214,7 @@ internal fun DaySchedulePage(
                     isToday = date == com.jetbrains.kmpapp.data.model.DateUtils.today(),
                     currentMinutesState = currentMinutesState,
                     showLessonProgress = showLessonProgress,
+                    showEmptyLessonProgress = showEmptyLessonProgress,
                     showAbbreviatedNames = showAbbreviatedNames,
                     scheduleTargetType = scheduleTargetType
                 )

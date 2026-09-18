@@ -111,6 +111,8 @@ private fun ScheduleMainContent(
     val refreshStatus by viewModel.refreshStatus.collectAsState()
     val dayLessonSummaries by viewModel.dayLessonSummaries.collectAsState()
     val showLessonProgress by viewModel.showLessonProgress.collectAsState()
+    val showEmptyLessonProgress by viewModel.showEmptyLessonProgress.collectAsState()
+    val showBreakProgress by viewModel.showBreakProgress.collectAsState()
     val autoScrollToCurrentLesson by viewModel.autoScrollToCurrentLesson.collectAsState()
     val showAbbreviatedNames by viewModel.showAbbreviatedNames.collectAsState()
     // Значение НЕ читаем здесь: тик раз в 30 секунд не должен пересобирать
@@ -307,6 +309,8 @@ private fun ScheduleMainContent(
                                 errorMessage = errorMessage,
                                 currentMinutesState = currentMinutesState,
                                 showLessonProgress = showLessonProgress,
+                                showEmptyLessonProgress = showEmptyLessonProgress,
+                                showBreakProgress = showBreakProgress,
                                 showAbbreviatedNames = showAbbreviatedNames,
                                 scheduleTargetType = selectedTarget?.type ?: com.jetbrains.kmpapp.data.model.ScheduleTargetType.GROUP,
                                 autoScrollToCurrentLesson = autoScrollToCurrentLesson,

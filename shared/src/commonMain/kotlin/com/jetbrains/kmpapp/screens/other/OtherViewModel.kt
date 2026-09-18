@@ -109,6 +109,8 @@ class OtherViewModel(
     val isLoading: StateFlow<Boolean> = repository.isLoading
     val showEmptyLessons: StateFlow<Boolean> = repository.showEmptyLessons
     val showLessonProgress: StateFlow<Boolean> = repository.showLessonProgress
+    val showEmptyLessonProgress: StateFlow<Boolean> = repository.showEmptyLessonProgress
+    val showBreakProgress: StateFlow<Boolean> = repository.showBreakProgress
     val autoScrollToCurrentLesson: StateFlow<Boolean> = repository.autoScrollToCurrentLesson
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
     val themeMode: StateFlow<ThemeMode> = repository.themeMode
@@ -130,6 +132,14 @@ class OtherViewModel(
 
     fun setShowLessonProgress(enabled: Boolean) {
         repository.setShowLessonProgress(enabled)
+    }
+
+    fun setShowEmptyLessonProgress(enabled: Boolean) {
+        repository.setShowEmptyLessonProgress(enabled)
+    }
+
+    fun setShowBreakProgress(enabled: Boolean) {
+        repository.setShowBreakProgress(enabled)
     }
 
     fun setAutoScrollToCurrentLesson(enabled: Boolean) {

@@ -46,6 +46,12 @@ class ScheduleStorage(
     private val _showLessonProgress = MutableStateFlow<Boolean>(true)
     val showLessonProgress: StateFlow<Boolean> = _showLessonProgress.asStateFlow()
 
+    private val _showEmptyLessonProgress = MutableStateFlow<Boolean>(true)
+    val showEmptyLessonProgress: StateFlow<Boolean> = _showEmptyLessonProgress.asStateFlow()
+
+    private val _showBreakProgress = MutableStateFlow<Boolean>(true)
+    val showBreakProgress: StateFlow<Boolean> = _showBreakProgress.asStateFlow()
+
     private val _autoScrollToCurrentLesson = MutableStateFlow<Boolean>(true)
     val autoScrollToCurrentLesson: StateFlow<Boolean> = _autoScrollToCurrentLesson.asStateFlow()
 
@@ -127,6 +133,8 @@ class ScheduleStorage(
         _themeMode.value = loadThemeModeSetting()
         _showEmptyLessons.value = loadBooleanFlag(KEY_SHOW_EMPTY_LESSONS, true)
         _showLessonProgress.value = loadBooleanFlag(KEY_SHOW_LESSON_PROGRESS, true)
+        _showEmptyLessonProgress.value = loadBooleanFlag(KEY_SHOW_EMPTY_LESSON_PROGRESS, true)
+        _showBreakProgress.value = loadBooleanFlag(KEY_SHOW_BREAK_PROGRESS, true)
         _autoScrollToCurrentLesson.value = loadBooleanFlag(KEY_AUTO_SCROLL_CURRENT_LESSON, true)
         _showAbbreviatedNames.value = loadBooleanFlag(KEY_SHOW_ABBREVIATED_NAMES, false)
         _themeOverlay.value = loadThemeOverlay()
@@ -302,6 +310,28 @@ class ScheduleStorage(
                 platformStorage.saveString(KEY_SHOW_LESSON_PROGRESS, enabled.toString())
             } catch (e: Exception) {
                 println("Failed to persist showLessonProgress: ${e.message}")
+            }
+        }
+    }
+
+    fun setShowEmptyLessonProgress(enabled: Boolean) {
+        _showEmptyLessonProgress.value = enabled
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_SHOW_EMPTY_LESSON_PROGRESS, enabled.toString())
+            } catch (e: Exception) {
+                println("Failed to persist showEmptyLessonProgress: ${e.message}")
+            }
+        }
+    }
+
+    fun setShowBreakProgress(enabled: Boolean) {
+        _showBreakProgress.value = enabled
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_SHOW_BREAK_PROGRESS, enabled.toString())
+            } catch (e: Exception) {
+                println("Failed to persist showBreakProgress: ${e.message}")
             }
         }
     }
@@ -649,6 +679,8 @@ class ScheduleStorage(
         _cachedLessons.value = emptyMap()
         _showEmptyLessons.value = true
         _showLessonProgress.value = true
+        _showEmptyLessonProgress.value = true
+        _showBreakProgress.value = true
         _autoScrollToCurrentLesson.value = true
         _showAbbreviatedNames.value = false
         _themeMode.value = ThemeMode.SYSTEM
@@ -750,6 +782,8 @@ class ScheduleStorage(
         private const val KEY_LAST_SYNC_PREFIX = "mirea_last_sync_"
         private const val KEY_SHOW_EMPTY_LESSONS = "mirea_show_empty_lessons"
         private const val KEY_SHOW_LESSON_PROGRESS = "mirea_show_lesson_progress"
+        private const val KEY_SHOW_EMPTY_LESSON_PROGRESS = "mirea_show_empty_lesson_progress"
+        private const val KEY_SHOW_BREAK_PROGRESS = "mirea_show_break_progress"
         private const val KEY_AUTO_SCROLL_CURRENT_LESSON = "mirea_auto_scroll_current_lesson"
         private const val KEY_SHOW_ABBREVIATED_NAMES = "mirea_show_abbreviated_names"
         private const val KEY_APP_THEME = "mirea_app_theme"

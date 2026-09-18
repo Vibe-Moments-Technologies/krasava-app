@@ -90,6 +90,18 @@ class ScheduleRepository(
         storage.setShowLessonProgress(enabled)
     }
 
+    val showEmptyLessonProgress: StateFlow<Boolean> = storage.showEmptyLessonProgress
+
+    fun setShowEmptyLessonProgress(enabled: Boolean) {
+        storage.setShowEmptyLessonProgress(enabled)
+    }
+
+    val showBreakProgress: StateFlow<Boolean> = storage.showBreakProgress
+
+    fun setShowBreakProgress(enabled: Boolean) {
+        storage.setShowBreakProgress(enabled)
+    }
+
     val autoScrollToCurrentLesson: StateFlow<Boolean> = storage.autoScrollToCurrentLesson
 
     fun setAutoScrollToCurrentLesson(enabled: Boolean) {

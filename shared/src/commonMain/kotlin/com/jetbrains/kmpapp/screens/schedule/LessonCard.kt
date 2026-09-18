@@ -34,9 +34,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.clipRect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,6 +55,8 @@ fun ScheduleSlotCard(
     isToday: Boolean = false,
     currentMinutesState: State<Int>? = null,
     showLessonProgress: Boolean = true,
+    showEmptyLessonProgress: Boolean = true,
+    showBreakProgress: Boolean = true,
     showAbbreviatedNames: Boolean = false,
     scheduleTargetType: ScheduleTargetType = ScheduleTargetType.GROUP,
     modifier: Modifier = Modifier
@@ -90,6 +95,9 @@ fun ScheduleSlotCard(
                 bellNumber = slot.bellNumber,
                 startTime = slot.startTime,
                 endTime = slot.endTime,
+                isToday = isToday,
+                currentMinutesState = currentMinutesState,
+                showEmptyLessonProgress = showEmptyLessonProgress,
                 modifier = modifier
             )
         }
@@ -405,8 +413,18 @@ fun EmptyLessonCard(
     bellNumber: Int,
     startTime: String,
     endTime: String,
+    isToday: Boolean = false,
+    currentMinutesState: State<Int>? = null,
+    showEmptyLessonProgress: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    // Прогресс — та же формула, что у обычной пары: 0..1 внутри [start, end).
+    val progress = if (isToday && showEmptyLessonProgress) {
+        val currentMinutes = currentMinutesState?.value
+            ?: com.jetbrains.kmpapp.data.model.DateUtils.currentTimeMinutes()
+        com.jetbrains.kmpapp.data.model.DateUtils.getLessonProgress(startTime, endTime, currentMinutes)
+    } else null
+
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -439,28 +457,101 @@ fun EmptyLessonCard(
                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
             )
         }
+        if (progress != null) {
+            // Полоса поверх нижней грани, размер блока не меняется.
+            val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = progress,
+                animationSpec = androidx.compose.animation.core.tween(500)
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(2.5.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(animatedProgress)
+                        .height(2.5.dp)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
     }
 }
 
 @Composable
 fun LessonBreakIndicator(
     breakMinutes: Int,
+    breakStartTime: String = "",
+    breakEndTime: String = "",
+    isToday: Boolean = false,
+    currentMinutesState: State<Int>? = null,
+    showBreakProgress: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     if (breakMinutes <= 0) return
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 0.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "••• перемена $breakMinutes мин •••",
-            fontSize = 12.5.sp,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-            letterSpacing = 0.2.sp
-        )
+    val breakText = "••• перемена $breakMinutes мин •••"
+    if (isToday && showBreakProgress) {
+        // Надпись перемены — сам прогрессбар: пройденная часть перекрашена.
+        val currentMinutes = currentMinutesState?.value
+            ?: com.jetbrains.kmpapp.data.model.DateUtils.currentTimeMinutes()
+        val progress = com.jetbrains.kmpapp.data.model.DateUtils
+            .getLessonProgress(breakStartTime, breakEndTime, currentMinutes)
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 0.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = breakText,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                letterSpacing = 0.2.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+            progress?.let {
+                val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = it,
+                    animationSpec = androidx.compose.animation.core.tween(500)
+                )
+                // Копия надписи цветом primary, обрезанная клипом рисования по
+                // пройденной части: текст одинаковой ширины лежит ровно поверх.
+                Text(
+                    text = breakText,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.primary,
+                    letterSpacing = 0.2.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .drawWithContent {
+                            clipRect(right = size.width * animatedProgress)
+                            drawContent()
+                        }
+                )
+            }
+        }
+    } else {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(vertical = 0.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = breakText,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                letterSpacing = 0.2.sp
+            )
+        }
     }
 }
 
