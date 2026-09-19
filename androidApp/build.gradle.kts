@@ -29,13 +29,6 @@ android {
         versionName = "26.0.0"
     }
     signingConfigs {
-        // Общий debug-ключ для dev/preview-сборок (не секрет, лежит в репо).
-        create("sharedDebug") {
-            storeFile = file("debug.keystore")
-            storePassword = "androiddebugkey"
-            keyAlias = "androiddebugkey"
-            keyPassword = "androiddebugkey"
-        }
         // Релизный ключ НЕ в репо: CI подаёт его из секретов org
         // (RELEASE_KEYSTORE_B64 + пароли). Локально — из переменных окружения.
         create("release") {
@@ -58,16 +51,17 @@ android {
     }
     buildTypes {
         getByName("debug") {
-            signingConfig = signingConfigs.getByName("sharedDebug")
+            // CI (с секретами) — релизный ключ; локально — стандартный debug SDK.
+            if (System.getenv("RELEASE_KEYSTORE_B64") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         getByName("release") {
             isMinifyEnabled = false
             signingConfig = if (System.getenv("RELEASE_KEYSTORE_B64") != null) {
                 signingConfigs.getByName("release")
             } else {
-                // Локальная сборка без секретов: падать на debug-подписи,
-                // чтобы релиз случайно не уехал с общим ключом.
-                signingConfigs.getByName("sharedDebug")
+                null // Без секретов release не собирается — fail-fast в CI.
             }
         }
     }

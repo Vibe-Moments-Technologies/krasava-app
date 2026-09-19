@@ -62,3 +62,8 @@ images/
 .mcp.json
 .vscode/mcp.json
 .vscode/extensions.json
+
+# Ключи подписи — никогда в репо
+*.keystore
+*.jks
+*.p12
