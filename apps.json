@@ -1,8 +1,20 @@
 {
-  "name": "MIREA Schedule",
-  "identifier": "mirea-schedule-stable",
-  "sourceURL": "https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/gh-pages/apps.json",
+  "name": "Красава!",
+  "identifier": "krasava-unified",
+  "sourceURL": "https://raw.githubusercontent.com/Vibe-Moments-Technologies/krasava-app/gh-pages/apps.json",
   "apps": [
+    {
+      "name": "Красава! (Dev)",
+      "bundleIdentifier": "ru.l1ratch.mireaschedule",
+      "developerName": "l1ratch",
+      "localizedDescription": "Расписание пар, поиск свободных аудиторий, интерактивные карты корпусов, задачи и офлайн-кеш.\n\nКанал: preview\nСборка: 26.2.1-dev.1\nОбновлено: 2026-09-19 20:44 UTC",
+      "iconURL": "https://raw.githubusercontent.com/Vibe-Moments-Technologies/krasava-app/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
+      "version": "26.2.1-dev.1",
+      "versionDate": "2026-09-19T20:44:23.714554+00:00",
+      "downloadURL": "https://github.com/Vibe-Moments-Technologies/krasava-app/releases/download/preview/Krasava-preview.ipa",
+      "tintColor": "4F46E5",
+      "channel": "preview"
+    },
     {
       "name": "Расписание МИРЭА",
       "bundleIdentifier": "ru.l1ratch.mireaschedule",
