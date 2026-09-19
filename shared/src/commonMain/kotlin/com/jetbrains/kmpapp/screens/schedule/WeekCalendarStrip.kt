@@ -293,32 +293,11 @@ fun WeekCalendarStrip(
             }
         }
 
-        // Разделитель; при включённом сворачивании свайпом — ещё и его ручка.
-        // Полоса 14dp: достаточно для жеста, без визуального «пустого этажа».
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(14.dp)
-                .then(
-                    if (swipeCollapseEnabled) {
-                        Modifier.pointerInput(Unit) {
-                            var accumulated = 0f
-                            detectVerticalDragGestures(
-                                onDragStart = { accumulated = 0f },
-                                onVerticalDrag = { change, dragAmount ->
-                                    change.consume()
-                                    accumulated -= dragAmount
-                                    if (accumulated > 40f) {
-                                        accumulated = 0f
-                                        onCollapse()
-                                    }
-                                }
-                            )
-                        }
-                    } else Modifier
-                ),
-            contentAlignment = Alignment.Center
-        ) {
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Разделитель. Полоса жеста (14dp) появляется только при включённом
+        // сворачивании свайпом; иначе — разделитель в упор, без пустоты.
+        val divider = @Composable {
             androidx.compose.material3.HorizontalDivider(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -326,6 +305,32 @@ fun WeekCalendarStrip(
                 thickness = 0.6.dp,
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
             )
+        }
+        if (swipeCollapseEnabled) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .pointerInput(Unit) {
+                        var accumulated = 0f
+                        detectVerticalDragGestures(
+                            onDragStart = { accumulated = 0f },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                accumulated -= dragAmount
+                                if (accumulated > 40f) {
+                                    accumulated = 0f
+                                    onCollapse()
+                                }
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                divider()
+            }
+        } else {
+            divider()
         }
     }
 }
