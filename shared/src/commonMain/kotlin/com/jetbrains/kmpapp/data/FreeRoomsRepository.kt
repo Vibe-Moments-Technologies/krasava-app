@@ -15,7 +15,7 @@ class FreeRoomsRepository(
     private val client: HttpClient,
     private val syncManager: UnifiedSyncManager
 ) {
-    private val cdnUrl = "https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/gh-pages/free_rooms.json"
+    private val cdnUrl = "https://raw.githubusercontent.com/Vibe-Moments-Technologies/krasava-app/gh-pages/free_rooms.json"
     private val cacheKey = "cached_free_rooms_json"
 
     /**

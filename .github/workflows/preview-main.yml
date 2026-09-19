@@ -90,13 +90,13 @@ jobs:
       - name: 🏷️ Prepare preview APK
         run: |
           mkdir -p dist
-          cp androidApp/build/outputs/apk/debug/*.apk dist/MIREA-Schedule-preview.apk
+          cp androidApp/build/outputs/apk/debug/*.apk dist/Krasava-preview.apk
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MIREA-Schedule-preview-APK
-          path: dist/MIREA-Schedule-preview.apk
+          name: Krasava-preview-APK
+          path: dist/Krasava-preview.apk
           if-no-files-found: error
 
   build_ipa:
@@ -163,15 +163,15 @@ jobs:
           APP_PATH=$(find build -name "*.app" -type d | head -n 1)
           echo "Found app at: $APP_PATH"
           cp -r "$APP_PATH" Payload/
-          zip -r ../MIREA-Schedule-preview.ipa Payload
+          zip -r ../Krasava-preview.ipa Payload
           rm -rf Payload
           cd ..
 
       - name: 📤 Upload IPA Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MIREA-Schedule-preview-IPA
-          path: MIREA-Schedule-preview.ipa
+          name: Krasava-preview-IPA
+          path: Krasava-preview.ipa
           if-no-files-found: error
 
   publish_preview:
@@ -186,14 +186,14 @@ jobs:
       - name: 📥 Download APK Artifact
         uses: actions/download-artifact@v4
         with:
-          name: MIREA-Schedule-preview-APK
+          name: Krasava-preview-APK
           path: download_apk
         continue-on-error: true
 
       - name: 📥 Download IPA Artifact
         uses: actions/download-artifact@v4
         with:
-          name: MIREA-Schedule-preview-IPA
+          name: Krasava-preview-IPA
           path: download_ipa
         continue-on-error: true
 

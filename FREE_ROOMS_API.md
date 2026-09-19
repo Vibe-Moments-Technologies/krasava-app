@@ -11,9 +11,9 @@ API предоставляет актуальную матрицу занято�
 - **Формат данных**: JSON (UTF-8, gzip-совместимый)
 - **Точка доступа (CDN)**:
   ```http
-  GET https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/gh-pages/free_rooms.json
+  GET https://raw.githubusercontent.com/Vibe-Moments-Technologies/krasava-app/gh-pages/free_rooms.json
   ```
-  *(Зеркало GitHub Pages: `https://l1ratch.github.io/MIREA-Schedule/free_rooms.json`)*
+  *(Зеркало GitHub Pages: `https://vibe-moments-technologies.github.io/krasava-app/free_rooms.json`)*
 - **Периодичность обновления**:
   - Автоматически каждое воскресенье в 03:00 UTC (06:00 МСК) через GitHub Actions ([`.github/workflows/sync-free-rooms.yml`](.github/workflows/sync-free-rooms.yml)).
   - Охватывает более **700 аудиторий** пяти кампусов.

@@ -29,16 +29,16 @@ APP_VERSION_FILE = "shared/src/commonMain/kotlin/com/jetbrains/kmpapp/data/model
 BUNDLE_ID = "ru.l1ratch.mireaschedule"
 TINT_COLOR = "4F46E5"
 APP_DESCRIPTION = (
-    "Расписание пар РТУ МИРЭА: поиск свободных аудиторий, интерактивные "
-    "карты корпусов, задачи и офлайн-кеш."
+    "Расписание пар, поиск свободных аудиторий, интерактивные карты "
+    "корпусов, задачи и офлайн-кеш."
 )
 
 # Канал → имя записи в источнике (по нему запись заменяется при обновлении).
 CHANNEL_APP_NAMES = {
-    "stable": "Расписание МИРЭА",
-    "beta": "Расписание МИРЭА (Beta)",
-    "rc": "Расписание МИРЭА (RC)",
-    "preview": "Расписание МИРЭА (Dev)",
+    "stable": "Красава!",
+    "beta": "Красава! (Beta)",
+    "rc": "Красава! (RC)",
+    "preview": "Красава! (Dev)",
 }
 # Порядок каналов в списке источника.
 CHANNEL_ORDER = ["stable", "rc", "beta", "preview"]
@@ -47,7 +47,7 @@ CHANNEL_ORDER = ["stable", "rc", "beta", "preview"]
 def parse_app_version(path):
     content = Path(path).read_text(encoding="utf-8")
     m = re.search(r'const\s+val\s+GITHUB_REPO\s*=\s*"([^"]+)"', content)
-    repo = m.group(1) if m else "l1ratch/MIREA-Schedule"
+    repo = m.group(1) if m else "Vibe-Moments-Technologies/krasava-app"
     m = (re.search(r'const\s+val\s+CHANGELOG\s*=\s*"""([\s\S]*?)"""', content)
          or re.search(r'const\s+val\s+CHANGELOG\s*=\s*"([^"]*)"', content))
     changelog = m.group(1).strip() if m else ""
@@ -63,23 +63,23 @@ def asset_urls(repo, channel, version):
         base = f"https://github.com/{repo}/releases"
         return {
             "download_url": f"{base}/latest",
-            "apk_url": f"{base}/latest/download/Schedule-MIREA.apk",
-            "ipa_url": f"{base}/latest/download/Schedule-MIREA.ipa",
+            "apk_url": f"{base}/latest/download/Krasava.apk",
+            "ipa_url": f"{base}/latest/download/Krasava.ipa",
         }
     if channel in ("beta", "rc"):
         base = f"https://github.com/{repo}/releases/download/v{version}"
         return {
             # Страница релиза, а не папка download/ (она отдаёт 404)
             "download_url": f"https://github.com/{repo}/releases/tag/v{version}",
-            "apk_url": f"{base}/Schedule-MIREA-v{version}.apk",
-            "ipa_url": f"{base}/Schedule-MIREA-v{version}.ipa",
+            "apk_url": f"{base}/Krasava-v{version}.apk",
+            "ipa_url": f"{base}/Krasava-v{version}.ipa",
         }
     # preview (rolling dev)
     base = f"https://github.com/{repo}/releases/download/preview"
     return {
-        "download_url": f"{base}/MIREA-Schedule-preview.apk",
-        "apk_url": f"{base}/MIREA-Schedule-preview.apk",
-        "ipa_url": f"{base}/MIREA-Schedule-preview.ipa",
+        "download_url": f"{base}/Krasava-preview.apk",
+        "apk_url": f"{base}/Krasava-preview.apk",
+        "ipa_url": f"{base}/Krasava-preview.ipa",
     }
 
 
@@ -130,8 +130,8 @@ def build_source(repo, channel, version, ipa_url):
     apps.sort(key=lambda a: CHANNEL_ORDER.index(a.get("channel"))
               if a.get("channel") in CHANNEL_ORDER else len(CHANNEL_ORDER))
     return {
-        "name": "MIREA Schedule",
-        "identifier": "mirea-schedule-unified",
+        "name": "Красава!",
+        "identifier": "krasava-unified",
         "sourceURL": f"https://raw.githubusercontent.com/{repo}/gh-pages/apps.json",
         "apps": apps,
     }

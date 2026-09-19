@@ -1,11 +1,11 @@
-# Политика конфиденциальности MIREA Schedule
+# Политика конфиденциальности Красава!
 
 **Редакция от «05» сентября 2026 г.**
-Приложение: MIREA Schedule (`ru.l1ratch.mireaschedule`), Android и iOS.
+Приложение: Красава! (`ru.l1ratch.mireaschedule`), Android и iOS.
 Регион: Российская Федерация.
 
 Настоящая Политика конфиденциальности описывает, какие сведения обрабатываются
-при использовании приложения MIREA Schedule, с какой целью и на каких условиях.
+при использовании приложения Красава!, с какой целью и на каких условиях.
 Политика является неотъемлемой частью Пользовательского соглашения и действует
 вместе с Политикой обработки персональных данных.
 
@@ -13,7 +13,7 @@
 
 ## 1. Кто мы и о чём этот документ
 
-1.1. MIREA Schedule — **некоммерческий студенческий проект с открытым исходным
+1.1. Красава! — **некоммерческий студенческий проект с открытым исходным
 кодом**. Мы — авторы и поддерживающие проект студенты («Владельцы», «мы»),
 указанные в репозитории проекта и разделе «О проекте». Мы не являемся
 работниками, представителями или агентами РТУ МИРЭА и не действуем от его имени.
@@ -186,16 +186,16 @@
 
 ## 12. Контакты
 
-Разработчик / Владельцы: авторы проекта MIREA Schedule (см. раздел «О проекте»).
+Разработчик / Владельцы: авторы проекта Красава! (см. раздел «О проекте»).
 
-- Репозиторий и вопросы: https://github.com/l1ratch/MIREA-Schedule/issues
+- Репозиторий и вопросы: https://github.com/Vibe-Moments-Technologies/krasava-app/issues
 - Сообщество проекта: https://t.me/MIREA_Schedule
 
 ---
 
 ## English notice (for store reviewers)
 
-MIREA Schedule is a free, open-source, non-commercial student project. It does
+Красава! is a free, open-source, non-commercial student project. It does
 **not** collect personal data in its own database. All user content (schedule
 cache, saved targets, notes, settings) is stored **only on the device**. The app
 uses **Yandex AppMetrica** to collect **anonymous technical usage statistics**

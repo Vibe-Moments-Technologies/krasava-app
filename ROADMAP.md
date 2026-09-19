@@ -1,8 +1,8 @@
-# 🗺️ Дорожная карта MIREA Schedule
+# 🗺️ Дорожная карта Красава!
 
 > **Файл ведёт только команда проекта.** Внешние контрибьюторы не меняют его
 > напрямую — предложения по фичам оформляются через
-> [Issue → Feature request](https://github.com/l1ratch/MIREA-Schedule/issues/new?template=feature_request.yml).
+> [Issue → Feature request](https://github.com/Vibe-Moments-Technologies/krasava-app/issues/new?template=feature_request.yml).
 >
 > Правила ведения:
 > - Задача считается выполненной только когда отмечен **весь** чеклист её DoD.

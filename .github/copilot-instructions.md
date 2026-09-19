@@ -1,7 +1,7 @@
-# GitHub Copilot Instructions for MIREA-Schedule
+# GitHub Copilot Instructions for krasava-app
 
 ## О проекте
-**MIREA-Schedule** — кроссплатформенное мобильное приложение расписания для студентов и преподавателей РТУ МИРЭА на базе **Kotlin Multiplatform (KMP)** и **Compose Multiplatform** для Android и iOS.
+**krasava-app** — кроссплатформенное мобильное приложение расписания для студентов и преподавателей РТУ МИРЭА на базе **Kotlin Multiplatform (KMP)** и **Compose Multiplatform** для Android и iOS.
 
 ## Архитектура и технологии
 - **Язык**: Kotlin 2.x

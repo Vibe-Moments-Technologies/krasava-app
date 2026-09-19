@@ -74,7 +74,7 @@ import com.jetbrains.kmpapp.data.update.UpdateUrgency
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
-private const val DOCS_BASE = "https://github.com/l1ratch/MIREA-Schedule/blob/main"
+private const val DOCS_BASE = "https://github.com/Vibe-Moments-Technologies/krasava-app/blob/main"
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF1E5BB0),

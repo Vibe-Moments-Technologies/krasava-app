@@ -1,9 +1,12 @@
 import os
 import re
 import shutil
+from pathlib import Path
 
-SOURCE_DIR = r"E:\Projects Directory\MIREA-Schedule\maps"
-TARGET_BASE = r"E:\Projects Directory\MIREA-Schedule\shared\src\commonMain\composeResources\files\maps"
+# Пути от корня репо — скрипт переживает любое переименование папки проекта.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+SOURCE_DIR = str(_REPO_ROOT / "maps")
+TARGET_BASE = str(_REPO_ROOT / "shared" / "src" / "commonMain" / "composeResources" / "files" / "maps")
 
 CAMPUS_MAP = {
     "В-78": "v-78",

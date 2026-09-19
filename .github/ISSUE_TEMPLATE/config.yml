@@ -1,10 +1,10 @@
-﻿blank_issues_enabled: false
+blank_issues_enabled: false
 contact_links:
   - name: 💬 Telegram-канал разработчика
     url: https://t.me/l1ratch
     about: Новости о проекте, обновлениях и релизах
   - name: 📦 Релизы и новые версии приложения
-    url: https://github.com/l1ratch/MIREA-Schedule/releases
+    url: https://github.com/Vibe-Moments-Technologies/krasava-app/releases
     about: Скачать последние сборки APK (Android) и IPA (iOS)
   - name: ℹ️ Официальный сайт расписания РТУ МИРЭА
     url: https://schedule-of.mirea.ru

@@ -1,6 +1,6 @@
-# MIREA Schedule
+# Красава!
 
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-3DDC84.svg?logo=android&logoColor=white)](https://github.com/l1ratch/MIREA-Schedule/releases)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20iOS-3DDC84.svg?logo=android&logoColor=white)](https://github.com/Vibe-Moments-Technologies/krasava-app/releases)
 [![Kotlin](https://img.shields.io/badge/Kotlin-2.4.10-7F52FF.svg?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose Multiplatform](https://img.shields.io/badge/Compose_Multiplatform-1.12.0-4285F4.svg?logo=jetpackcompose&logoColor=white)](https://www.jetbrains.com/lp/compose-multiplatform/)
 [![License](https://img.shields.io/badge/License-GPL_v3-blue.svg)](LICENSE)
@@ -12,9 +12,9 @@
 >
 > Приложение отправляет анонимную статистику использования и отчёты о падениях (Яндекс AppMetrica) — без личных данных и аккаунтов. При первом запуске приложение спрашивает разрешение, позже его можно включить или отключить в настройках («Отправлять анонимную статистику»).
 
-**Скачать:** [APK (Android, стабильная версия)](https://github.com/l1ratch/MIREA-Schedule/releases/latest/download/Schedule-MIREA.apk) · [IPA (iOS, без подписи)](https://github.com/l1ratch/MIREA-Schedule/releases/latest/download/Schedule-MIREA.ipa) · [Все релизы](https://github.com/l1ratch/MIREA-Schedule/releases)
+**Скачать:** [APK (Android, стабильная версия)](https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.apk) · [IPA (iOS, без подписи)](https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.ipa) · [Все релизы](https://github.com/Vibe-Moments-Technologies/krasava-app/releases)
 
-**Сообщество:** [Telegram](https://t.me/MIREA_Schedule) · [GitHub](https://github.com/l1ratch/MIREA-Schedule)
+**Сообщество:** [Telegram](https://t.me/MIREA_Schedule) · [GitHub](https://github.com/Vibe-Moments-Technologies/krasava-app)
 
 ---
 
@@ -59,7 +59,7 @@
 ## Установка
 
 ### Android
-1. Скачайте [Schedule-MIREA.apk](https://github.com/l1ratch/MIREA-Schedule/releases/latest/download/Schedule-MIREA.apk) из последнего стабильного релиза.
+1. Скачайте [Krasava.apk](https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.apk) из последнего стабильного релиза.
 2. Установите приложение, разрешив установку из неизвестных источников.
 3. Дальше приложение само проверяет обновления и предлагает установить новую версию.
 
@@ -69,7 +69,7 @@ IPA собирается без подписи, поэтому для устан
 Источник приложений (AltStore-совместимый формат):
 
 ```
-https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/gh-pages/apps.json
+https://raw.githubusercontent.com/Vibe-Moments-Technologies/krasava-app/gh-pages/apps.json
 ```
 
 ---
@@ -79,8 +79,8 @@ https://raw.githubusercontent.com/l1ratch/MIREA-Schedule/gh-pages/apps.json
 Требования: JDK 21, Android SDK (compileSdk 37, minSdk 24, targetSdk 37), Xcode 16+ для iOS. Gradle 9.6.1 подключается через wrapper (`gradlew`).
 
 ```bash
-git clone https://github.com/l1ratch/MIREA-Schedule.git
-cd MIREA-Schedule
+git clone https://github.com/Vibe-Moments-Technologies/krasava-app.git
+cd krasava-app
 
 # Android (debug APK)
 ./gradlew assembleDebug

@@ -139,7 +139,7 @@ fun AboutScreen(
                 }
             ) {
                 Text(
-                    text = "Расписание РТУ МИРЭА",
+                    text = "Красава!",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
