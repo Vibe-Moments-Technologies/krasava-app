@@ -16,13 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.screens.schedule.DayLessonSummary
@@ -50,6 +52,11 @@ import kotlinx.datetime.minus
  * Полноценный месячный календарь: листание месяцев/лет, подсветка сегодня
  * и выбранного дня, цветные точки пар под числом (легенда внизу), «Сегодня».
  * Общий для расписания и свободных аудиторий.
+ *
+ * Намеренно НЕ AlertDialog: тот построен на SubcomposeLayout, чей intrinsic-
+ * замер на iOS бросает IllegalStateException при изменении размера контента
+ * (краш на втором листании месяца). Здесь — обычный Dialog + Surface с
+ * фиксированными размерами: геометрия окна постоянна при любом листании.
  */
 @Composable
 fun MonthPickerDialog(
@@ -77,70 +84,62 @@ fun MonthPickerDialog(
     }
     val isDark = isSystemInDarkTheme()
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-        confirmButton = {
-            TextButton(onClick = {
-                displayedYear = today.year
-                displayedMonth = today.month.ordinal + 1
-                highlighted = today
-            }) {
-                Text("Сегодня", fontWeight = FontWeight.SemiBold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
-        },
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = {
-                        if (displayedMonth == 1) {
-                            displayedMonth = 12
-                            displayedYear -= 1
-                        } else {
-                            displayedMonth -= 1
-                        }
-                    },
-                    modifier = Modifier.size(36.dp)
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
+            modifier = Modifier.width(320.dp)
+        ) {
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                // Заголовок: стрелки + «Месяц Год»
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                        contentDescription = "Предыдущий месяц"
+                    IconButton(
+                        onClick = {
+                            if (displayedMonth == 1) {
+                                displayedMonth = 12
+                                displayedYear -= 1
+                            } else {
+                                displayedMonth -= 1
+                            }
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            contentDescription = "Предыдущий месяц"
+                        )
+                    }
+
+                    Text(
+                        text = "${DateUtils.formatMonthTitle(Month.entries[displayedMonth - 1])} $displayedYear",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
+
+                    IconButton(
+                        onClick = {
+                            if (displayedMonth == 12) {
+                                displayedMonth = 1
+                                displayedYear += 1
+                            } else {
+                                displayedMonth += 1
+                            }
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = "Следующий месяц"
+                        )
+                    }
                 }
 
-                Text(
-                    text = "${DateUtils.formatMonthTitle(Month.entries[displayedMonth - 1])} $displayedYear",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                IconButton(
-                    onClick = {
-                        if (displayedMonth == 12) {
-                            displayedMonth = 1
-                            displayedYear += 1
-                        } else {
-                            displayedMonth += 1
-                        }
-                    },
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                        contentDescription = "Следующий месяц"
-                    )
-                }
-            }
-        },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
+                // Дни недели
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceAround
@@ -157,15 +156,8 @@ fun MonthPickerDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // Всегда 6 строк сетки (максимум для любого месяца): высота
-                // диалога постоянна при листании. На iOS окно диалога
-                // перекладывается под содержимое, и сжатие контента при
-                // возврате на более короткий месяц роняло приложение.
-                // Каждая ячейка — всегда Box (никаких Spacer↔Box подмен
-                // взвешенных детей при смене месяца): дерево компоновки
-                // статично, меняются только листья.
+                // Сетка: всегда 6 рядов по 7 ячеек-Box (статичное дерево,
+                // постоянная высота — окно диалога не перекладывается).
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -177,8 +169,9 @@ fun MonthPickerDialog(
                         ) {
                             for (col in 0 until 7) {
                                 val dayNumber = row * 7 + col - leadingEmptyDays + 1
-                                val inMonth = dayNumber in 1..daysInMonth
-                                val cellDate = if (inMonth) LocalDate(displayedYear, displayedMonth, dayNumber) else null
+                                val cellDate = if (dayNumber in 1..daysInMonth) {
+                                    LocalDate(displayedYear, displayedMonth, dayNumber)
+                                } else null
 
                                 Box(
                                     modifier = Modifier
@@ -250,7 +243,7 @@ fun MonthPickerDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 // Легенда типов пар в одну строку — короткие названия, как на
                 // карточках пар (полные не влезают в ширину диалога).
@@ -276,9 +269,27 @@ fun MonthPickerDialog(
                         }
                     }
                 }
+
+                // Кнопки
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = {
+                        displayedYear = today.year
+                        displayedMonth = today.month.ordinal + 1
+                        highlighted = today
+                    }) {
+                        Text("Сегодня", fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    TextButton(onClick = onDismiss) {
+                        Text("Отмена")
+                    }
+                }
             }
         }
-    )
+    }
 }
 
 /** Цвета точек пар — единый источник для ленточного и месячного календарей. */
