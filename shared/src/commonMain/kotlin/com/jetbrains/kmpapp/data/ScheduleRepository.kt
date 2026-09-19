@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.data
 
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
 import com.jetbrains.kmpapp.data.model.Lesson
+import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.LessonDiffItem
 import com.jetbrains.kmpapp.data.model.LessonDiffType
 import com.jetbrains.kmpapp.data.model.ScheduleDiff
@@ -38,7 +39,15 @@ class ScheduleRepository(
     val isLowPowerMode: StateFlow<Boolean> = powerManager.isLowPowerMode
     val savedTargets: StateFlow<List<ScheduleTarget>> = storage.savedTargets
     val selectedTarget: StateFlow<ScheduleTarget?> = storage.selectedTarget
-    val cachedLessons: StateFlow<Map<Int, List<Lesson>>> = storage.cachedLessons
+    // Единая точка скрытия ДОП-пар: отсюда читают экран расписания,
+    // сравнение расписаний и все производные StateFlow.
+    val cachedLessons: StateFlow<Map<Int, List<Lesson>>> = combine(
+        storage.cachedLessons,
+        storage.hideAdditionalLessons
+    ) { cache, hideAdditional ->
+        if (!hideAdditional) cache
+        else cache.mapValues { (_, lessons) -> lessons.filter { it.lessonType != LessonType.ADDITIONAL } }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
     val showEmptyLessons: StateFlow<Boolean> = storage.showEmptyLessons
     val themeMode: StateFlow<ThemeMode> = storage.themeMode
     val dockTabs: StateFlow<List<com.jetbrains.kmpapp.screens.components.AppTab>> = storage.dockTabs
@@ -114,6 +123,12 @@ class ScheduleRepository(
         storage.setCalendarSwipeCollapse(enabled)
     }
 
+    val hideAdditionalLessons: StateFlow<Boolean> = storage.hideAdditionalLessons
+
+    fun setHideAdditionalLessons(enabled: Boolean) {
+        storage.setHideAdditionalLessons(enabled)
+    }
+
     val autoScrollToCurrentLesson: StateFlow<Boolean> = storage.autoScrollToCurrentLesson
 
     fun setAutoScrollToCurrentLesson(enabled: Boolean) {
@@ -153,9 +168,10 @@ class ScheduleRepository(
                 storage.selectedTarget,
                 storage.notificationsEnabled,
                 storage.notifyMinutesBefore,
-                storage.notificationsTargetId
-            ) { lessons, activeTarget, enabled, minutes, notificationTargetId ->
-                NotificationsPayload(lessons, activeTarget, enabled, minutes, notificationTargetId)
+                storage.notificationsTargetId,
+                storage.hideAdditionalLessons
+            ) { lessons, activeTarget, enabled, minutes, notificationTargetId, hideAdditional ->
+                NotificationsPayload(lessons, activeTarget, enabled, minutes, notificationTargetId, hideAdditional)
             }.collect { p ->
                 notificationRescheduleMutex.withLock {
                     val target = p.notificationTargetId?.let { id ->
@@ -167,6 +183,11 @@ class ScheduleRepository(
                         storage.setNotificationsTargetId(it.id)
                     }
                     val targetLessons = target?.let { p.lessons[it.id] }
+                        ?.let { list ->
+                            if (p.hideAdditionalLessons) {
+                                list.filter { it.lessonType != LessonType.ADDITIONAL }
+                            } else list
+                        }
                     when {
                         !p.enabled || target == null -> {
                             NotificationsManager.reschedule(emptyList(), p.minutes) { "" } // снимает всё
@@ -200,7 +221,8 @@ class ScheduleRepository(
         val activeTarget: com.jetbrains.kmpapp.data.model.ScheduleTarget?,
         val enabled: Boolean,
         val minutes: Int,
-        val notificationTargetId: Int?
+        val notificationTargetId: Int?,
+        val hideAdditionalLessons: Boolean
     )
 
     fun setThemeOverlay(overlay: ThemeOverlay) = storage.setThemeOverlay(overlay)
@@ -227,10 +249,11 @@ class ScheduleRepository(
 
     val currentLessons: StateFlow<List<Lesson>> = combine(
         storage.selectedTarget,
-        storage.cachedLessons
-    ) { selected, cache ->
-        if (selected == null) emptyList()
-        else cache[selected.id] ?: emptyList()
+        storage.cachedLessons,
+        storage.hideAdditionalLessons
+    ) { selected, cache, hideAdditional ->
+        val lessons = if (selected == null) emptyList() else cache[selected.id] ?: emptyList()
+        if (hideAdditional) lessons.filter { it.lessonType != LessonType.ADDITIONAL } else lessons
     }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     init {

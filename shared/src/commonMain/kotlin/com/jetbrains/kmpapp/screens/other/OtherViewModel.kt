@@ -112,6 +112,7 @@ class OtherViewModel(
     val showEmptyLessonProgress: StateFlow<Boolean> = repository.showEmptyLessonProgress
     val showBreakProgress: StateFlow<Boolean> = repository.showBreakProgress
     val calendarSwipeCollapse: StateFlow<Boolean> = repository.calendarSwipeCollapse
+    val hideAdditionalLessons: StateFlow<Boolean> = repository.hideAdditionalLessons
     val autoScrollToCurrentLesson: StateFlow<Boolean> = repository.autoScrollToCurrentLesson
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
     val themeMode: StateFlow<ThemeMode> = repository.themeMode
@@ -145,6 +146,10 @@ class OtherViewModel(
 
     fun setCalendarSwipeCollapse(enabled: Boolean) {
         repository.setCalendarSwipeCollapse(enabled)
+    }
+
+    fun setHideAdditionalLessons(enabled: Boolean) {
+        repository.setHideAdditionalLessons(enabled)
     }
 
     fun setAutoScrollToCurrentLesson(enabled: Boolean) {

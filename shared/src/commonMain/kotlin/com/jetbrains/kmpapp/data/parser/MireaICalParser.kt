@@ -107,6 +107,8 @@ object MireaICalParser {
         val rawType = props["X-META-LESSON_TYPE"]?.firstOrNull()
             ?: props["X-META-FULL_LESSON_TYPE"]?.firstOrNull() ?: ""
         val lessonType = when {
+            // «доп» раньше «пр»: иначе «доп. практика» уедет в PRACTICE.
+            rawType.contains("доп", ignoreCase = true) -> LessonType.ADDITIONAL
             rawType.contains("лк", ignoreCase = true) || rawType.contains("лек", ignoreCase = true) -> LessonType.LECTURE
             rawType.contains("пр", ignoreCase = true) || rawType.contains("прак", ignoreCase = true) -> LessonType.PRACTICE
             rawType.contains("лаб", ignoreCase = true) -> LessonType.LAB

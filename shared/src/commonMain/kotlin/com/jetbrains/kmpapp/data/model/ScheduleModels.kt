@@ -31,7 +31,8 @@ enum class LessonType(val displayName: String, val shortName: String) {
     LECTURE("Лекция", "ЛК"),
     PRACTICE("Практика", "ПР"),
     LAB("Лабораторная", "ЛАБ"),
-    OTHER("Занятие", "ДР")
+    OTHER("Занятие", "ДР"),
+    ADDITIONAL("Доп. занятие", "ДОП")
 }
 
 @Serializable

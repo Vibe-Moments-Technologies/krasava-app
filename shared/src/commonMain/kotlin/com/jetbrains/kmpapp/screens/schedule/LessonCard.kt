@@ -555,5 +555,7 @@ internal fun getTypeBadgeColors(lessonType: LessonType): Pair<Color, Color> {
             if (isDark) Color(0xFF7C2D12) to Color(0xFFFED7AA) else Color(0xFFFED7AA) to Color(0xFFC2410C)
         LessonType.OTHER ->
             if (isDark) Color(0xFF581C87) to Color(0xFFE9D5FF) else Color(0xFFE9D5FF) to Color(0xFF7E22CE)
+        LessonType.ADDITIONAL ->
+            if (isDark) Color(0xFF831843) to Color(0xFFFBCFE8) else Color(0xFFFCE7F3) to Color(0xFFBE185D)
     }
 }

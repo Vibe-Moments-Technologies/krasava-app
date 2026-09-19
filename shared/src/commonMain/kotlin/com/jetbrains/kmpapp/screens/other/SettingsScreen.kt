@@ -79,6 +79,7 @@ fun SettingsScreen(
     PlatformBackHandler(onBack = onBack)
 
     val showEmptyLessons by viewModel.showEmptyLessons.collectAsState()
+    val hideAdditionalLessons by viewModel.hideAdditionalLessons.collectAsState()
     val showLessonProgress by viewModel.showLessonProgress.collectAsState()
     val showEmptyLessonProgress by viewModel.showEmptyLessonProgress.collectAsState()
     val showBreakProgress by viewModel.showBreakProgress.collectAsState()
@@ -325,6 +326,36 @@ fun SettingsScreen(
                     Switch(
                         checked = showEmptyLessons,
                         onCheckedChange = { viewModel.setShowEmptyLessons(it) }
+                    )
+                }
+
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Скрывать доп. занятия",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Не показывать пары типа «ДОП» в расписании, календаре и напоминаниях",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = hideAdditionalLessons,
+                        onCheckedChange = { viewModel.setHideAdditionalLessons(it) }
                     )
                 }
 
