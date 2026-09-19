@@ -3,28 +3,25 @@
 tools/update_version_feed.py — генерация канальных фидов и IPA-источников на gh-pages.
 
 Каналы и файлы:
-  --channel stable   : version.json (автообновление обычных пользователей)
-                       + apps.json (AltStore-совместимый источник стабильных IPA)
-                       + apps-beta.json (GBox-источник «всегда последняя сборка»)
-  --channel beta|rc  : beta.json (opt-in бета-канал в настройках приложения)
-                       + apps-beta.json
-  --channel preview  : apps-beta.json только (rolling dev-сборка main)
+  --channel stable   : version.json (автообновление обычных пользователей) + apps.json
+  --channel beta|rc  : beta.json (opt-in бета-канал в настройках приложения) + apps.json
+  --channel preview  : apps.json только (rolling dev-сборка main)
 
-apps-beta.json — «самая свежая сборка» (dev/beta/rc/stable): кто последний
-собрался, тот и записан. Используется владельцем для цикла
-«собрал → обновил в GBox → протестил». В description дублируются версия
-и дата/время, чтобы не запутаться.
+apps.json — ЕДИНЫЙ GBox/AltStore-источник: список всех живых каналов
+(стабильный, beta, rc, dev) — по одной свежайшей сборке на канал. Каждый
+запуск скрипта обновляет запись своего канала, остальные подтягиваются
+из уже опубликованного apps.json (fetch с gh-pages). apps-beta.json
+оставлен алиасом того же содержимого — на него ссылается старый GBox-сетап.
 
 Вызывается ТОЛЬКО из релизного и preview-воркфлоу. Деплой на gh-pages
-выполняет workflow (peaceiris/actions-gh-pages, keep_files). Источники
-apps.json / apps-beta.json совместимы с AltStore-подобными клиентами
-(SideStore, GBox и др.); один bundle id — подключай один источник за раз.
+выполняет workflow (peaceiris/actions-gh-pages, keep_files).
 """
 
 import argparse
 import json
 import re
 import sys
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,6 +32,16 @@ APP_DESCRIPTION = (
     "Расписание пар РТУ МИРЭА: поиск свободных аудиторий, интерактивные "
     "карты корпусов, задачи и офлайн-кеш."
 )
+
+# Канал → имя записи в источнике (по нему запись заменяется при обновлении).
+CHANNEL_APP_NAMES = {
+    "stable": "Расписание МИРЭА",
+    "beta": "Расписание МИРЭА (Beta)",
+    "rc": "Расписание МИРЭА (RC)",
+    "preview": "Расписание МИРЭА (Dev)",
+}
+# Порядок каналов в списке источника.
+CHANNEL_ORDER = ["stable", "rc", "beta", "preview"]
 
 
 def parse_app_version(path):
@@ -76,32 +83,57 @@ def asset_urls(repo, channel, version):
     }
 
 
-def build_source(repo, channel, version, ipa_url):
-    """AltStore-совместимый источник. apps-beta.json всегда несёт последнюю сборку."""
-    stable = channel == "stable"
-    filename = "apps.json" if stable else "apps-beta.json"
+def build_app_entry(repo, channel, version, ipa_url):
+    """Одна запись канала в едином AltStore-совместимом источнике."""
     now = datetime.now(timezone.utc)
     # В description дублируем версию и время — так в GBox видно, что установлено.
     description = (
         f"{APP_DESCRIPTION}\n\n"
+        f"Канал: {channel}\n"
         f"Сборка: {version}\n"
         f"Обновлено: {now.strftime('%Y-%m-%d %H:%M UTC')}"
     )
     return {
-        "name": "MIREA Schedule" + ("" if stable else " (Beta)"),
-        "identifier": f"mirea-schedule-{'stable' if stable else 'beta'}",
-        "sourceURL": f"https://raw.githubusercontent.com/{repo}/gh-pages/{filename}",
-        "apps": [{
-            "name": "Расписание МИРЭА",
-            "bundleIdentifier": BUNDLE_ID,
-            "developerName": "l1ratch",
-            "localizedDescription": description,
-            "iconURL": f"https://raw.githubusercontent.com/{repo}/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
-            "version": version,
-            "versionDate": now.isoformat(),
-            "downloadURL": ipa_url,
-            "tintColor": TINT_COLOR,
-        }],
+        "name": CHANNEL_APP_NAMES[channel],
+        "bundleIdentifier": BUNDLE_ID,
+        "developerName": "l1ratch",
+        "localizedDescription": description,
+        "iconURL": f"https://raw.githubusercontent.com/{repo}/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
+        "version": version,
+        "versionDate": now.isoformat(),
+        "downloadURL": ipa_url,
+        "tintColor": TINT_COLOR,
+        # Не AltStore-поле, нужно только нам: по нему запись канала заменяется.
+        "channel": channel,
+    }
+
+
+def fetch_published_apps(repo):
+    """Текущий apps.json с gh-pages — чтобы не потерять чужие каналы."""
+    url = f"https://raw.githubusercontent.com/{repo}/gh-pages/apps.json"
+    try:
+        with urllib.request.urlopen(url, timeout=15) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        apps = data.get("apps", [])
+        return apps if isinstance(apps, list) else []
+    except Exception as e:
+        print(f"WARN: cannot fetch published apps.json ({e}); starting fresh", file=sys.stderr)
+        return []
+
+
+def build_source(repo, channel, version, ipa_url):
+    """Единый источник: свежайшая сборка каждого канала в одном списке."""
+    entry = build_app_entry(repo, channel, version, ipa_url)
+    apps = [a for a in fetch_published_apps(repo)
+            if isinstance(a, dict) and a.get("channel") != channel and a.get("name") != entry["name"]]
+    apps.append(entry)
+    apps.sort(key=lambda a: CHANNEL_ORDER.index(a.get("channel"))
+              if a.get("channel") in CHANNEL_ORDER else len(CHANNEL_ORDER))
+    return {
+        "name": "MIREA Schedule",
+        "identifier": "mirea-schedule-unified",
+        "sourceURL": f"https://raw.githubusercontent.com/{repo}/gh-pages/apps.json",
+        "apps": apps,
     }
 
 
@@ -118,7 +150,6 @@ def main():
     repo, changelog, critical, min_supported = parse_app_version(args.app_version_file)
     channel = args.channel
     is_stable = channel == "stable"
-    is_preview = channel == "preview"
     # beta и rc пишут один и тот же фид: бета-канал приложения читает beta.json
     is_beta = channel in ("beta", "rc")
     urls = asset_urls(repo, channel, args.version)
@@ -149,17 +180,13 @@ def main():
             json.dumps(feed, indent=2, ensure_ascii=False), encoding="utf-8")
         written.append(feed_name)
 
-    # 2) GBox-источники: apps.json — стабильный, apps-beta.json — всегда последняя сборка
-    if is_stable:
-        (out_dir / "apps.json").write_text(
-            json.dumps(build_source(repo, channel, args.version, urls["ipa_url"]),
-                       indent=2, ensure_ascii=False), encoding="utf-8")
-        written.append("apps.json")
-    # apps-beta.json пишется ВСЕМИ каналами — «самая свежая сборка» для GBox
-    (out_dir / "apps-beta.json").write_text(
-        json.dumps(build_source(repo, channel, args.version, urls["ipa_url"]),
-                   indent=2, ensure_ascii=False), encoding="utf-8")
-    written.append("apps-beta.json")
+    # 2) Единый GBox/AltStore-источник: apps.json (все каналы).
+    #    apps-beta.json — алиас того же содержимого для старых подписок.
+    source = build_source(repo, channel, args.version, urls["ipa_url"])
+    source_json = json.dumps(source, indent=2, ensure_ascii=False)
+    for filename in ("apps.json", "apps-beta.json"):
+        (out_dir / filename).write_text(source_json, encoding="utf-8")
+        written.append(filename)
 
     print(f"Generated in {out_dir}: {', '.join(written)}")
 

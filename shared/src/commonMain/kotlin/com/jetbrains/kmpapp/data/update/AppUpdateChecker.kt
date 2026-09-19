@@ -86,12 +86,11 @@ class AppUpdateChecker(
     }
 
     suspend fun checkForUpdates(includeBeta: Boolean = false): UpdateCheckResult? = withContext(Dispatchers.IO) {
-        // Тестовые (dev/beta/rc) сборки живут в бета-канале: им проверка нужна
-        // всегда, иначе без тумблера «Бета-канал» кнопка проверки мертва.
-        val checkBeta = includeBeta || AppVersion.isTestBuild
-
+        // Бета-канал проверяется только если пользователь явно включил тумблер.
+        // Раньше тестовые сборки форсировали проверку беты — из-за этого бета
+        // предлагалась даже с выключенным тумблером.
         val stableResult = fetchFeedResult(AppVersion.UPDATE_FEED_URL, channel = "stable", isPrerelease = false)
-        val betaResult = if (checkBeta) {
+        val betaResult = if (includeBeta) {
             fetchFeedResult(AppVersion.BETA_FEED_URL, channel = "beta", isPrerelease = true)
         } else {
             null

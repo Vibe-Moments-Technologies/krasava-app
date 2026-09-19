@@ -10,17 +10,28 @@ import kmp_app_template.shared.generated.resources.team_prosto_max
  * новый участник = строка в [projectTeam]. Аватарки захардкожены
  * ресурсами, чтобы не тянуть их с сети при каждом открытии экрана.
  */
+
+/** Типы личных ссылок участника: определяют иконку кнопки в карточке. */
+enum class TeamLinkType {
+    GITHUB, TELEGRAM, OTHER
+}
+
+data class TeamLink(
+    val type: TeamLinkType,
+    val url: String
+)
+
 data class TeamMember(
     val name: String,
     val role: String,
     val department: String,
     val description: String? = null,
     val avatar: DrawableResource? = null,
-    val githubUrl: String? = null
+    val links: List<TeamLink> = emptyList()
 )
 
-/** Отделы для будущей группировки; карточки выводятся по этому порядку. */
-val teamDepartments = listOf("Разработка")
+/** Отделы для группировки; карточки выводятся по этому порядку. */
+val teamDepartments = listOf("Разработка", "Карты")
 
 val projectTeam = listOf(
     TeamMember(
@@ -29,7 +40,7 @@ val projectTeam = listOf(
         department = "Разработка",
         description = "Создание и поддержка приложения, архитектура, релизы.",
         avatar = Res.drawable.team_l1ratch,
-        githubUrl = "https://github.com/l1ratch"
+        links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/l1ratch"))
     ),
     TeamMember(
         name = "prosto-max",
@@ -37,6 +48,13 @@ val projectTeam = listOf(
         department = "Разработка",
         description = "Разработка функций и улучшения приложения.",
         avatar = Res.drawable.team_prosto_max,
-        githubUrl = "https://github.com/prosto-max"
+        links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/prosto-max"))
+    ),
+    TeamMember(
+        name = "KiraSunshine",
+        role = "Картограф",
+        department = "Карты",
+        description = "Перерисовывает планы корпусов для интерактивных карт приложения.",
+        links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/KiraSunshine"))
     )
 )

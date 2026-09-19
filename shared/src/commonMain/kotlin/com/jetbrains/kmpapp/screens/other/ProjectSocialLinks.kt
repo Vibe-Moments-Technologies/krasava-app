@@ -173,7 +173,7 @@ private fun SocialIcon(
 }
 
 /** Логотип GitHub (Simple Icons, 24×24). */
-private val GitHubMark: ImageVector by lazy {
+internal val GitHubMark: ImageVector by lazy {
     ImageVector.Builder(
         name = "GitHubMark",
         defaultWidth = 24.dp,
@@ -214,7 +214,7 @@ private val GitHubMark: ImageVector by lazy {
 }
 
 /** Логотип Telegram (Simple Icons, 24×24). */
-private val TelegramMark: ImageVector by lazy {
+internal val TelegramMark: ImageVector by lazy {
     ImageVector.Builder(
         name = "TelegramMark",
         defaultWidth = 24.dp,

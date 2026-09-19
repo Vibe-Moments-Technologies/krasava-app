@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp.screens.other
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -99,9 +101,7 @@ fun TeamScreen(
                     )
                 }
                 items(members, key = { it.name }) { member ->
-                    TeamMemberCard(member = member) {
-                        member.githubUrl?.let { uriHandler.openUri(it) }
-                    }
+                    TeamMemberCard(member = member)
                 }
             }
 
@@ -111,69 +111,110 @@ fun TeamScreen(
 }
 
 @Composable
-private fun TeamMemberCard(member: TeamMember, onClick: (() -> Unit)?) {
-    // clip ДО clickable — иначе ripple рисуется по прямоугольнику и
-    // его углы вылезают за скругление карточки
+private fun TeamMemberCard(member: TeamMember) {
+    val uriHandler = LocalUriHandler.current
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier)
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (member.avatar != null) {
-                Image(
-                    painter = painterResource(member.avatar),
-                    contentDescription = "Аватар ${member.name}",
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {}
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (member.avatar != null) {
+                    Image(
+                        painter = painterResource(member.avatar),
+                        contentDescription = "Аватар ${member.name}",
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                    )
+                } else {
+                    // Заглушка-инициал: для участников без фото (например, отдел «Карты»).
+                    Box(
+                        modifier = Modifier
+                            .size(52.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = member.name.first().uppercase(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = member.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    if (onClick != null) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                            modifier = Modifier.size(13.dp)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = member.role,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    member.description?.let {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = it,
+                            fontSize = 11.5.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = member.role,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.SemiBold
-                )
-                member.description?.let {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = it,
-                        fontSize = 11.5.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+            }
+
+            // Личные ссылки — компактные иконки-чипы; вся карточка больше не кликабельна.
+            if (member.links.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    member.links.forEach { link ->
+                        val (icon, tint, label) = when (link.type) {
+                            TeamLinkType.GITHUB -> Triple(
+                                GitHubMark,
+                                MaterialTheme.colorScheme.onSurface,
+                                "GitHub"
+                            )
+                            TeamLinkType.TELEGRAM -> Triple(
+                                TelegramMark,
+                                Color(0xFF29A9EB),
+                                "Telegram"
+                            )
+                            TeamLinkType.OTHER -> Triple(
+                                Icons.AutoMirrored.Filled.OpenInNew,
+                                MaterialTheme.colorScheme.primary,
+                                "Ссылка"
+                            )
+                        }
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                                .clickable { uriHandler.openUri(link.url) }
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = label,
+                                tint = tint,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = label,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
                 }
             }
         }
