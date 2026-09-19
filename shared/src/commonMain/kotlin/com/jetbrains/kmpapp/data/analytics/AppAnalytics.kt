@@ -8,7 +8,7 @@ package com.jetbrains.kmpapp.data.analytics
  *  - iOS: iOSApp.init → Swift-класс AppMetricaEngine (iosApp)
  * Падения собираются SDK автоматически после активации.
  *
- * Выключается пользователем тумблером в настройках (mirea_analytics_enabled).
+ * Выключается пользователем тумблером в настройках (krasava_analytics_enabled).
  */
 interface AnalyticsEngine {
     fun logEvent(name: String, params: Map<String, String>)

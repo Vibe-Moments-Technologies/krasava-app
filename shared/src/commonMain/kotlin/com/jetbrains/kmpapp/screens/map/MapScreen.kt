@@ -110,7 +110,7 @@ fun MapScreen(
     }
 
     var showDisclaimerDialog by remember {
-        mutableStateOf(platformStorage.getString("mirea_map_disclaimer_seen") != "true")
+        mutableStateOf(platformStorage.getString("krasava_map_disclaimer_seen") != "true")
     }
 
     var selectedCampus by remember { mutableStateOf(CAMPUSES.first()) }
@@ -418,7 +418,7 @@ fun MapScreen(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null
                         ) {
-                            platformStorage.saveString("mirea_map_disclaimer_seen", "true")
+                            platformStorage.saveString("krasava_map_disclaimer_seen", "true")
                             showDisclaimerDialog = false
                         },
                     contentAlignment = Alignment.Center
@@ -504,7 +504,7 @@ fun MapScreen(
 
                             Button(
                                 onClick = {
-                                    platformStorage.saveString("mirea_map_disclaimer_seen", "true")
+                                    platformStorage.saveString("krasava_map_disclaimer_seen", "true")
                                     showDisclaimerDialog = false
                                 },
                                 shape = RoundedCornerShape(14.dp),

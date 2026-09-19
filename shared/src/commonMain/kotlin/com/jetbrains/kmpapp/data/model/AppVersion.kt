@@ -39,7 +39,6 @@ object AppVersion {
 
     val isTestBuild: Boolean get() = BUILD_CHANNEL != "stable"
 
-    const val APPLICATION_ID = "ru.l1ratch.mireaschedule"
     const val DISPLAY_VERSION = "Версия $VERSION_NAME (сборка $BUILD_NUMBER)"
     const val GITHUB_REPO = "Vibe-Moments-Technologies/krasava-app"
     const val GITHUB_REPO_URL = "https://github.com/Vibe-Moments-Technologies/krasava-app"

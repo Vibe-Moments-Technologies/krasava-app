@@ -74,8 +74,20 @@ jobs:
         with:
           validate-wrappers: false
 
-      - name: 🔨 Run all tests + Build Android APK
-        run: ./gradlew :shared:allTests assembleDebug --stacktrace
+      - name: 🔒 Fail fast без релизных секретов подписи
+        run: |
+          if [ -z "${{ secrets.RELEASE_KEYSTORE_B64 }}" ]; then
+            echo "::error::RELEASE_KEYSTORE_B64 не задан в секретах — релиз не может быть подписан."
+            exit 1
+          fi
+
+      - name: 🔨 Run all tests + Build Android APK (release, подписан из секретов)
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :shared:allTests assembleRelease --stacktrace
 
       - name: 🏷️ Prepare APK Artifact
         env:
@@ -85,9 +97,9 @@ jobs:
           mkdir -p dist
           if [ "$CHANNEL" = "stable" ]; then
             # неизменное имя — на него ссылаются старые версии приложения
-            cp androidApp/build/outputs/apk/debug/*.apk dist/Krasava.apk
+            cp androidApp/build/outputs/apk/release/*.apk dist/Krasava.apk
           else
-            cp androidApp/build/outputs/apk/debug/*.apk "dist/Krasava-v${VERSION}.apk"
+            cp androidApp/build/outputs/apk/release/*.apk "dist/Krasava-v${VERSION}.apk"
           fi
 
       - name: 📤 Upload APK Artifact
