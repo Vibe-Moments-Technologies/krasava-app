@@ -53,7 +53,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PREV="$(gh api "repos/${{ github.repository }}/releases/tags/preview" --jq .name 2>/dev/null || true)"
+          # 404 (релиза preview ещё нет, например в новом репо) gh отдаёт JSON
+          # в stdout с кодом 1 — сбрасываем PREV, иначе JSON едет в --prev-version.
+          PREV="$(gh api "repos/${{ github.repository }}/releases/tags/preview" --jq .name 2>/dev/null)" || PREV=""
           python tools/versioning.py resolve --channel dev --prev-version "${PREV:-}"
 
   build_apk:
