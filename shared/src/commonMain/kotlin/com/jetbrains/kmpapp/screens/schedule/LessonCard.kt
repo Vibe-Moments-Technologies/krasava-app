@@ -543,19 +543,33 @@ fun LessonBreakIndicator(
 }
 
 
+/** Пары (фон, текст) для каждого типа: [0] = тёмная тема, [1] = светлая. */
+private val TYPE_BADGE_COLORS = mapOf(
+    LessonType.LECTURE to listOf(
+        Color(0xFF0C4A6E) to Color(0xFFBAE6FD),
+        Color(0xFFBAE6FD) to Color(0xFF0369A1)
+    ),
+    LessonType.PRACTICE to listOf(
+        Color(0xFF14532D) to Color(0xFFBBF7D0),
+        Color(0xFFBBF7D0) to Color(0xFF15803D)
+    ),
+    LessonType.LAB to listOf(
+        Color(0xFF7C2D12) to Color(0xFFFED7AA),
+        Color(0xFFFED7AA) to Color(0xFFC2410C)
+    ),
+    LessonType.OTHER to listOf(
+        Color(0xFF581C87) to Color(0xFFE9D5FF),
+        Color(0xFFE9D5FF) to Color(0xFF7E22CE)
+    ),
+    LessonType.ADDITIONAL to listOf(
+        Color(0xFF831843) to Color(0xFFFBCFE8),
+        Color(0xFFFCE7F3) to Color(0xFFBE185D)
+    )
+)
+
 @Composable
 internal fun getTypeBadgeColors(lessonType: LessonType): Pair<Color, Color> {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    return when (lessonType) {
-        LessonType.LECTURE ->
-            if (isDark) Color(0xFF0C4A6E) to Color(0xFFBAE6FD) else Color(0xFFBAE6FD) to Color(0xFF0369A1)
-        LessonType.PRACTICE ->
-            if (isDark) Color(0xFF14532D) to Color(0xFFBBF7D0) else Color(0xFFBBF7D0) to Color(0xFF15803D)
-        LessonType.LAB ->
-            if (isDark) Color(0xFF7C2D12) to Color(0xFFFED7AA) else Color(0xFFFED7AA) to Color(0xFFC2410C)
-        LessonType.OTHER ->
-            if (isDark) Color(0xFF581C87) to Color(0xFFE9D5FF) else Color(0xFFE9D5FF) to Color(0xFF7E22CE)
-        LessonType.ADDITIONAL ->
-            if (isDark) Color(0xFF831843) to Color(0xFFFBCFE8) else Color(0xFFFCE7F3) to Color(0xFFBE185D)
-    }
+    val colors = TYPE_BADGE_COLORS.getValue(lessonType)
+    return if (isDark) colors[0] else colors[1]
 }

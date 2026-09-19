@@ -189,95 +189,11 @@ fun App() {
             val updateResult by otherViewModel.updateResult.collectAsState()
             var dismissedUpdateKey by rememberSaveable { mutableStateOf<String?>(null) }
 
-            val activeUpdate = updateResult
-            if (activeUpdate != null && activeUpdate.hasUpdate) {
-                val updateKey = "${activeUpdate.latestVersion}_${activeUpdate.latestBuild}_${activeUpdate.urgency}"
-                val isCritical = activeUpdate.urgency == UpdateUrgency.CRITICAL
-                val isNewVersion = activeUpdate.urgency == UpdateUrgency.NEW_VERSION
-                val isPrereleaseUpdate = activeUpdate.isPrerelease
-
-                if ((isCritical || isNewVersion) && dismissedUpdateKey != updateKey) {
-                    AlertDialog(
-                        onDismissRequest = {
-                            if (!isCritical) {
-                                dismissedUpdateKey = updateKey
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = if (isCritical) Icons.Default.Warning else Icons.Default.SystemUpdate,
-                                contentDescription = null,
-                                tint = if (isCritical) Color(0xFFC084FC) else MaterialTheme.colorScheme.primary
-                            )
-                        },
-                        title = {
-                            Text(
-                                text = when {
-                                    isCritical -> "Критическое обновление!"
-                                    isPrereleaseUpdate -> "Доступна тестовая версия"
-                                    else -> "Доступна новая версия"
-                                },
-                                fontWeight = FontWeight.Bold
-                            )
-                        },
-                        text = {
-                            androidx.compose.foundation.layout.Column {
-                                Text(
-                                    text = when {
-                                        isCritical ->
-                                            "Обнаружено критическое обновление безопасности/стабильности (сборка ${activeUpdate.latestBuild}). Рекомендуется установить его сейчас."
-                                        isPrereleaseUpdate ->
-                                            "Вышла тестовая сборка ${activeUpdate.latestVersion} (сборка ${activeUpdate.latestBuild}). Она может быть менее стабильной."
-                                        else ->
-                                            "Вышла версия ${activeUpdate.latestVersion} (сборка ${activeUpdate.latestBuild})."
-                                    },
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                if (!activeUpdate.changelog.isNullOrBlank()) {
-                                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        text = activeUpdate.changelog,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            Button(
-                                onClick = {
-                                    startPlatformUpdate(
-                                        browserUrl = activeUpdate.downloadUrl,
-                                        apkUrl = activeUpdate.apkUrl
-                                    )
-                                    dismissedUpdateKey = updateKey
-                                },
-                                colors = if (isCritical) {
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF881337),
-                                        contentColor = Color.White
-                                    )
-                                } else {
-                                    ButtonDefaults.buttonColors()
-                                }
-                            ) {
-                                Text("Обновить сейчас")
-                            }
-                        },
-                        dismissButton = {
-                            if (!isCritical) {
-                                TextButton(onClick = { dismissedUpdateKey = updateKey }) {
-                                    Text("Позже")
-                                }
-                            } else {
-                                TextButton(onClick = { dismissedUpdateKey = updateKey }) {
-                                    Text("Игнорировать", color = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        }
-                    )
-                }
-            }
+            UpdateDialog(
+                updateResult = updateResult,
+                dismissedUpdateKey = dismissedUpdateKey,
+                onDismiss = { dismissedUpdateKey = it }
+            )
 
             Box(modifier = Modifier.fillMaxSize()) {
                 Crossfade(targetState = currentTab) { tab ->
@@ -364,48 +280,150 @@ fun App() {
             // Единый гейт при первом запуске. Без подтверждения приложением
             // пользоваться нельзя — поэтому у диалога нет кнопки отказа.
             if (analyticsConsent == null) {
-                val uriHandler = LocalUriHandler.current
-                val docs = listOf(
-                    "Соглашение" to "$DOCS_BASE/TERMS.md",
-                    "Конфиденциальность" to "$DOCS_BASE/PRIVACY.md",
-                    "Обработка ПДн" to "$DOCS_BASE/PDP_POLICY.md",
-                )
-                AlertDialog(
-                    onDismissRequest = { },
-                    title = { Text("Прежде чем начать") },
-                    text = {
-                        Column {
-                            Text(
-                                "Приложение бесплатное, неофициальное и с открытым кодом. Оно не связано " +
-                                    "с администрацией РТУ МИРЭА и не является его сервисом. Для пользования " +
-                                    "нужен возраст 18 лет и старше.\n\n" +
-                                    "Расписание и карты хранятся на вашем устройстве. Для диагностики " +
-                                    "сбоев собирается обезличенная статистика: какие разделы открывают " +
-                                    "и какие ошибки возникают. Аккаунты, имена, группы, номера студентов " +
-                                    "и тексты ваших записей не передаются. Сбор можно выключить в настройках.\n\n" +
-                                    "Продолжая, вы принимаете условия документов ниже.",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            docs.forEach { (label, url) ->
-                                Text(
-                                    label,
-                                    modifier = Modifier
-                                        .clickable { uriHandler.openUri(url) }
-                                        .padding(vertical = 4.dp),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            }
-                        }
-                    },
-                    confirmButton = {
-                        TextButton(onClick = { repository.setAnalyticsConsent(true) }) {
-                            Text("Принимаю")
-                        }
-                    }
-                )
+                ConsentDialog(onAccept = { repository.setAnalyticsConsent(true) })
             }
         }
     }
+}
+
+/** Диалог обновления: критическое / новая версия / тестовая сборка. */
+@Composable
+private fun UpdateDialog(
+    updateResult: com.jetbrains.kmpapp.data.update.UpdateCheckResult?,
+    dismissedUpdateKey: String?,
+    onDismiss: (String) -> Unit
+) {
+    val activeUpdate = updateResult ?: return
+    if (!activeUpdate.hasUpdate) return
+
+    val updateKey = "${activeUpdate.latestVersion}_${activeUpdate.latestBuild}_${activeUpdate.urgency}"
+    val isCritical = activeUpdate.urgency == UpdateUrgency.CRITICAL
+    val isNewVersion = activeUpdate.urgency == UpdateUrgency.NEW_VERSION
+    val isPrereleaseUpdate = activeUpdate.isPrerelease
+
+    if (!(isCritical || isNewVersion) || dismissedUpdateKey == updateKey) return
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!isCritical) onDismiss(updateKey)
+        },
+        icon = {
+            Icon(
+                imageVector = if (isCritical) Icons.Default.Warning else Icons.Default.SystemUpdate,
+                contentDescription = null,
+                tint = if (isCritical) Color(0xFFC084FC) else MaterialTheme.colorScheme.primary
+            )
+        },
+        title = {
+            Text(
+                text = when {
+                    isCritical -> "Критическое обновление!"
+                    isPrereleaseUpdate -> "Доступна тестовая версия"
+                    else -> "Доступна новая версия"
+                },
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = when {
+                        isCritical ->
+                            "Обнаружено критическое обновление безопасности/стабильности (сборка ${activeUpdate.latestBuild}). Рекомендуется установить его сейчас."
+                        isPrereleaseUpdate ->
+                            "Вышла тестовая сборка ${activeUpdate.latestVersion} (сборка ${activeUpdate.latestBuild}). Она может быть менее стабильной."
+                        else ->
+                            "Вышла версия ${activeUpdate.latestVersion} (сборка ${activeUpdate.latestBuild})."
+                    },
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                if (!activeUpdate.changelog.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = activeUpdate.changelog,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    startPlatformUpdate(
+                        browserUrl = activeUpdate.downloadUrl,
+                        apkUrl = activeUpdate.apkUrl
+                    )
+                    onDismiss(updateKey)
+                },
+                colors = if (isCritical) {
+                    ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF881337),
+                        contentColor = Color.White
+                    )
+                } else {
+                    ButtonDefaults.buttonColors()
+                }
+            ) {
+                Text("Обновить сейчас")
+            }
+        },
+        dismissButton = {
+            if (!isCritical) {
+                TextButton(onClick = { onDismiss(updateKey) }) {
+                    Text("Позже")
+                }
+            } else {
+                TextButton(onClick = { onDismiss(updateKey) }) {
+                    Text("Игнорировать", color = MaterialTheme.colorScheme.error)
+                }
+            }
+        }
+    )
+}
+
+/** Гейт согласия при первом запуске: без принятия приложение не открывается. */
+@Composable
+private fun ConsentDialog(onAccept: () -> Unit) {
+    val uriHandler = LocalUriHandler.current
+    val docs = listOf(
+        "Соглашение" to "$DOCS_BASE/TERMS.md",
+        "Конфиденциальность" to "$DOCS_BASE/PRIVACY.md",
+        "Обработка ПДн" to "$DOCS_BASE/PDP_POLICY.md",
+    )
+    AlertDialog(
+        onDismissRequest = { },
+        title = { Text("Прежде чем начать") },
+        text = {
+            Column {
+                Text(
+                    "Приложение бесплатное, неофициальное и с открытым кодом. Оно не связано " +
+                        "с администрацией РТУ МИРЭА и не является его сервисом. Для пользования " +
+                        "нужен возраст 18 лет и старше.\n\n" +
+                        "Расписание и карты хранятся на вашем устройстве. Для диагностики " +
+                        "сбоев собирается обезличенная статистика: какие разделы открывают " +
+                        "и какие ошибки возникают. Аккаунты, имена, группы, номера студентов " +
+                        "и тексты ваших записей не передаются. Сбор можно выключить в настройках.\n\n" +
+                        "Продолжая, вы принимаете условия документов ниже.",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+                docs.forEach { (label, url) ->
+                    Text(
+                        label,
+                        modifier = Modifier
+                            .clickable { uriHandler.openUri(url) }
+                            .padding(vertical = 4.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onAccept) {
+                Text("Принимаю")
+            }
+        }
+    )
 }
