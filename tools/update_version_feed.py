@@ -124,8 +124,13 @@ def fetch_published_apps(repo):
 def build_source(repo, channel, version, ipa_url):
     """Единый источник: свежайшая сборка каждого канала в одном списке."""
     entry = build_app_entry(repo, channel, version, ipa_url)
+    # Держим только записи с известным каналом: legacy-записи старого формата
+    # (без ключа "channel", например уехавшие в другой репо) вычищаются сами.
     apps = [a for a in fetch_published_apps(repo)
-            if isinstance(a, dict) and a.get("channel") != channel and a.get("name") != entry["name"]]
+            if isinstance(a, dict)
+            and a.get("channel") in CHANNEL_ORDER
+            and a.get("channel") != channel
+            and a.get("name") != entry["name"]]
     apps.append(entry)
     apps.sort(key=lambda a: CHANNEL_ORDER.index(a.get("channel"))
               if a.get("channel") in CHANNEL_ORDER else len(CHANNEL_ORDER))
