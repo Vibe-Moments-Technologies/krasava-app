@@ -101,6 +101,7 @@ import com.jetbrains.kmpapp.data.model.TaskCategory
 import com.jetbrains.kmpapp.data.model.TaskPriority
 import com.jetbrains.kmpapp.data.model.TaskStatus
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import kotlinx.coroutines.launch
@@ -155,7 +156,7 @@ fun TasksScreen(
                 overallProgress = overallProgress,
                 onSelectSubject = {
                     selectedSubjectId = it
-                    AppAnalytics.logEvent("screen_view", mapOf("screen" to "task_subject_detail"))
+                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SCREEN_VIEW, mapOf("screen" to "task_subject_detail"))
                 },
                 onCreateSubject = { showCreateSubjectSheet = true }
             )

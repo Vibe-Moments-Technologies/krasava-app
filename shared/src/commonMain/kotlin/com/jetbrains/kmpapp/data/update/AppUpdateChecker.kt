@@ -67,9 +67,17 @@ data class UpdateCheckResult(
     val releaseUrl: String,
     val apkUrl: String? = null,
     val channel: String = "stable",
-    val isPrerelease: Boolean = false
+    val isPrerelease: Boolean = false,
+    /** URL страницы в маркете, если приложение установлено оттуда. */
+    val storeUrl: String? = null
 ) {
     val hasUpdate: Boolean get() = urgency != UpdateUrgency.UP_TO_DATE
+
+    /**
+     * URL для кнопки «Обновить»: маркет → страница в маркете,
+     * иначе → прямое скачивание / страница релиза.
+     */
+    val actionUrl: String get() = storeUrl ?: downloadUrl
 }
 
 class AppUpdateChecker(
@@ -78,6 +86,10 @@ class AppUpdateChecker(
 ) {
     companion object {
         private const val GITHUB_REPO = AppVersion.GITHUB_REPO
+        /** Страница приложения в маркете — подставляется при установке оттуда. */
+        const val RUSTORE_URL = "https://www.rustore.ru/catalog/app/ru.vibemoments.krasava"
+        const val GOOGLE_PLAY_URL = "https://play.google.com/store/apps/details?id=ru.vibemoments.krasava"
+        const val APP_STORE_URL = "https://apps.apple.com/app/id0000000000" // TODO: заменить после публикации
     }
 
     private val json = Json {
@@ -96,7 +108,18 @@ class AppUpdateChecker(
             null
         }
 
-        pickBestResult(betaResult, stableResult) ?: fetchLatestReleaseResult()
+        val result = pickBestResult(betaResult, stableResult) ?: fetchLatestReleaseResult()
+        // Роутинг обновлений: если приложение установлено из маркета,
+        // кнопка «Обновить» ведёт на страницу в маркете, а не на GitHub.
+        result?.let {
+            val storeUrl = when (detectInstallSource()) {
+                InstallSource.RUSTORE -> RUSTORE_URL
+                InstallSource.GOOGLE_PLAY -> GOOGLE_PLAY_URL
+                InstallSource.APP_STORE -> APP_STORE_URL
+                else -> null
+            }
+            if (storeUrl != null) it.copy(storeUrl = storeUrl) else it
+        }
     }
 
     private suspend fun fetchFeedResult(url: String, channel: String, isPrerelease: Boolean): UpdateCheckResult? {

@@ -1,14 +1,11 @@
 import AppMetricaCore
 import Shared
 
-/// iOS-движок анонимной аналитики. Класс AppMetrica активируется в iOSApp.init,
-/// сюда приходят только события и тумблер из общих настроек.
+/// iOS-движок анонимной аналитики. AppMetrica активирован всегда (краши
+/// собираются независимо от согласия); сюда приходят только события.
+/// Опциональная аналитика фильтруется на уровне AppAnalytics (common).
 final class AppMetricaEngine: AnalyticsEngine {
     func logEvent(name: String, params: [String : String]) {
         AppMetrica.reportEvent(name: name, parameters: params, onFailure: nil)
-    }
-
-    func setEnabled(enabled: Bool) {
-        AppMetrica.setDataSendingEnabled(enabled)
     }
 }

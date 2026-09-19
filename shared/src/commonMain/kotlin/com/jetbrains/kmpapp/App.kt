@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.jetbrains.kmpapp.data.ScheduleRepository
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.analytics.platformName
 import com.jetbrains.kmpapp.data.model.AppVersion
@@ -145,15 +146,15 @@ fun App() {
             params["version"] = AppVersion.VERSION_NAME
             params["platform"] = platformName()
         }
-        AppAnalytics.logEvent("app_open", params)
+        AppAnalytics.logEvent(AnalyticsEvents.SESSION_OPEN, params)
     }
     LaunchedEffect(dockTabs) {
         val params = mutableMapOf("count" to dockTabs.size.toString())
         dockTabs.forEachIndexed { index, tab -> params["slot_${index + 1}"] = tab.name }
-        AppAnalytics.logEvent("dock_config", params)
+        AppAnalytics.logEvent(AnalyticsEvents.SESSION_DOCK_CONFIG, params)
     }
     LaunchedEffect(selectedTarget) {
-        selectedTarget?.let { AppAnalytics.logEvent("target_type", mapOf("type" to it.type.name)) }
+        selectedTarget?.let { AppAnalytics.logEvent(AnalyticsEvents.SCHEDULE_TARGET_TYPE, mapOf("type" to it.type.name)) }
     }
 
     val systemDark = isSystemInDarkTheme()
@@ -248,7 +249,7 @@ fun App() {
                         currentTab = currentTab,
                         onTabSelected = {
                             currentTab = it
-                            AppAnalytics.logEvent("tab_open", mapOf("tab" to it.name))
+                            AppAnalytics.logEvent(AnalyticsEvents.NAV_TAB_OPEN, mapOf("tab" to it.name))
                         },
                         onTabReselected = { tab ->
                             when (tab) {
@@ -351,8 +352,8 @@ private fun UpdateDialog(
             Button(
                 onClick = {
                     startPlatformUpdate(
-                        browserUrl = activeUpdate.downloadUrl,
-                        apkUrl = activeUpdate.apkUrl
+                        browserUrl = activeUpdate.actionUrl,
+                        apkUrl = if (activeUpdate.storeUrl != null) null else activeUpdate.apkUrl
                     )
                     onDismiss(updateKey)
                 },
@@ -385,44 +386,55 @@ private fun UpdateDialog(
 /** Гейт согласия при первом запуске: без принятия приложение не открывается. */
 @Composable
 private fun ConsentDialog(onAccept: () -> Unit) {
-    val uriHandler = LocalUriHandler.current
-    val docs = listOf(
-        "Соглашение" to "$DOCS_BASE/TERMS.md",
-        "Конфиденциальность" to "$DOCS_BASE/PRIVACY.md",
-        "Обработка ПДн" to "$DOCS_BASE/PDP_POLICY.md",
-    )
     AlertDialog(
         onDismissRequest = { },
-        title = { Text("Прежде чем начать") },
+        title = {
+            Text(
+                "Привет! 👋",
+                fontWeight = FontWeight.Bold
+            )
+        },
         text = {
             Column {
                 Text(
-                    "Приложение бесплатное, неофициальное и с открытым кодом. Оно не связано " +
-                        "с администрацией РТУ МИРЭА и не является его сервисом. Для пользования " +
-                        "нужен возраст 18 лет и старше.\n\n" +
-                        "Расписание и карты хранятся на вашем устройстве. Для диагностики " +
-                        "сбоев собирается обезличенная статистика: какие разделы открывают " +
-                        "и какие ошибки возникают. Аккаунты, имена, группы, номера студентов " +
-                        "и тексты ваших записей не передаются. Сбор можно выключить в настройках.\n\n" +
-                        "Продолжая, вы принимаете условия документов ниже.",
+                    "Для улучшения приложения мы собираем некоторые " +
+                        "анонимизированные диагностические и аналитические данные.",
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(Modifier.height(8.dp))
-                docs.forEach { (label, url) ->
+                Spacer(Modifier.height(12.dp))
+                // Обязательный пункт
+                Row(verticalAlignment = Alignment.Top) {
+                    Text("•", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
                     Text(
-                        label,
-                        modifier = Modifier
-                            .clickable { uriHandler.openUri(url) }
-                            .padding(vertical = 4.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        "Диагностика сбоев и ошибок — обязательна, " +
+                            "помогает находить и исправлять проблемы.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
+                }
+                Spacer(Modifier.height(8.dp))
+                // Опциональный пункт
+                Row(verticalAlignment = Alignment.Top) {
+                    Text("•", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(end = 8.dp))
+                    Column {
+                        Text(
+                            "Аналитика использования — необязательна, " +
+                                "помогает понимать, какие функции важны.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            "Можно отключить в любой момент в настройках.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = onAccept) {
-                Text("Принимаю")
+            Button(onClick = onAccept) {
+                Text("Продолжить")
             }
         }
     )

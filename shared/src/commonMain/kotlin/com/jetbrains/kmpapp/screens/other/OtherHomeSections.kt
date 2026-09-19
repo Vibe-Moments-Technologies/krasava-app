@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.update.UpdateCheckResult
@@ -159,15 +160,13 @@ internal fun UpdateStatusCard(
             .clickable {
                 if (hasUpdate) {
                     AppAnalytics.logEvent(
-                        "update_open",
+                        AnalyticsEvents.FEATURE_UPDATE_SHOWN,
                         mapOf("version" to (updateResult?.latestVersion ?: "?"))
                     )
-                    // Платформенное обновление: Android качает APK сам,
-                    // iOS открывает страницу релиза (download_url в старых
-                    // фидах мог быть папкой releases/download/ → 404)
+                    // Маркет → страница в маркете; иначе → прямое скачивание
                     startPlatformUpdate(
-                        browserUrl = updateResult?.releaseUrl ?: AppVersion.GITHUB_REPO_URL,
-                        apkUrl = updateResult?.apkUrl
+                        browserUrl = updateResult?.actionUrl ?: AppVersion.GITHUB_REPO_URL,
+                        apkUrl = if (updateResult?.storeUrl != null) null else updateResult?.apkUrl
                     )
                 } else {
                     onCheckForUpdates()

@@ -1,5 +1,6 @@
 package com.jetbrains.kmpapp.data.storage
 
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
@@ -156,7 +157,7 @@ class ScheduleStorage(
         _analyticsEnabled.value = loadBooleanFlag(KEY_ANALYTICS_ENABLED, true)
         _analyticsConsent.value = nullableFlag(KEY_ANALYTICS_CONSENT)
         // До первого ответа на диалог согласия ничего не отправляем.
-        AppAnalytics.setEnabled(_analyticsEnabled.value && _analyticsConsent.value != null)
+        AppAnalytics.setEventsEnabled(_analyticsEnabled.value && _analyticsConsent.value != null)
         // Миграция иконки: прошлые «Новая светлая/тёмная» и «Старая»
         // (AppIconClassic) слились в дефолт; неизвестные значения → дефолт.
         _appIcon.value = when (val saved = platformStorage.getString(KEY_APP_ICON)) {
@@ -301,7 +302,7 @@ class ScheduleStorage(
                 println("Failed to persist themeMode: ${e.message}")
             }
         }
-        if (changed) AppAnalytics.logEvent("theme_set", mapOf("mode" to mode.name))
+        if (changed) AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_THEME_SET, mapOf("mode" to mode.name))
     }
 
     fun setShowEmptyLessons(enabled: Boolean) {
@@ -419,7 +420,7 @@ class ScheduleStorage(
                 println("Failed to persist theme overlay: ${e.message}")
             }
         }
-        if (changed) AppAnalytics.logEvent("theme_overlay_set", mapOf("overlay" to overlay.name))
+        if (changed) AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_THEME_OVERLAY_SET, mapOf("overlay" to overlay.name))
     }
 
     fun setCyberpunkTheme(enabled: Boolean) {
@@ -452,7 +453,7 @@ class ScheduleStorage(
         _analyticsEnabled.value = enabled
         // Ручное включение тумблера = согласие; до ответа на диалог ничего не уходит
         if (enabled) _analyticsConsent.value = _analyticsConsent.value ?: true
-        AppAnalytics.setEnabled(enabled && _analyticsConsent.value != null)
+        AppAnalytics.setEventsEnabled(enabled && _analyticsConsent.value != null)
         scope.launch { platformStorage.saveString(KEY_ANALYTICS_ENABLED, enabled.toString()) }
     }
 
@@ -460,7 +461,7 @@ class ScheduleStorage(
     fun setAnalyticsConsent(accepted: Boolean) {
         _analyticsConsent.value = accepted
         _analyticsEnabled.value = accepted
-        AppAnalytics.setEnabled(accepted)
+        AppAnalytics.setEventsEnabled(accepted)
         scope.launch {
             platformStorage.saveString(KEY_ANALYTICS_CONSENT, accepted.toString())
             platformStorage.saveString(KEY_ANALYTICS_ENABLED, accepted.toString())
@@ -474,7 +475,7 @@ class ScheduleStorage(
         AppIconManager.apply(name)
         scope.launch { platformStorage.saveString(KEY_APP_ICON, name) }
         if (changed) {
-            AppAnalytics.logEvent("app_icon_changed", mapOf("icon" to name))
+            AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_APP_ICON_CHANGED, mapOf("icon" to name))
         }
     }
 
@@ -490,7 +491,7 @@ class ScheduleStorage(
         }
         scope.launch { platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, enabled.toString()) }
         if (changed) {
-            AppAnalytics.logEvent("notifications_changed", mapOf(
+            AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_NOTIFICATIONS_CHANGED, mapOf(
                 "enabled" to enabled.toString(),
                 "minutes_before" to _notifyMinutesBefore.value.toString()
             ))
@@ -585,7 +586,7 @@ class ScheduleStorage(
         // ни id, ни название группы/преподавателя наружу не уходят.
         if (wasNew) {
             AppAnalytics.logEvent(
-                "target_added",
+                AnalyticsEvents.SCHEDULE_TARGET_ADDED,
                 mapOf(
                     "type" to target.type.name,
                     "count" to _savedTargets.value.size.toString()
@@ -617,7 +618,7 @@ class ScheduleStorage(
         persistTargets()
         if (removed != null) {
             AppAnalytics.logEvent(
-                "target_removed",
+                AnalyticsEvents.SCHEDULE_TARGET_REMOVED,
                 mapOf(
                     "type" to removed.type.name,
                     "count" to _savedTargets.value.size.toString()

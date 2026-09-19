@@ -11,6 +11,8 @@ import io.appmetrica.analytics.AppMetricaConfig
 class AndroidAnalytics : AnalyticsEngine {
 
     init {
+        // SDK активирован всегда: краши собираются независимо от согласия.
+        // Опциональная аналитика (события) фильтруется на уровне AppAnalytics.
         AndroidContextProvider.context?.let { context ->
             AppMetrica.activate(
                 context,
@@ -21,9 +23,5 @@ class AndroidAnalytics : AnalyticsEngine {
 
     override fun logEvent(name: String, params: Map<String, String>) {
         AppMetrica.reportEvent(name, params)
-    }
-
-    override fun setEnabled(enabled: Boolean) {
-        AppMetrica.setDataSendingEnabled(enabled)
     }
 }

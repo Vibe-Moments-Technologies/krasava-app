@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.AppVersion
 import kotlinx.coroutines.delay
@@ -59,7 +60,7 @@ internal fun ProjectSocialLinks() {
                 tint = MaterialTheme.colorScheme.onSurface,
                 contentDescription = "GitHub",
                 onClick = {
-                    AppAnalytics.logEvent("social_open", mapOf("network" to "github"))
+                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "github"))
                     uriHandler.openUri(AppVersion.GITHUB_REPO_URL)
                 },
                 modifier = Modifier.weight(1f)
@@ -69,7 +70,7 @@ internal fun ProjectSocialLinks() {
                 tint = Color(0xFF29A9EB),
                 contentDescription = "Telegram",
                 onClick = {
-                    AppAnalytics.logEvent("social_open", mapOf("network" to "telegram"))
+                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "telegram"))
                     uriHandler.openUri(TELEGRAM_URL)
                 },
                 modifier = Modifier.weight(1f)
@@ -79,7 +80,7 @@ internal fun ProjectSocialLinks() {
                 tint = Color(0xFF5865F2),
                 contentDescription = "Discord",
                 onClick = {
-                    AppAnalytics.logEvent("social_open", mapOf("network" to "discord"))
+                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "discord"))
                     toastMessage = "Discord-сервер скоро появится"
                 },
                 modifier = Modifier.weight(1f)
@@ -89,7 +90,7 @@ internal fun ProjectSocialLinks() {
                 tint = Color(0xFFF15F2F),
                 contentDescription = "Boosty",
                 onClick = {
-                    AppAnalytics.logEvent("social_open", mapOf("network" to "boosty"))
+                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "boosty"))
                     toastMessage = "Поддержка разработчиков скоро появится"
                 },
                 modifier = Modifier.weight(1f)

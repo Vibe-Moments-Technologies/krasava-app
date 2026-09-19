@@ -1,18 +1,22 @@
 package com.jetbrains.kmpapp.data.analytics
 
 /**
- * Анонимная аналитика (AppMetrica): аудитория, частота разделов, падения.
+ * Анонимная аналитика (AppMetrica), разделённая на два уровня:
+ *
+ * 1. **Обязательная диагностика** (краши, ошибки) — SDK активирован всегда,
+ *    `setDataSendingEnabled` не трогаем: краши собираются независимо от
+ *    согласия пользователя. Это нужно для стабильности приложения.
+ *
+ * 2. **Опциональная аналитика** (события использования) — шлётся только
+ *    если пользователь дал согласие (consent-диалог при первом запуске).
+ *    Управляется тумблером в настройках (`krasava_analytics_enabled`).
  *
  * Движок подставляет платформа на старте приложения:
  *  - Android: ScheduleApp.onCreate → AndroidAnalytics (shared/androidMain)
  *  - iOS: iOSApp.init → Swift-класс AppMetricaEngine (iosApp)
- * Падения собираются SDK автоматически после активации.
- *
- * Выключается пользователем тумблером в настройках (krasava_analytics_enabled).
  */
 interface AnalyticsEngine {
     fun logEvent(name: String, params: Map<String, String>)
-    fun setEnabled(enabled: Boolean)
 }
 
 object AppAnalytics {
@@ -20,19 +24,21 @@ object AppAnalytics {
     const val API_KEY = "fc0cde08-05c5-4718-96ee-e9674b8c33e7"
 
     private var engine: AnalyticsEngine? = null
-    private var enabled = true
+
+    /** Опциональная аналитика: true после согласия, false если отказался. */
+    private var eventsEnabled = true
 
     fun setEngine(engine: AnalyticsEngine) {
         this.engine = engine
-        engine.setEnabled(enabled)
     }
 
-    fun setEnabled(value: Boolean) {
-        enabled = value
-        engine?.setEnabled(value)
+    /** Управление опциональной аналитикой (события). Краши не затрагиваются. */
+    fun setEventsEnabled(value: Boolean) {
+        eventsEnabled = value
     }
 
+    /** Событие использования. Шлётся только при включённой опциональной аналитике. */
     fun logEvent(name: String, params: Map<String, String> = emptyMap()) {
-        if (enabled) engine?.logEvent(name, params)
+        if (eventsEnabled) engine?.logEvent(name, params)
     }
 }

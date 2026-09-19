@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
@@ -63,7 +64,7 @@ class ServicesViewModel : ViewModel() {
 
     fun openService(tab: AppTab) {
         _activeService.value = tab
-        AppAnalytics.logEvent("service_open", mapOf("service" to tab.name, "source" to "services_tab"))
+        AppAnalytics.logEvent(AnalyticsEvents.NAV_SERVICE_OPEN, mapOf("service" to tab.name, "source" to "services_tab"))
     }
 
     fun closeService() {

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.TaskRepository
 import com.jetbrains.kmpapp.data.DebugConfig
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
@@ -191,7 +192,7 @@ class OtherViewModel(
         // Сервисные подстраницы пишут свой service_open (с источником) —
         // здесь их не дублируем, иначе в панели двойной счёт.
         if (subScreen != OtherSubScreen.ROOT && !subScreen.isServiceScreen) {
-            AppAnalytics.logEvent("screen_view", mapOf("screen" to subScreen.name))
+            AppAnalytics.logEvent(AnalyticsEvents.NAV_SCREEN_VIEW, mapOf("screen" to subScreen.name))
         }
     }
 

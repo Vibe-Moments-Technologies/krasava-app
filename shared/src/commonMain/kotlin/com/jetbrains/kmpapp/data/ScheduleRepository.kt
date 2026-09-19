@@ -9,6 +9,7 @@ import com.jetbrains.kmpapp.data.model.ScheduleDiff
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.network.detectVpnActive
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.parser.MireaICalParser
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
@@ -340,7 +341,7 @@ class ScheduleRepository(
             storage.setLastSyncTime(target.id, now)
             _errorMessage.value = null
             AppAnalytics.logEvent(
-                "schedule_refresh",
+                AnalyticsEvents.SCHEDULE_REFRESH,
                 mapOf("result" to "ok", "vpn_active" to detectVpnActive().toString())
             )
             if (!silent) {
@@ -357,7 +358,7 @@ class ScheduleRepository(
             println("refreshSchedule error for ${target.targetTitle}: ${e.message}")
             val code = com.jetbrains.kmpapp.data.model.AppErrorCode.fromException(e)
             AppAnalytics.logEvent(
-                "schedule_refresh",
+                AnalyticsEvents.ERROR_SCHEDULE_LOAD,
                 mapOf(
                     "result" to "error",
                     "code" to code.code,

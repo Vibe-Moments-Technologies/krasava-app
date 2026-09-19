@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
@@ -207,7 +208,7 @@ private fun OtherMainContent(
                 // То же событие, что и со страницы «Сервисы» — в панели
                 // сценарии сходятся по одному service_open, различает source.
                 AppAnalytics.logEvent(
-                    "service_open",
+                    AnalyticsEvents.NAV_SERVICE_OPEN,
                     mapOf("service" to tab.name, "source" to "other_block")
                 )
                 onNavigate(subScreen)
