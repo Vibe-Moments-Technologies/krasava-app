@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.screens.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -39,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.screens.schedule.DayLessonSummary
@@ -53,13 +54,15 @@ import kotlinx.datetime.minus
  * и выбранного дня, цветные точки пар под числом (легенда внизу), «Сегодня».
  * Общий для расписания и свободных аудиторий.
  *
- * Намеренно НЕ AlertDialog: тот построен на SubcomposeLayout, чей intrinsic-
- * замер на iOS бросает IllegalStateException при изменении размера контента
- * (краш на втором листании месяца). Здесь — обычный Dialog + Surface с
- * фиксированными размерами: геометрия окна постоянна при любом листании.
+ * Намеренно НЕ Dialog/AlertDialog, а оверлей в окне экрана: на iOS любое
+ * диалоговое окно (AlertDialog и даже голый Dialog) роняло приложение при
+ * второй смене состояния контента — необработанное исключение в корутине
+ * кадра Compose (FlushCoroutineDispatcher → terminateWithUnhandledException).
+ * Оверлей использует тот же механизм отрисовки, что баннеры/бейджи/детальный
+ * экран пары, которые на iOS не падают. Вызывать из корневого Box экрана.
  */
 @Composable
-fun MonthPickerDialog(
+fun MonthPickerOverlay(
     initialDate: LocalDate,
     onDatePicked: (LocalDate) -> Unit,
     onDismiss: () -> Unit,
@@ -84,12 +87,27 @@ fun MonthPickerDialog(
     }
     val isDark = isSystemInDarkTheme()
 
-    Dialog(onDismissRequest = onDismiss) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.45f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 6.dp,
-            modifier = Modifier.width(320.dp)
+            modifier = Modifier
+                .width(320.dp)
+                // Тап по карточке не должен закрывать календарь.
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {}
         ) {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 // Заголовок: стрелки + «Месяц Год»
@@ -156,8 +174,8 @@ fun MonthPickerDialog(
                     }
                 }
 
-                // Сетка: всегда 6 рядов по 7 ячеек-Box (статичное дерево,
-                // постоянная высота — окно диалога не перекладывается).
+                // Сетка: всегда 6 строк по 7 ячеек-Box (статичное дерево,
+                // постоянная высота).
                 Column(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -246,7 +264,7 @@ fun MonthPickerDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 // Легенда типов пар в одну строку — короткие названия, как на
-                // карточках пар (полные не влезают в ширину диалога).
+                // карточках пар (полные не влезают в ширину карточки).
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),

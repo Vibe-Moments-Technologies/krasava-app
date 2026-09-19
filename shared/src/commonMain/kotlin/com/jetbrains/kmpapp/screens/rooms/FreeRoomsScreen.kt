@@ -435,7 +435,7 @@ fun FreeRoomsScreen(
     }
 
     if (showDatePicker) {
-        com.jetbrains.kmpapp.screens.components.MonthPickerDialog(
+        com.jetbrains.kmpapp.screens.components.MonthPickerOverlay(
             initialDate = selectedDate,
             onDatePicked = { viewModel.selectDate(it) },
             onDismiss = { showDatePicker = false }

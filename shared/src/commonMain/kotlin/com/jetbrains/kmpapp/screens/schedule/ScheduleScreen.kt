@@ -392,16 +392,18 @@ private fun ScheduleMainContent(
                     }
                 }
             }
-        }
-    }
 
-    if (showMonthPicker) {
-        com.jetbrains.kmpapp.screens.components.MonthPickerDialog(
-            initialDate = selectedDate,
-            lessonSummaries = dayLessonSummaries,
-            onDatePicked = { viewModel.selectDate(it) },
-            onDismiss = { showMonthPicker = false }
-        )
+        // Месячный календарь — оверлей поверх всего экрана (НЕ Dialog:
+        // диалоговые окна Compose на iOS падали при смене месяца).
+        if (showMonthPicker) {
+            com.jetbrains.kmpapp.screens.components.MonthPickerOverlay(
+                initialDate = selectedDate,
+                lessonSummaries = dayLessonSummaries,
+                onDatePicked = { viewModel.selectDate(it) },
+                onDismiss = { showMonthPicker = false }
+            )
+        }
+        }
     }
 
     if (showAddSheet) {
