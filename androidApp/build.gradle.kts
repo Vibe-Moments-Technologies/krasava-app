@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Base64
 
 plugins {
     alias(libs.plugins.androidApplication)
@@ -42,7 +43,7 @@ android {
             if (b64 != null) {
                 storeFile = file("${layout.buildDirectory.get().asFile}/release.keystore").apply {
                     parentFile.mkdirs()
-                    writeBytes(java.util.Base64.getDecoder().decode(b64))
+                    writeBytes(Base64.getDecoder().decode(b64))
                 }
                 storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
                 keyAlias = System.getenv("RELEASE_KEY_ALIAS") ?: "krasava"
