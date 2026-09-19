@@ -36,6 +36,7 @@ class ScheduleViewModel(
     val showEmptyLessonProgress: StateFlow<Boolean> = repository.showEmptyLessonProgress
     val showBreakProgress: StateFlow<Boolean> = repository.showBreakProgress
     val calendarCollapsed: StateFlow<Boolean> = repository.calendarCollapsed
+    val calendarSwipeCollapse: StateFlow<Boolean> = repository.calendarSwipeCollapse
     val autoScrollToCurrentLesson: StateFlow<Boolean> = repository.autoScrollToCurrentLesson
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled

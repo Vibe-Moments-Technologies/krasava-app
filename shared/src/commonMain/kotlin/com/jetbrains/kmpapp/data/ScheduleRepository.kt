@@ -108,6 +108,12 @@ class ScheduleRepository(
         storage.setCalendarCollapsed(collapsed)
     }
 
+    val calendarSwipeCollapse: StateFlow<Boolean> = storage.calendarSwipeCollapse
+
+    fun setCalendarSwipeCollapse(enabled: Boolean) {
+        storage.setCalendarSwipeCollapse(enabled)
+    }
+
     val autoScrollToCurrentLesson: StateFlow<Boolean> = storage.autoScrollToCurrentLesson
 
     fun setAutoScrollToCurrentLesson(enabled: Boolean) {

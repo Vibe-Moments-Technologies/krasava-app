@@ -114,6 +114,7 @@ private fun ScheduleMainContent(
     val showEmptyLessonProgress by viewModel.showEmptyLessonProgress.collectAsState()
     val showBreakProgress by viewModel.showBreakProgress.collectAsState()
     val calendarCollapsed by viewModel.calendarCollapsed.collectAsState()
+    val calendarSwipeCollapse by viewModel.calendarSwipeCollapse.collectAsState()
     val autoScrollToCurrentLesson by viewModel.autoScrollToCurrentLesson.collectAsState()
     val showAbbreviatedNames by viewModel.showAbbreviatedNames.collectAsState()
     // Значение НЕ читаем здесь: тик раз в 30 секунд не должен пересобирать
@@ -245,6 +246,7 @@ private fun ScheduleMainContent(
                         lessonSummaries = dayLessonSummaries,
                         onTitleClick = { showMonthPicker = true },
                         onCollapse = { viewModel.setCalendarCollapsed(true) },
+                        swipeCollapseEnabled = calendarSwipeCollapse,
                         modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
                     )
                 }

@@ -59,6 +59,7 @@ fun WeekCalendarStrip(
     lessonSummaries: Map<LocalDate, DayLessonSummary> = emptyMap(),
     onTitleClick: () -> Unit = {},
     onCollapse: () -> Unit = {},
+    swipeCollapseEnabled: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val today = DateUtils.today()
@@ -292,26 +293,30 @@ fun WeekCalendarStrip(
             }
         }
 
-        Spacer(modifier = Modifier.height(6.dp))
-        // Ручка сворачивания: свайп вверх по разделителю прячет ленту календаря.
+        // Разделитель; при включённом сворачивании свайпом — ещё и его ручка.
+        // Полоса 14dp: достаточно для жеста, без визуального «пустого этажа».
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(22.dp)
-                .pointerInput(Unit) {
-                    var accumulated = 0f
-                    detectVerticalDragGestures(
-                        onDragStart = { accumulated = 0f },
-                        onVerticalDrag = { change, dragAmount ->
-                            change.consume()
-                            accumulated -= dragAmount
-                            if (accumulated > 40f) {
-                                accumulated = 0f
-                                onCollapse()
-                            }
+                .height(14.dp)
+                .then(
+                    if (swipeCollapseEnabled) {
+                        Modifier.pointerInput(Unit) {
+                            var accumulated = 0f
+                            detectVerticalDragGestures(
+                                onDragStart = { accumulated = 0f },
+                                onVerticalDrag = { change, dragAmount ->
+                                    change.consume()
+                                    accumulated -= dragAmount
+                                    if (accumulated > 40f) {
+                                        accumulated = 0f
+                                        onCollapse()
+                                    }
+                                }
+                            )
                         }
-                    )
-                },
+                    } else Modifier
+                ),
             contentAlignment = Alignment.Center
         ) {
             androidx.compose.material3.HorizontalDivider(
@@ -322,7 +327,6 @@ fun WeekCalendarStrip(
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
             )
         }
-        Spacer(modifier = Modifier.height(2.dp))
     }
 }
 
