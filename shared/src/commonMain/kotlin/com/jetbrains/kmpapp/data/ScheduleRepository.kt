@@ -163,14 +163,18 @@ class ScheduleRepository(
         scope.launch {
             var scheduledTargetId: Int? = null
             var notificationStateInitialized = false
+            // combine принимает максимум 5 потоков — настройки свёрнуты в тройку.
+            val notifSettings = combine(
+                storage.notificationsEnabled,
+                storage.notifyMinutesBefore,
+                storage.hideAdditionalLessons
+            ) { enabled, minutes, hideAdditional -> Triple(enabled, minutes, hideAdditional) }
             combine(
                 storage.cachedLessons,
                 storage.selectedTarget,
-                storage.notificationsEnabled,
-                storage.notifyMinutesBefore,
                 storage.notificationsTargetId,
-                storage.hideAdditionalLessons
-            ) { lessons, activeTarget, enabled, minutes, notificationTargetId, hideAdditional ->
+                notifSettings
+            ) { lessons, activeTarget, notificationTargetId, (enabled, minutes, hideAdditional) ->
                 NotificationsPayload(lessons, activeTarget, enabled, minutes, notificationTargetId, hideAdditional)
             }.collect { p ->
                 notificationRescheduleMutex.withLock {
