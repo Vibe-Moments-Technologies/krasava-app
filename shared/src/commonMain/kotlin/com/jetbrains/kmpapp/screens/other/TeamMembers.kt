@@ -25,7 +25,7 @@ data class TeamMember(
     val name: String,
     val role: String,
     val department: String,
-    val description: String? = null,
+    val email: String? = null,
     val avatar: DrawableResource? = null,
     val links: List<TeamLink> = emptyList()
 )
@@ -38,7 +38,7 @@ val projectTeam = listOf(
         name = "Линк (l1ratch)",
         role = "Разработчик",
         department = "Разработка",
-        description = "Создание и поддержка приложения, архитектура, релизы.",
+        email = "connect@l1ratch.ru",
         avatar = Res.drawable.team_l1ratch,
         links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/l1ratch"))
     ),
@@ -46,7 +46,6 @@ val projectTeam = listOf(
         name = "prosto-max",
         role = "Разработчик",
         department = "Разработка",
-        description = "Разработка функций и улучшения приложения.",
         avatar = Res.drawable.team_prosto_max,
         links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/prosto-max"))
     ),
@@ -54,7 +53,6 @@ val projectTeam = listOf(
         name = "KiraSunshine",
         role = "Картограф",
         department = "Карты",
-        description = "Перерисовывает планы корпусов для интерактивных карт приложения.",
         links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/KiraSunshine"))
     )
 )

@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SystemUpdate
@@ -33,7 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
@@ -232,69 +230,4 @@ internal fun UpdateStatusCard(
     }
 }
 
-/** Карточка-ссылка на GitHub Issues. */
-@Composable
-internal fun GitHubIssuesCard() {
-    val uriHandler = LocalUriHandler.current
 
-    Card(
-        onClick = { uriHandler.openUri(AppVersion.GITHUB_ISSUES_URL) },
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.BugReport,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column {
-                    Text(
-                        text = "Есть проблема или идея?",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Создать Issue на GitHub",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}

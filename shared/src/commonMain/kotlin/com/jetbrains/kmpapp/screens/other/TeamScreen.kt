@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -159,13 +160,30 @@ private fun TeamMemberCard(member: TeamMember) {
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
                     )
-                    member.description?.let {
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = it,
-                            fontSize = 11.5.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    member.email?.let { email ->
+                        Spacer(modifier = Modifier.height(3.dp))
+                        // Контактный e-mail: тап открывает почтовый клиент (mailto).
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { uriHandler.openUri("mailto:$email") }
+                                .padding(vertical = 1.dp, horizontal = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = email,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
                     }
                 }
             }

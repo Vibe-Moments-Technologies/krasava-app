@@ -21,7 +21,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,13 +38,15 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.model.AppVersion
@@ -174,11 +178,79 @@ fun AboutScreen(
                 onClick = onOpenLicenses
             )
 
-            // «Есть проблема или идея?» — Issue на GitHub
-            GitHubIssuesCard()
+            // «Контакты» — почта проекта + Issue на GitHub (компактный блок)
+            ContactsCard()
 
             Spacer(modifier = Modifier.height(48.dp))
         }
+    }
+}
+
+/** Почта проекта: пишем письма через mailto. */
+private const val PROJECT_EMAIL = "vibe.moments.technologies@gmail.com"
+
+@Composable
+private fun ContactsCard() {
+    val uriHandler = LocalUriHandler.current
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp)) {
+            Text(
+                text = "Контакты",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+            ContactRow(
+                icon = Icons.Default.Email,
+                tint = MaterialTheme.colorScheme.primary,
+                text = PROJECT_EMAIL,
+                onClick = { uriHandler.openUri("mailto:$PROJECT_EMAIL") }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            ContactRow(
+                icon = Icons.Default.BugReport,
+                tint = MaterialTheme.colorScheme.secondary,
+                text = "Проблема или идея? Создать Issue",
+                onClick = { uriHandler.openUri(AppVersion.GITHUB_ISSUES_URL) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ContactRow(
+    icon: ImageVector,
+    tint: Color,
+    text: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(18.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 13.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
