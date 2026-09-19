@@ -157,12 +157,12 @@ class ScheduleStorage(
         _analyticsConsent.value = nullableFlag(KEY_ANALYTICS_CONSENT)
         // До первого ответа на диалог согласия ничего не отправляем.
         AppAnalytics.setEnabled(_analyticsEnabled.value && _analyticsConsent.value != null)
-        // Миграция иконки: прошлые «Новая светлая/тёмная» слились в одну
-        // «новую» (автоподстройка темы), неизвестные значения → дефолт.
+        // Миграция иконки: прошлые «Новая светлая/тёмная» и «Старая»
+        // (AppIconClassic) слились в дефолт; неизвестные значения → дефолт.
         _appIcon.value = when (val saved = platformStorage.getString(KEY_APP_ICON)) {
             null -> AppIconManager.ICON_DEFAULT
-            "AppIconNewLight", "AppIconNewDark" -> AppIconManager.ICON_DEFAULT
-            AppIconManager.ICON_DEFAULT, AppIconManager.ICON_CLASSIC -> saved
+            "AppIconNewLight", "AppIconNewDark", "AppIconClassic" -> AppIconManager.ICON_DEFAULT
+            AppIconManager.ICON_DEFAULT, AppIconManager.ICON_ALT -> saved
             else -> AppIconManager.ICON_DEFAULT
         }
         _notificationsEnabled.value = loadBooleanFlag(KEY_NOTIFICATIONS_ENABLED, false)
