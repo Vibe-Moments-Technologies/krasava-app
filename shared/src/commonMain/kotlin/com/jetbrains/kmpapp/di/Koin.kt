@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.di
 
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
+import com.jetbrains.kmpapp.data.config.RemoteConfigLoader
 import com.jetbrains.kmpapp.data.storage.LessonNotesStorage
 import com.jetbrains.kmpapp.data.storage.PlatformStorage
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
@@ -58,6 +59,7 @@ val dataModule = module {
     singleOf(::AppUpdateChecker)
     singleOf(::FreeRoomsRepository)
     singleOf(::TaskRepository)
+    singleOf(::RemoteConfigLoader)
 }
 
 val viewModelModule = module {

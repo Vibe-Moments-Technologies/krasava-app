@@ -74,6 +74,10 @@ fun SettingsScreen(
     onOpenDockSettings: () -> Unit,
     onOpenTaskSettings: () -> Unit,
     onOpenIconPicker: () -> Unit = {},
+    onOpenScheduleDisplay: () -> Unit = {},
+    onOpenScheduleProgress: () -> Unit = {},
+    onOpenScheduleCalendar: () -> Unit = {},
+    onOpenServiceSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -299,277 +303,46 @@ fun SettingsScreen(
             }
             */
 
-            // Section: Schedule presentation
+            // Section: Schedule — ссылки на подстраницы
             SettingsSectionCard(
                 title = "Расписание",
                 icon = Icons.Default.CalendarMonth
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Показывать пустые пары",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Отображать окна между занятиями в списке пар",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = showEmptyLessons,
-                        onCheckedChange = { viewModel.setShowEmptyLessons(it) }
-                    )
-                }
-
+                SettingsNavigationRow(
+                    title = "Отображение",
+                    subtitle = "Пустые пары, ДОП-занятия, сокращения, авто-скролл",
+                    onClick = onOpenScheduleDisplay
+                )
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Скрывать доп. занятия",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Не показывать пары типа «ДОП» в расписании, календаре и напоминаниях",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = hideAdditionalLessons,
-                        onCheckedChange = { viewModel.setHideAdditionalLessons(it) }
-                    )
-                }
-
+                SettingsNavigationRow(
+                    title = "Прогресс и индикаторы",
+                    subtitle = "Полоски времени, прогресс перемены",
+                    onClick = onOpenScheduleProgress
+                )
                 HorizontalDivider(
                     modifier = Modifier.padding(vertical = 12.dp),
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Сокращенные названия",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Сокращать по первым буквам названия предметов в расписании",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = showAbbreviatedNames,
-                        onCheckedChange = { viewModel.setShowAbbreviatedNames(it) }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                SettingsNavigationRow(
+                    title = "Календарь",
+                    subtitle = "Сворачивание свайпом",
+                    onClick = onOpenScheduleCalendar
                 )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Индикатор прогресса пары",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Полоска оставшегося времени в карточке идущего занятия",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = showLessonProgress,
-                        onCheckedChange = { viewModel.setShowLessonProgress(it) }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Прогресс пустых пар",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Полоска оставшегося времени в карточке «Нет пары»",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = showEmptyLessonProgress,
-                        onCheckedChange = { viewModel.setShowEmptyLessonProgress(it) }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Прогресс перемены",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Пройденная часть надписи «перемена» подсвечивается цветом",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = showBreakProgress,
-                        onCheckedChange = { viewModel.setShowBreakProgress(it) }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Сворачивание календаря свайпом",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Свайп вверх по разделителю скрывает календарь над расписанием",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = calendarSwipeCollapse,
-                        onCheckedChange = { viewModel.setCalendarSwipeCollapse(it) }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Прокрутка к текущей паре",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Фокусировать список на текущей паре или перемене при открытии",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = autoScrollToCurrentLesson,
-                        onCheckedChange = { viewModel.setAutoScrollToCurrentLesson(it) }
-                    )
-                }
             }
 
-
-            // Section: Notes
+            // Section: Service settings
             SettingsSectionCard(
-                title = "Конспекты",
+                title = "Параметры сервисов",
                 icon = Icons.Default.EditNote
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Спрашивать каждый раз при удалении заметок",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Подтверждение перед удалением страниц и полей в конспектах",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = askBeforeNoteDelete,
-                        onCheckedChange = { viewModel.setAskBeforeNoteDelete(it) }
-                    )
-                }
+                SettingsNavigationRow(
+                    title = "Конспекты",
+                    subtitle = "Настройки блокнота и заметок",
+                    onClick = onOpenServiceSettings
+                )
             }
 
             // Section: Lesson notifications (платформенный движок)
@@ -708,7 +481,7 @@ fun SettingsScreen(
                 }
             }
 
-            // Section: Additional features
+            // Section: Additional features (объединённый блок)
             SettingsSectionCard(
                 title = "Дополнительный функционал",
                 icon = Icons.Default.Tune
@@ -737,13 +510,12 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setVpnWarningEnabled(it) }
                     )
                 }
-            }
 
-            // Section: Updates
-            SettingsSectionCard(
-                title = "Обновления",
-                icon = Icons.Default.Update
-            ) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -768,13 +540,12 @@ fun SettingsScreen(
                         onCheckedChange = { viewModel.setBetaChannel(it) }
                     )
                 }
-            }
 
-            // Section: Anonymous statistics
-            SettingsSectionCard(
-                title = "Статистика",
-                icon = Icons.Default.Analytics
-            ) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -788,7 +559,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Помогает находить падения приложения и понимать, какие разделы чаще используются. Полностью анонимно, без личных данных (Яндекс AppMetrica)",
+                            text = "Помогает находить падения и понимать, какие разделы чаще используются. Анонимно, без личных данных",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -925,6 +696,42 @@ fun SettingsScreen(
                     Text("Готово")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun SettingsNavigationRow(
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = "Открыть",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }

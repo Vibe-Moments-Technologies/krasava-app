@@ -99,6 +99,13 @@ class AppUpdateChecker(
     }
 
     suspend fun checkForUpdates(includeBeta: Boolean = false): UpdateCheckResult? = withContext(Dispatchers.IO) {
+        // Google Play / App Store обновляют нативно — наша система не нужна.
+        // RuStore: пока ведём на страницу в маркете; TODO: подключить RuStore SDK.
+        val source = detectInstallSource()
+        if (source == InstallSource.GOOGLE_PLAY || source == InstallSource.APP_STORE) {
+            return@withContext null
+        }
+
         // Бета-канал проверяется только если пользователь явно включил тумблер.
         // Раньше тестовые сборки форсировали проверку беты — из-за этого бета
         // предлагалась даже с выключенным тумблером.
@@ -110,15 +117,9 @@ class AppUpdateChecker(
         }
 
         val result = pickBestResult(betaResult, stableResult) ?: fetchLatestReleaseResult()
-        // Роутинг обновлений: если приложение установлено из маркета,
-        // кнопка «Обновить» ведёт на страницу в маркете, а не на GitHub.
+        // Роутинг обновлений: RuStore-установка ведёт на страницу в маркете.
         result?.let {
-            val storeUrl = when (detectInstallSource()) {
-                InstallSource.RUSTORE -> RUSTORE_URL
-                InstallSource.GOOGLE_PLAY -> GOOGLE_PLAY_URL
-                InstallSource.APP_STORE -> APP_STORE_URL
-                else -> null
-            }
+            val storeUrl = if (source == InstallSource.RUSTORE) RUSTORE_URL else null
             if (storeUrl != null) it.copy(storeUrl = storeUrl) else it
         }
     }

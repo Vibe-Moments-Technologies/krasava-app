@@ -102,7 +102,11 @@ fun OtherScreen(
                         onOpenDataAndCache = { viewModel.navigateToSubScreen(OtherSubScreen.DATA_AND_CACHE) },
                         onOpenDockSettings = { viewModel.navigateToSubScreen(OtherSubScreen.DOCK_SETTINGS) },
                         onOpenTaskSettings = { viewModel.navigateToSubScreen(OtherSubScreen.TASK_SETTINGS) },
-                        onOpenIconPicker = { viewModel.navigateToSubScreen(OtherSubScreen.ICON_PICKER) }
+                        onOpenIconPicker = { viewModel.navigateToSubScreen(OtherSubScreen.ICON_PICKER) },
+                        onOpenScheduleDisplay = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_DISPLAY) },
+                        onOpenScheduleProgress = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_PROGRESS) },
+                        onOpenScheduleCalendar = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_CALENDAR) },
+                        onOpenServiceSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_SETTINGS) }
                     )
                 }
                 OtherSubScreen.DATA_AND_CACHE -> {
@@ -116,6 +120,25 @@ fun OtherScreen(
                 }
                 OtherSubScreen.TASK_SETTINGS -> {
                     TaskSettingsScreen(tasksViewModel = tasksViewModel, onBack = back)
+                }
+                OtherSubScreen.SCHEDULE_DISPLAY -> {
+                    ScheduleDisplaySettingsScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.SCHEDULE_PROGRESS -> {
+                    ScheduleProgressSettingsScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.SCHEDULE_CALENDAR -> {
+                    ScheduleCalendarSettingsScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.SERVICE_SETTINGS -> {
+                    ServiceSettingsScreen(
+                        viewModel = viewModel,
+                        onBack = back,
+                        onOpenNotesSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_NOTES_SETTINGS) }
+                    )
+                }
+                OtherSubScreen.SERVICE_NOTES_SETTINGS -> {
+                    ServiceNotesSettingsScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.RESOURCES -> {
                     ResourcesScreen(onBack = back)

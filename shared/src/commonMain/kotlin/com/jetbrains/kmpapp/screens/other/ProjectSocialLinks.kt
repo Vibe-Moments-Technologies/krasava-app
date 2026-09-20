@@ -35,19 +35,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
-import com.jetbrains.kmpapp.data.model.AppVersion
+import com.jetbrains.kmpapp.data.config.RemoteConfigLoader
 import kotlinx.coroutines.delay
-
-/** Канал проекта в Telegram. */
-private const val TELEGRAM_URL = "https://t.me/MIREA_Schedule"
+import org.koin.compose.koinInject
 
 /**
  * Блок-ссылки на соцсети проекта: квадратные кнопки-иконки без подписей.
- * Discord и Boosty — заглушки: показывают тематический тост «скоро».
+ * Ссылки берутся из удалённого конфига (config.json на gh-pages).
+ * Пустая ссылка → тост «скоро».
  */
 @Composable
 internal fun ProjectSocialLinks() {
     val uriHandler = LocalUriHandler.current
+    val configLoader: RemoteConfigLoader = koinInject()
+    val config by configLoader.config.collectAsState()
     var toastMessage by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -61,7 +62,7 @@ internal fun ProjectSocialLinks() {
                 contentDescription = "GitHub",
                 onClick = {
                     AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "github"))
-                    uriHandler.openUri(AppVersion.GITHUB_REPO_URL)
+                    uriHandler.openUri(config.socialLinks.github)
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -71,7 +72,7 @@ internal fun ProjectSocialLinks() {
                 contentDescription = "Telegram",
                 onClick = {
                     AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "telegram"))
-                    uriHandler.openUri(TELEGRAM_URL)
+                    uriHandler.openUri(config.socialLinks.telegram)
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -81,7 +82,9 @@ internal fun ProjectSocialLinks() {
                 contentDescription = "Discord",
                 onClick = {
                     AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "discord"))
-                    toastMessage = "Discord-сервер скоро появится"
+                    val url = config.socialLinks.discord
+                    if (url.isNotBlank()) uriHandler.openUri(url)
+                    else toastMessage = "Discord-сервер скоро появится"
                 },
                 modifier = Modifier.weight(1f)
             )
@@ -91,7 +94,9 @@ internal fun ProjectSocialLinks() {
                 contentDescription = "Boosty",
                 onClick = {
                     AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "boosty"))
-                    toastMessage = "Поддержка разработчиков скоро появится"
+                    val url = config.socialLinks.boosty
+                    if (url.isNotBlank()) uriHandler.openUri(url)
+                    else toastMessage = "Поддержка разработчиков скоро появится"
                 },
                 modifier = Modifier.weight(1f)
             )
