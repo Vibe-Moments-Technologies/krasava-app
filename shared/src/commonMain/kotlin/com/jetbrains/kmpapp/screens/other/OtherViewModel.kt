@@ -47,6 +47,7 @@ enum class OtherSubScreen(val depth: Int) {
     SCHEDULE_CALENDAR(2),
     // Параметры сервисов
     SERVICE_SETTINGS(2),
+    SERVICE_NOTES_SETTINGS(3),
     RESOURCES(1),
     ABOUT(1),
     TEAM(2),
@@ -73,6 +74,7 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SCHEDULE_PROGRESS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_CALENDAR to OtherSubScreen.SETTINGS,
     OtherSubScreen.SERVICE_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SERVICE_SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.TEAM to OtherSubScreen.ABOUT,

@@ -157,19 +157,66 @@ fun ScheduleCalendarSettingsScreen(
 fun ServiceSettingsScreen(
     viewModel: OtherViewModel,
     onBack: () -> Unit,
+    onOpenNotesSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
-    val askBeforeNoteDelete by viewModel.askBeforeNoteDelete.collectAsState()
 
     SettingsSubScreen(
         title = "Параметры сервисов",
         onBack = onBack,
         modifier = modifier
     ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onOpenNotesSettings)
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Конспекты",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Настройки блокнота и заметок",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = "Открыть",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+// ── Конспекты: настройки ─────────────────────────────────────
+
+@Composable
+fun ServiceNotesSettingsScreen(
+    viewModel: OtherViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PlatformBackHandler(onBack = onBack)
+    val askBeforeNoteDelete by viewModel.askBeforeNoteDelete.collectAsState()
+
+    SettingsSubScreen(
+        title = "Конспекты",
+        onBack = onBack,
+        modifier = modifier
+    ) {
         SettingsToggleRow(
-            title = "Спрашивать при удалении конспектов",
-            subtitle = "Подтверждение перед удалением страниц и полей",
+            title = "Спрашивать при удалении",
+            subtitle = "Подтверждение перед удалением страниц и полей в конспектах",
             checked = askBeforeNoteDelete,
             onCheckedChange = { viewModel.setAskBeforeNoteDelete(it) }
         )
