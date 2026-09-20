@@ -38,6 +38,7 @@ import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.config.RemoteConfigLoader
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
+import androidx.compose.runtime.collectAsState
 
 /**
  * Блок-ссылки на соцсети проекта: квадратные кнопки-иконки без подписей.
