@@ -36,10 +36,12 @@ jobs:
       build_id: ${{ steps.ver.outputs.build_id }}
       commit_sha: ${{ steps.ver.outputs.commit_sha }}
     steps:
+      # Пуш тега → checkout тега; ручной запуск → main (тег может не существовать
+      # в репо — он нужен только для парсинга версии, не для checkout).
       - name: 📚 Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag != '' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
 
       - name: 🧭 Validate tag & resolve version
         id: ver
@@ -55,7 +57,7 @@ jobs:
       - name: 📚 Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag != '' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
 
       - name: 🔖 Patch version files
         env:
@@ -122,7 +124,7 @@ jobs:
       - name: 📚 Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag != '' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
 
       - name: 🔖 Patch version files
         env:
@@ -215,7 +217,7 @@ jobs:
       - name: 📚 Checkout Repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag != '' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'push' && github.ref || 'main' }}
 
       - name: 📥 Download APK Artifact
         uses: actions/download-artifact@v4
