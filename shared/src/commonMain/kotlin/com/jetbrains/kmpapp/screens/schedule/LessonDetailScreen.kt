@@ -85,14 +85,28 @@ fun LessonDetailScreen(
         mutableStateOf(notesStorage.getSubjectNote(targetId, lesson.subject)?.text ?: "")
     }
 
-    // Сохранение заметок при выходе с экрана
+    // rememberUpdatedState: onDispose видит актуальные тексты, а не из первого рендера
+    val currentLessonNote by androidx.compose.runtime.rememberUpdatedState(lessonNoteText)
+    val currentSubjectNote by androidx.compose.runtime.rememberUpdatedState(subjectNoteText)
+
+    // Сохранение/удаление заметок + скрытие клавиатуры при выходе
+    val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose {
-            if (lessonNoteText.isNotBlank()) {
-                notesStorage.saveLessonNote(targetId, dateStr, lesson.bellNumber, lessonNoteText)
+            keyboardController?.hide()
+            if (currentLessonNote.isNotBlank()) {
+                notesStorage.saveLessonNote(targetId, dateStr, lesson.bellNumber, currentLessonNote)
+            } else {
+                notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.let {
+                    notesStorage.deleteNote(it.id)
+                }
             }
-            if (subjectNoteText.isNotBlank()) {
-                notesStorage.saveSubjectNote(targetId, lesson.subject, subjectNoteText)
+            if (currentSubjectNote.isNotBlank()) {
+                notesStorage.saveSubjectNote(targetId, lesson.subject, currentSubjectNote)
+            } else {
+                notesStorage.getSubjectNote(targetId, lesson.subject)?.let {
+                    notesStorage.deleteNote(it.id)
+                }
             }
         }
     }
