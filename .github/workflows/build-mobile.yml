@@ -16,6 +16,11 @@ on:
         description: 'Тег релиза, например v26.10 или v26.10-beta.1'
         required: true
         type: string
+      publish:
+        description: 'Публиковать релиз и фиды? Выключи для сборки без публикации (например, для загрузки в RuStore).'
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -201,7 +206,11 @@ jobs:
     name: 🚀 Publish GitHub Release
     runs-on: ubuntu-latest
     needs: [resolve, build_apk, build_ipa]
-    if: always() && (needs.build_apk.result == 'success' || needs.build_ipa.result == 'success')
+    # При пуше тега публикуем всегда; при ручном запуске — по флагу publish.
+    if: |
+      always() &&
+      (needs.build_apk.result == 'success' || needs.build_ipa.result == 'success') &&
+      (github.event_name == 'push' || inputs.publish != false)
     steps:
       - name: 📚 Checkout Repository
         uses: actions/checkout@v4
