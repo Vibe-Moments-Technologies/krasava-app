@@ -108,6 +108,11 @@ fun SettingsScreen(
     var customMinutesDraft by remember { mutableStateOf("") }
     var showNotificationsTargetDialog by remember { mutableStateOf(false) }
 
+    // rememberSaveable: позиция скролла сохраняется при навигации в подразделы
+    val scrollState = rememberSaveable(saver = androidx.compose.foundation.ScrollState.Saver) {
+        androidx.compose.foundation.ScrollState(0)
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
@@ -140,7 +145,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

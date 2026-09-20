@@ -144,10 +144,16 @@ fun LessonDetailScreen(
         modifier = modifier
             .fillMaxSize()
     ) { innerPadding ->
+        // Тап вне полей ввода скрывает клавиатуру
+        val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) { focusManager.clearFocus() }
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

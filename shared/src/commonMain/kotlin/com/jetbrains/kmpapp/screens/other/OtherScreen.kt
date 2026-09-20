@@ -131,14 +131,7 @@ fun OtherScreen(
                     ScheduleCalendarSettingsScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.SERVICE_SETTINGS -> {
-                    ServiceSettingsScreen(
-                        viewModel = viewModel,
-                        onBack = back,
-                        onOpenNotesSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_NOTES_SETTINGS) }
-                    )
-                }
-                OtherSubScreen.SERVICE_NOTES_SETTINGS -> {
-                    ServiceNotesSettingsScreen(viewModel = viewModel, onBack = back)
+                    ServiceSettingsScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.RESOURCES -> {
                     ResourcesScreen(onBack = back)
