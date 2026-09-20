@@ -29,6 +29,8 @@ class ScheduleViewModel(
 
     val savedTargets: StateFlow<List<ScheduleTarget>> = repository.savedTargets
     val selectedTarget: StateFlow<ScheduleTarget?> = repository.selectedTarget
+    val selectedTargetId: Int
+        get() = selectedTarget.value?.id ?: -1
     val isLoading: StateFlow<Boolean> = repository.isLoading
     val errorMessage: StateFlow<String?> = repository.errorMessage
     val activeDiff: StateFlow<com.jetbrains.kmpapp.data.model.ScheduleDiff?> = repository.activeDiff

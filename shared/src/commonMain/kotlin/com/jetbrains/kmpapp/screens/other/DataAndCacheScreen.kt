@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Map
@@ -63,6 +64,11 @@ fun DataAndCacheScreen(
     PlatformBackHandler(onBack = onBack)
 
     val storageStats by viewModel.storageStats.collectAsState()
+    val notesStorage: com.jetbrains.kmpapp.data.storage.LessonNotesStorage =
+        org.koin.compose.koinInject()
+    val notes by notesStorage.notes.collectAsState()
+    val notesCount = notes.size
+    val notesSizeBytes = notesStorage.getStorageSizeBytes()
 
     LaunchedEffect(Unit) {
         viewModel.refreshStorageStats()
@@ -264,6 +270,18 @@ fun DataAndCacheScreen(
                     )
 
                     StorageDetailRow(
+                        icon = Icons.Default.EditNote,
+                        title = "Заметки к парам",
+                        subtitle = "${notesCount} заметок",
+                        size = notesStorage.formatBytes(notesSizeBytes)
+                    )
+
+                    androidx.compose.material3.HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                    )
+
+                    StorageDetailRow(
                         icon = Icons.Default.TaskAlt,
                         title = "Задачи и дедлайны",
                         subtitle = "Предметы, чек-листы и прогресс",
@@ -281,6 +299,38 @@ fun DataAndCacheScreen(
                         subtitle = "Тема, фильтры, опции отображения",
                         size = storageStats.formatBytes(storageStats.settingsSizeBytes)
                     )
+                }
+            }
+
+            // Очистка старых заметок к прошедшим парам
+            if (notesCount > 0) {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Text(
+                            text = "Заметки к прошедшим парам",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Заметки, привязанные к занятиям старше 90 дней, можно удалить для экономии места.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedButton(
+                            onClick = {
+                                val cutoff = kotlin.time.Clock.System.now().toEpochMilliseconds() - 90L * 24 * 60 * 60 * 1000
+                                notesStorage.cleanOldLessonNotes(cutoff)
+                            }
+                        ) {
+                            Text("Очистить заметки к прошедшим занятиям")
+                        }
+                    }
                 }
             }
 

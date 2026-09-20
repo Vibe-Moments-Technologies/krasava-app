@@ -46,6 +46,8 @@ import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleSlot
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
+import com.jetbrains.kmpapp.data.storage.LessonNotesStorage
+import org.koin.compose.koinInject
 
 @Composable
 fun ScheduleSlotCard(
@@ -117,6 +119,13 @@ fun LessonCard(
     horizontalMargin: androidx.compose.ui.unit.Dp = 16.dp
 ) {
     val (typeBg, typeTextColor) = getTypeBadgeColors(lesson.lessonType)
+
+    // Заметка к паре (R2): читаем из хранилища, показываем превью
+    val notesStorage: LessonNotesStorage = koinInject()
+    val notePreview = notesStorage.getLessonNoteByDate(
+        date = lesson.date.toString(),
+        bellNumber = lesson.bellNumber
+    )?.text
 
     // ponytail: State протягивается вниз и читается ТОЛЬКО на сегодняшних
     // карточках: тик раз в 30 секунд пересобирает одну активную карточку,
@@ -315,6 +324,35 @@ fun LessonCard(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+                    }
+                }
+
+                // Заметка к паре (R2): ≤2 строк с … на переполнении
+                if (!notePreview.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EditNote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = notePreview,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
 

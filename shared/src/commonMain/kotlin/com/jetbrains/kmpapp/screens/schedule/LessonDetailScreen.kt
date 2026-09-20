@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -65,16 +66,36 @@ import kotlin.time.Clock
 @Composable
 fun LessonDetailScreen(
     lesson: Lesson,
+    targetId: Int,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
     val taskRepository: TaskRepository = koinInject()
+    val notesStorage: com.jetbrains.kmpapp.data.storage.LessonNotesStorage = koinInject()
     val subjects by taskRepository.subjects.collectAsState()
     val isAlreadyAdded = subjects.any { it.name.trim().equals(lesson.subject.trim(), ignoreCase = true) }
 
-    // Заметка к этой паре (пока локальное состояние; персистентность — в R2)
-    var noteText by remember { mutableStateOf("") }
+    // Персистентные заметки (R2): к паре и к предмету
+    val dateStr = lesson.date.toString()
+    var lessonNoteText by remember(targetId, dateStr, lesson.bellNumber) {
+        mutableStateOf(notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.text ?: "")
+    }
+    var subjectNoteText by remember(targetId, lesson.subject) {
+        mutableStateOf(notesStorage.getSubjectNote(targetId, lesson.subject)?.text ?: "")
+    }
+
+    // Сохранение заметок при выходе с экрана
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose {
+            if (lessonNoteText.isNotBlank()) {
+                notesStorage.saveLessonNote(targetId, dateStr, lesson.bellNumber, lessonNoteText)
+            }
+            if (subjectNoteText.isNotBlank()) {
+                notesStorage.saveSubjectNote(targetId, lesson.subject, subjectNoteText)
+            }
+        }
+    }
 
     val (typeBg, typeTextColor) = getTypeBadgeColors(lesson.lessonType)
 
@@ -220,7 +241,7 @@ fun LessonDetailScreen(
                 }
             }
 
-            // Панель инструментов: заметка к паре + добавить в задачи
+            // Панель инструментов: заметки + добавить в задачи
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -228,37 +249,26 @@ fun LessonDetailScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     // Заметка к этой паре
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.EditNote,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Заметка к этой паре",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = noteText,
-                        onValueChange = { noteText = it },
-                        placeholder = { Text("Например: принести отчёт, тетрадь…") },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = false,
-                        maxLines = 3,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-                        )
+                    NoteField(
+                        icon = Icons.Default.EditNote,
+                        title = "Заметка к этой паре",
+                        placeholder = "Например: принести отчёт, тетрадь…",
+                        value = lessonNoteText,
+                        onValueChange = { lessonNoteText = it }
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Заметка к предмету
+                    NoteField(
+                        icon = Icons.Default.MenuBook,
+                        title = "Заметка к предмету",
+                        placeholder = "Например: всегда брать тетрадь, учебник…",
+                        value = subjectNoteText,
+                        onValueChange = { subjectNoteText = it }
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     // Добавить предмет в задачи — одна строка: плюсик + текст
                     Row(
@@ -370,4 +380,44 @@ private fun DetailItem(label: String, value: String) {
             color = MaterialTheme.colorScheme.onSurface
         )
     }
+}
+
+/** Поле заметки с автосохранением при потере фокуса. */
+@Composable
+private fun NoteField(
+    icon: ImageVector,
+    title: String,
+    placeholder: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(10.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = { Text(placeholder) },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        singleLine = false,
+        maxLines = 3,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    )
 }

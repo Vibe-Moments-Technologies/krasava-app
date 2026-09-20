@@ -32,7 +32,8 @@ import kotlin.time.Clock
 class ScheduleRepository(
     private val api: MireaScheduleApi,
     private val storage: ScheduleStorage,
-    private val powerManager: com.jetbrains.kmpapp.data.power.PlatformPowerManager
+    private val powerManager: com.jetbrains.kmpapp.data.power.PlatformPowerManager,
+    private val lessonNotesStorage: com.jetbrains.kmpapp.data.storage.LessonNotesStorage
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val notificationRescheduleMutex = Mutex()
@@ -311,6 +312,9 @@ class ScheduleRepository(
 
     fun removeTarget(targetId: Int) {
         storage.removeTarget(targetId)
+        // Каскадное удаление заметок (R2): заметки к парам и предметам
+        // этого расписания удаляются вместе с ним.
+        lessonNotesStorage.removeNotesForTarget(targetId)
     }
 
     fun refreshCurrentSchedule() {

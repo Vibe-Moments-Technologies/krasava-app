@@ -88,6 +88,7 @@ fun ScheduleScreen(
         screenContent = { detailLesson, back ->
             LessonDetailScreen(
                 lesson = detailLesson as Lesson,
+                targetId = viewModel.selectedTargetId,
                 onBack = back
             )
         },
