@@ -21,7 +21,7 @@ interface AnalyticsEngine {
 
 object AppAnalytics {
     /** Публичный ключ AppMetrica — по дизайну системы шьётся в приложение. */
-    const val API_KEY = "fc0cde08-05c5-4718-96ee-e9674b8c33e7"
+    const val API_KEY = "3960c728-5ca5-4b96-8bf2-f147994bf1f6"
 
     private var engine: AnalyticsEngine? = null
 
