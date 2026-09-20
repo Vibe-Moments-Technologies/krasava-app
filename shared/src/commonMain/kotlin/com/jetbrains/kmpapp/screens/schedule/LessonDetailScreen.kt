@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp.screens.schedule
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,18 +27,22 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -67,6 +72,9 @@ fun LessonDetailScreen(
     val taskRepository: TaskRepository = koinInject()
     val subjects by taskRepository.subjects.collectAsState()
     val isAlreadyAdded = subjects.any { it.name.trim().equals(lesson.subject.trim(), ignoreCase = true) }
+
+    // Заметка к этой паре (пока локальное состояние; персистентность — в R2)
+    var noteText by remember { mutableStateOf("") }
 
     val (typeBg, typeTextColor) = getTypeBadgeColors(lesson.lessonType)
 
@@ -212,57 +220,100 @@ fun LessonDetailScreen(
                 }
             }
 
-            Button(
-                onClick = {
-                    if (!isAlreadyAdded) {
-                        val words = lesson.subject.split(" ", "-", "_").filter { it.isNotBlank() }
-                        val shortCode = if (words.size > 1) {
-                            words.mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(4).joinToString("")
-                        } else {
-                            lesson.subject.take(3).uppercase()
-                        }
-                        val colorIdx = (lesson.subject.hashCode().and(0x7fffffff)) % DefaultSubjectColors.size
-                        val newSubject = Subject(
-                            id = Clock.System.now().toEpochMilliseconds().toString(),
-                            name = lesson.subject.trim(),
-                            shortCode = shortCode,
-                            colorHex = DefaultSubjectColors[colorIdx],
-                            importance = SubjectImportance.MEDIUM,
-                            assessmentType = when (lesson.lessonType) {
-                                LessonType.LAB -> AssessmentType.CREDIT
-                                LessonType.PRACTICE -> AssessmentType.TEST
-                                else -> AssessmentType.EXAM
-                            },
-                            teacherName = lesson.teachers.joinToString(", "),
-                            roomOrLink = lesson.classrooms.joinToString(", "),
-                            notes = "Добавлено из расписания"
-                        )
-                        taskRepository.addSubject(newSubject)
-                    }
-                },
-                enabled = !isAlreadyAdded,
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
+            // Панель инструментов: заметка к паре + добавить в задачи
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(
-                    imageVector = if (isAlreadyAdded) Icons.Default.Check else Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = if (isAlreadyAdded) "Предмет уже в задачах" else "Добавить предмет в задачи",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp
-                )
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // Заметка к этой паре
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.EditNote,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Заметка к этой паре",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = noteText,
+                        onValueChange = { noteText = it },
+                        placeholder = { Text("Например: принести отчёт, тетрадь…") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = false,
+                        maxLines = 3,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Добавить предмет в задачи — одна строка: плюсик + текст
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable(enabled = !isAlreadyAdded) {
+                                val words = lesson.subject.split(" ", "-", "_").filter { it.isNotBlank() }
+                                val shortCode = if (words.size > 1) {
+                                    words.mapNotNull { it.firstOrNull()?.uppercaseChar() }.take(4).joinToString("")
+                                } else {
+                                    lesson.subject.take(3).uppercase()
+                                }
+                                val colorIdx = (lesson.subject.hashCode().and(0x7fffffff)) % DefaultSubjectColors.size
+                                val newSubject = Subject(
+                                    id = Clock.System.now().toEpochMilliseconds().toString(),
+                                    name = lesson.subject.trim(),
+                                    shortCode = shortCode,
+                                    colorHex = DefaultSubjectColors[colorIdx],
+                                    importance = SubjectImportance.MEDIUM,
+                                    assessmentType = when (lesson.lessonType) {
+                                        LessonType.LAB -> AssessmentType.CREDIT
+                                        LessonType.PRACTICE -> AssessmentType.TEST
+                                        else -> AssessmentType.EXAM
+                                    },
+                                    teacherName = lesson.teachers.joinToString(", "),
+                                    roomOrLink = lesson.classrooms.joinToString(", "),
+                                    notes = "Добавлено из расписания"
+                                )
+                                taskRepository.addSubject(newSubject)
+                            }
+                            .background(
+                                if (isAlreadyAdded) MaterialTheme.colorScheme.surfaceContainerHigh
+                                else MaterialTheme.colorScheme.primaryContainer
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (isAlreadyAdded) Icons.Default.Check else Icons.Default.Add,
+                            contentDescription = null,
+                            tint = if (isAlreadyAdded) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = if (isAlreadyAdded) "Предмет уже в задачах" else "Добавить предмет в задачи",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = if (isAlreadyAdded) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(72.dp))
