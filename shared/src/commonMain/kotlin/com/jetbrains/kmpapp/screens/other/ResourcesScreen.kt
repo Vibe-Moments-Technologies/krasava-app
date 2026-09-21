@@ -31,10 +31,13 @@ import androidx.compose.material.icons.filled.Domain
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -63,7 +66,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
@@ -170,14 +172,14 @@ private fun plannedLink(title: String, description: String, accent: Color) =
     )
 
 private val INSTITUTE_VK_LINKS = listOf(
-    vkLink("ИКБ", "Институт кибербезопасности и цифровых технологий", "Слон", "https://vk.ru/ikb_sumirea", Color(0xFF007AFF)),
-    vkLink("ИИИ", "Институт искусственного интеллекта", "Робот", "https://vk.ru/iii_sumirea", Color(0xFFAF52DE)),
-    vkLink("ИИТ", "Институт информационных технологий", "Панда", "https://vk.ru/it_sumirea", Color(0xFF00C7BE)),
-    vkLink("ИТУ", "Институт технологий управления", "Динозавр", "https://vk.ru/itu_sumirea", Color(0xFFFF9500)),
-    vkLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", "Лев", "https://vk.ru/iptip_sumirea", Color(0xFF5856D6)),
-    vkLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", "Феникс", "https://vk.ru/itht_sumirea", Color(0xFFE64A19)),
-    vkLink("ИРИ", "Институте радиоэлектроники и информатики", "летучая мышь", "https://vk.ru/iri_sumirea", Color(0xFF34C759)),
-    vkLink("КПК", "Колледж программирования и кибербезопасности", "Ворон", "https://vk.ru/college_sumirea", Color(0xFF8E8E93)),
+    vkLink("ИКБ", "Институт кибербезопасности и цифровых технологий", "🐘", "https://vk.ru/ikb_sumirea", Color(0xFF007AFF)),
+    vkLink("ИИИ", "Институт искусственного интеллекта", "🤖", "https://vk.ru/iii_sumirea", Color(0xFF34C759)),
+    vkLink("ИИТ", "Институт информационных технологий", "🐼", "https://vk.ru/it_sumirea", Color(0xFF1C1C1E)),
+    vkLink("ИТУ", "Институт технологий управления", "🦕", "https://vk.ru/itu_sumirea", Color(0xFFFF3B30)),
+    vkLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", "🦁", "https://vk.ru/iptip_sumirea", Color(0xFFFFCC00)),
+    vkLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", "🐦‍🔥", "https://vk.ru/itht_sumirea", Color(0xFFFF2D55)),
+    vkLink("ИРИ", "Институте радиоэлектроники и информатики", "🦇", "https://vk.ru/iri_sumirea", Color(0xFFAF52DE)),
+    vkLink("КПК", "Колледж программирования и кибербезопасности", "🐦‍⬛", "https://vk.ru/college_sumirea", Color(0xFFFF9500)),
     plannedLink("ПИШ", "Передовые инженерные школы", Color(0xFFFF2D55)),
     plannedLink("Фрязино", "Филиал РТУ МИРЭА в г. Фрязино", Color(0xFF5AC8FA)),
     plannedLink("Ставрополь", "Филиал РТУ МИРЭА в г. Ставрополе", Color(0xFF32ADD6))
@@ -187,47 +189,64 @@ private val INSTITUTE_TG_LINKS = listOf(
     ResourceLink(
         title = "ИИИ",
         description = "Институт искусственного интеллекта",
-        symbol = "Робот",
+        symbol = "🤖",
         url = "https://t.me/iii_sumirea",
-        accentColor = Color(0xFFAF52DE)
+        accentColor = Color(0xFF34C759)
     ),
     plannedLink("ИКБ", "Институт кибербезопасности и цифровых технологий", Color(0xFF007AFF)),
-    plannedLink("ИИТ", "Институт информационных технологий", Color(0xFF00C7BE)),
-    plannedLink("ИТУ", "Институт технологий управления", Color(0xFFFF9500)),
-    plannedLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", Color(0xFF5856D6)),
-    plannedLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", Color(0xFFE64A19)),
-    plannedLink("ИРИ", "Институте радиоэлектроники и информатики", Color(0xFF34C759)),
-    plannedLink("КПК", "Колледж программирования и кибербезопасности", Color(0xFF8E8E93)),
+    plannedLink("ИИТ", "Институт информационных технологий", Color(0xFF1C1C1E)),
+    plannedLink("ИТУ", "Институт технологий управления", Color(0xFFFF3B30)),
+    plannedLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", Color(0xFFFFCC00)),
+    plannedLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", Color(0xFFFF2D55)),
+    plannedLink("ИРИ", "Институте радиоэлектроники и информатики", Color(0xFFAF52DE)),
+    plannedLink("КПК", "Колледж программирования и кибербезопасности", Color(0xFFFF9500)),
     plannedLink("ПИШ", "Передовые инженерные школы", Color(0xFFFF2D55)),
     plannedLink("Фрязино", "Филиал РТУ МИРЭА в г. Фрязино", Color(0xFF5AC8FA)),
     plannedLink("Ставрополь", "Филиал РТУ МИРЭА в г. Ставрополе", Color(0xFF32ADD6))
 )
 
-/** Логотип ВК (Simple Icons, 24×24 — классический знак «VK»). */
+/** Логотип ВК (Font Awesome 6 brands «vk», 448×512 — классический знак «VK»). */
 internal val VkMark: ImageVector by lazy {
     ImageVector.Builder(
         name = "VkMark",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
-        viewportWidth = 24f,
-        viewportHeight = 24f
+        viewportWidth = 448f,
+        viewportHeight = 512f
     ).apply {
-        path(fill = SolidColor(Color(0xFF2787F5))) {
-            moveTo(6.79f, 7.3f)
-            horizontalLineTo(4.05f)
-            curveTo(0.13f, 6.24f, 3.25f, 9.99f, 8.72f, 9.99f)
-            horizontalLineToRelative(0.31f)
-            verticalLineToRelative(-3.57f)
-            curveTo(2.01f, 0.2f, 3.53f, 1.67f, 4.14f, 3.57f)
-            horizontalLineToRelative(2.84f)
-            curveTo(-0.78f, -2.84f, -2.83f, -4.41f, -4.11f, -5.01f)
-            curveTo(1.28f, -0.74f, 3.08f, -2.54f, 3.51f, -4.98f)
-            horizontalLineToRelative(-2.58f)
-            curveTo(-0.56f, 1.98f, -2.22f, 3.78f, -3.8f, 3.95f)
-            verticalLineTo(7.3f)
-            horizontalLineTo(10.5f)
-            verticalLineToRelative(6.92f)
-            curveTo(-1.6f, -0.4f, -3.62f, -2.34f, -3.71f, -6.92f)
+        path(fill = SolidColor(Color(0xFF0077FF))) {
+            moveTo(31.4907f, 63.4907f)
+            curveTo(0f, 94.9813f, 0f, 145.671f, 0f, 247.04f)
+            verticalLineTo(264.96f)
+            curveTo(0f, 366.329f, 0f, 417.019f, 31.4907f, 448.509f)
+            curveTo(62.9813f, 480f, 113.671f, 480f, 215.04f, 480f)
+            horizontalLineTo(232.96f)
+            curveTo(334.329f, 480f, 385.019f, 480f, 416.509f, 448.509f)
+            curveTo(448f, 417.019f, 448f, 366.329f, 448f, 264.96f)
+            verticalLineTo(247.04f)
+            curveTo(448f, 145.671f, 448f, 94.9813f, 416.509f, 63.4907f)
+            curveTo(385.019f, 32f, 334.329f, 32f, 232.96f, 32f)
+            horizontalLineTo(215.04f)
+            curveTo(113.671f, 32f, 62.9813f, 32f, 31.4907f, 63.4907f)
+            close()
+            moveTo(75.6f, 168.267f)
+            horizontalLineTo(126.747f)
+            curveTo(128.427f, 253.76f, 166.133f, 289.973f, 196f, 297.44f)
+            verticalLineTo(168.267f)
+            horizontalLineTo(244.16f)
+            verticalLineTo(242f)
+            curveTo(273.653f, 238.827f, 304.64f, 205.227f, 315.093f, 168.267f)
+            horizontalLineTo(363.253f)
+            curveTo(359.313f, 187.435f, 351.46f, 205.583f, 340.186f, 221.579f)
+            curveTo(328.913f, 237.574f, 314.461f, 251.071f, 297.733f, 261.227f)
+            curveTo(316.41f, 270.499f, 332.907f, 283.63f, 346.132f, 299.751f)
+            curveTo(359.357f, 315.873f, 369.01f, 334.618f, 374.453f, 354.747f)
+            horizontalLineTo(321.44f)
+            curveTo(316.555f, 337.262f, 306.614f, 321.61f, 292.865f, 309.754f)
+            curveTo(279.117f, 297.899f, 262.173f, 290.368f, 244.16f, 288.107f)
+            verticalLineTo(354.747f)
+            horizontalLineTo(238.373f)
+            curveTo(136.267f, 354.747f, 78.0267f, 284.747f, 75.6f, 168.267f)
             close()
         }
     }.build()
@@ -252,7 +271,7 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                 ResourceFolder(
                     title = "ВК",
                     icon = VkMark,
-                    accentColor = Color(0xFF2787F5),
+                    accentColor = Color(0xFF0077FF),
                     children = INSTITUTE_VK_LINKS
                 ),
                 ResourceFolder(
@@ -272,6 +291,24 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     title = "Студенческий союз РТУ МИРЭА",
                     icon = Icons.Default.GroupAdd,
                     accentColor = Color(0xFF00C7BE),
+                    children = emptyList()
+                ),
+                ResourceFolder(
+                    title = "Профсоюзная организация РТУ МИРЭА",
+                    icon = Icons.Default.Handshake,
+                    accentColor = Color(0xFF5856D6),
+                    children = emptyList()
+                ),
+                ResourceFolder(
+                    title = "Студенческое научное общество",
+                    icon = Icons.Default.Science,
+                    accentColor = Color(0xFF007AFF),
+                    children = emptyList()
+                ),
+                ResourceFolder(
+                    title = "Стартап-клуб РТУ МИРЭА",
+                    icon = Icons.Default.RocketLaunch,
+                    accentColor = Color(0xFFFF9500),
                     children = emptyList()
                 )
             )
@@ -654,7 +691,7 @@ private fun LinkAvatar(link: ResourceLink, resolvedAvatar: String?) {
     }
 }
 
-/** Заглушка аватара: символ из данных (Слон, Робот, Панда и т.п.). */
+/** Заглушка аватара: иконка-эмодзи из данных (🐘, 🤖, 🐼 и т.п.). */
 @Composable
 private fun SymbolAvatar(symbol: String, accentColor: Color, modifier: Modifier = Modifier) {
     Box(
@@ -666,13 +703,9 @@ private fun SymbolAvatar(symbol: String, accentColor: Color, modifier: Modifier 
     ) {
         Text(
             text = symbol,
-            fontSize = 7.5.sp,
-            lineHeight = 9.sp,
-            fontWeight = FontWeight.Bold,
-            color = accentColor,
+            fontSize = 22.sp,
+            lineHeight = 26.sp,
             textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 2.dp)
         )
     }
