@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp.di
 
 import com.jetbrains.kmpapp.data.ScheduleRepository
+import com.jetbrains.kmpapp.data.VkAvatarLoader
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
 import com.jetbrains.kmpapp.data.config.RemoteConfigLoader
 import com.jetbrains.kmpapp.data.storage.LessonNotesStorage
@@ -53,6 +54,7 @@ val dataModule = module {
     singleOf(::PlatformStorage)
     singleOf(::UnifiedSyncManager)
     singleOf(::MireaScheduleApi)
+    singleOf(::VkAvatarLoader)
     singleOf(::ScheduleStorage)
     singleOf(::LessonNotesStorage)
     singleOf(::ScheduleRepository)
