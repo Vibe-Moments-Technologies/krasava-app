@@ -147,7 +147,6 @@ class ScheduleRepository(
     val isMatrixTheme: StateFlow<Boolean> = storage.isMatrixTheme
     val cheatsAgreed: StateFlow<Boolean?> = storage.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = storage.cheatsBlocked
-    val betaChannel: StateFlow<Boolean> = storage.betaChannel
     val analyticsEnabled: StateFlow<Boolean> = storage.analyticsEnabled
     val analyticsConsent: StateFlow<Boolean?> = storage.analyticsConsent
     val appIcon: StateFlow<String> = storage.appIcon
@@ -235,7 +234,6 @@ class ScheduleRepository(
     fun setMatrixTheme(enabled: Boolean) = storage.setMatrixTheme(enabled)
     fun setCheatsAgreed(agreed: Boolean?) = storage.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = storage.setCheatsBlocked(blocked)
-    fun setBetaChannel(enabled: Boolean) = storage.setBetaChannel(enabled)
     fun setAnalyticsEnabled(enabled: Boolean) = storage.setAnalyticsEnabled(enabled)
     fun setAnalyticsConsent(accepted: Boolean) = storage.setAnalyticsConsent(accepted)
     fun setAppIcon(name: String) = storage.setAppIcon(name)

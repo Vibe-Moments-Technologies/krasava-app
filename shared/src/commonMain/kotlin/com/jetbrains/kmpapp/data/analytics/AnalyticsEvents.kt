@@ -49,14 +49,9 @@ object AnalyticsEvents {
     const val FEATURE_NOTE_ADDED = "feature_note_added"
     const val FEATURE_NOTE_REMOVED = "feature_note_removed"
     const val FEATURE_MAP_OPENED = "feature_map_opened"
-    const val FEATURE_UPDATE_SHOWN = "feature_update_shown"
     const val FEATURE_VPN_BANNER_SHOWN = "feature_vpn_banner_shown"
     const val FEATURE_LESSON_DETAIL = "feature_lesson_detail"
-    const val FEATURE_COMPARE_OPENED = "feature_compare_opened"
-    const val FEATURE_FREE_ROOMS_SEARCH = "feature_free_rooms_search"
 
     // ── Ошибки (не краши — краши собирает SDK автоматически) ─
     const val ERROR_SCHEDULE_LOAD = "error_schedule_load"
-    const val ERROR_FREE_ROOMS_LOAD = "error_free_rooms_load"
-    const val ERROR_UPDATE_CHECK = "error_update_check"
 }

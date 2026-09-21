@@ -88,9 +88,6 @@ class ScheduleStorage(
     private val _cheatsBlocked = MutableStateFlow(false)
     val cheatsBlocked: StateFlow<Boolean> = _cheatsBlocked.asStateFlow()
 
-    private val _betaChannel = MutableStateFlow(false)
-    val betaChannel: StateFlow<Boolean> = _betaChannel.asStateFlow()
-
     private val _analyticsEnabled = MutableStateFlow(true)
     val analyticsEnabled: StateFlow<Boolean> = _analyticsEnabled.asStateFlow()
 
@@ -153,7 +150,6 @@ class ScheduleStorage(
         _themeOverlay.value = loadThemeOverlay()
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
-        _betaChannel.value = loadBooleanFlag(KEY_BETA_CHANNEL, false)
         _analyticsEnabled.value = loadBooleanFlag(KEY_ANALYTICS_ENABLED, true)
         _analyticsConsent.value = nullableFlag(KEY_ANALYTICS_CONSENT)
         // До первого ответа на диалог согласия ничего не отправляем.
@@ -444,11 +440,6 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_CHEATS_BLOCKED, blocked.toString()) }
     }
 
-    fun setBetaChannel(enabled: Boolean) {
-        _betaChannel.value = enabled
-        scope.launch { platformStorage.saveString(KEY_BETA_CHANNEL, enabled.toString()) }
-    }
-
     fun setAnalyticsEnabled(enabled: Boolean) {
         _analyticsEnabled.value = enabled
         // Ручное включение тумблера = согласие; до ответа на диалог ничего не уходит
@@ -716,7 +707,6 @@ class ScheduleStorage(
     fun resetAllData() {
         val cheatsAgreedBefore = _cheatsAgreed.value
         val cheatsBlockedBefore = _cheatsBlocked.value
-        val betaChannelBefore = _betaChannel.value
         val analyticsEnabledBefore = _analyticsEnabled.value
         val analyticsConsentBefore = _analyticsConsent.value
         val notificationsEnabledBefore = _notificationsEnabled.value
@@ -740,7 +730,6 @@ class ScheduleStorage(
         _themeOverlay.value = ThemeOverlay.NONE
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
-        _betaChannel.value = betaChannelBefore
         _analyticsEnabled.value = analyticsEnabledBefore
         _analyticsConsent.value = analyticsConsentBefore
         _notificationsEnabled.value = notificationsEnabledBefore
@@ -755,7 +744,6 @@ class ScheduleStorage(
             if (cheatsAgreedBefore == null) platformStorage.remove(KEY_CHEATS_AGREED)
             else platformStorage.saveString(KEY_CHEATS_AGREED, cheatsAgreedBefore.toString())
             platformStorage.saveString(KEY_CHEATS_BLOCKED, cheatsBlockedBefore.toString())
-            platformStorage.saveString(KEY_BETA_CHANNEL, betaChannelBefore.toString())
             platformStorage.saveString(KEY_ANALYTICS_ENABLED, analyticsEnabledBefore.toString())
             if (analyticsConsentBefore == null) platformStorage.remove(KEY_ANALYTICS_CONSENT)
             else platformStorage.saveString(KEY_ANALYTICS_CONSENT, analyticsConsentBefore.toString())
@@ -849,7 +837,6 @@ class ScheduleStorage(
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
         private const val KEY_CHEATS_AGREED = "krasava_cheats_agreed"
         private const val KEY_CHEATS_BLOCKED = "krasava_cheats_blocked"
-        private const val KEY_BETA_CHANNEL = "krasava_beta_channel"
         private const val KEY_ANALYTICS_ENABLED = "krasava_analytics_enabled"
         private const val KEY_ANALYTICS_CONSENT = "krasava_analytics_consent"
         private const val KEY_APP_ICON = "krasava_app_icon"

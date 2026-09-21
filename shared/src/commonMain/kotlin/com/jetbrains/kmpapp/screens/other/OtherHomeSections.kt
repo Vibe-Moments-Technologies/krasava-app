@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
@@ -34,12 +33,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.update.UpdateCheckResult
 import com.jetbrains.kmpapp.data.update.UpdateUrgency
-import com.jetbrains.kmpapp.data.update.startPlatformUpdate
 import com.jetbrains.kmpapp.screens.components.AppTab
 
 /** Концентратор вкладок, спрятанных из дока (виден только если такие есть). */
@@ -92,7 +88,11 @@ internal fun HiddenTabsCard(
     }
 }
 
-/** Карточка версии/обновления с трёхуровневой расцветкой по срочности. */
+/**
+ * Карточка версии/обновления — информационная. Никаких переходов и
+ * установщиков: приложение обновляется маркетом, sideload — вручную.
+ * Тап при актуальной версии — повторная проверка.
+ */
 @Composable
 internal fun UpdateStatusCard(
     updateResult: UpdateCheckResult?,
@@ -101,7 +101,6 @@ internal fun UpdateStatusCard(
 ) {
     val urgency = updateResult?.urgency ?: UpdateUrgency.UP_TO_DATE
     val hasUpdate = updateResult?.hasUpdate == true
-    val isPrereleaseUpdate = updateResult?.isPrerelease == true
 
     val cardContainerColor = when (urgency) {
         UpdateUrgency.CRITICAL -> Color(0xFF581C87).copy(alpha = 0.20f)
@@ -126,8 +125,7 @@ internal fun UpdateStatusCard(
 
     val titleText = when {
         isCheckingUpdate -> "Проверка обновлений..."
-        urgency == UpdateUrgency.CRITICAL -> "Критическое обновление!"
-        urgency == UpdateUrgency.NEW_VERSION && isPrereleaseUpdate -> "Доступна тестовая сборка!"
+        urgency == UpdateUrgency.CRITICAL -> "Важное обновление!"
         urgency == UpdateUrgency.NEW_VERSION -> "Вышла новая версия!"
         urgency == UpdateUrgency.MINOR_BUILD -> "Доступна новая сборка"
         else -> "У вас актуальная версия"
@@ -136,10 +134,8 @@ internal fun UpdateStatusCard(
     val subtitleText = when {
         urgency == UpdateUrgency.CRITICAL ->
             "Версия ${updateResult?.latestVersion} • Важные исправления безопасности"
-        urgency == UpdateUrgency.NEW_VERSION && isPrereleaseUpdate ->
-            "Тестовая ${updateResult?.latestVersion} • Нажмите для перехода"
         hasUpdate ->
-            "Версия ${updateResult?.latestVersion} • Нажмите для перехода"
+            "Версия ${updateResult?.latestVersion} • Обновитесь в магазине приложений"
         else -> AppVersion.DISPLAY_VERSION
     }
 
@@ -157,21 +153,9 @@ internal fun UpdateStatusCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .clickable {
-                if (hasUpdate) {
-                    AppAnalytics.logEvent(
-                        AnalyticsEvents.FEATURE_UPDATE_SHOWN,
-                        mapOf("version" to (updateResult?.latestVersion ?: "?"))
-                    )
-                    // Маркет → страница в маркете; иначе → прямое скачивание
-                    startPlatformUpdate(
-                        browserUrl = updateResult?.actionUrl ?: AppVersion.GITHUB_REPO_URL,
-                        apkUrl = if (updateResult?.storeUrl != null) null else updateResult?.apkUrl
-                    )
-                } else {
-                    onCheckForUpdates()
-                }
-            }
+            // Информационная карточка: кликабельна только для ручной
+            // повторной проверки, когда обновление не найдено.
+            .clickable(enabled = !hasUpdate && !isCheckingUpdate) { onCheckForUpdates() }
     ) {
         Row(
             modifier = Modifier
@@ -215,15 +199,6 @@ internal fun UpdateStatusCard(
                         color = if (hasUpdate) accentTint else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-
-            if (hasUpdate) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                    contentDescription = "Перейти к релизу",
-                    tint = accentTint,
-                    modifier = Modifier.size(20.dp)
-                )
             }
         }
     }

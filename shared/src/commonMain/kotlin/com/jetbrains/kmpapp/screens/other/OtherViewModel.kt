@@ -134,7 +134,6 @@ class OtherViewModel(
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
     val dockTabs: StateFlow<List<AppTab>> = repository.dockTabs
-    val betaChannel: StateFlow<Boolean> = repository.betaChannel
     val analyticsEnabled: StateFlow<Boolean> = repository.analyticsEnabled
     val appIcon: StateFlow<String> = repository.appIcon
     val notificationsEnabled: StateFlow<Boolean> = repository.notificationsEnabled
@@ -233,38 +232,17 @@ class OtherViewModel(
     private val _isCheckingUpdate = MutableStateFlow(false)
     val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate.asStateFlow()
 
-    private val _updateStatusMessage = MutableStateFlow<String?>(null)
-    val updateStatusMessage: StateFlow<String?> = _updateStatusMessage.asStateFlow()
-
-    fun setBetaChannel(enabled: Boolean) {
-        repository.setBetaChannel(enabled)
-        checkForUpdates()
-    }
-
     fun checkForUpdates() {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {
                 _isCheckingUpdate.value = true
-                _updateStatusMessage.value = null
-                val result = updateChecker.checkForUpdates(betaChannel.value)
-                _updateResult.value = result
-                _isCheckingUpdate.value = false
-                if (result != null && !result.hasUpdate) {
-                    _updateStatusMessage.value = "У вас установлена последняя версия (${result.currentVersion})"
-                } else if (result == null) {
-                    _updateStatusMessage.value = "Не удалось проверить обновления"
-                }
+                _updateResult.value = updateChecker.checkForUpdates()
             } catch (t: Throwable) {
                 println("checkForUpdates caught throwable: ${t.message}")
+            } finally {
                 _isCheckingUpdate.value = false
-                _updateStatusMessage.value = null
             }
         }
-    }
-
-    fun dismissUpdateDialog() {
-        _updateResult.value = null
-        _updateStatusMessage.value = null
     }
 
     // Search, filter, and sort state for ManageSchedulesScreen

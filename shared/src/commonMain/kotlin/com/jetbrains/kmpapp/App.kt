@@ -1,7 +1,6 @@
 package com.jetbrains.kmpapp
 
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
@@ -33,7 +31,6 @@ import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
 import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.analytics.platformName
 import com.jetbrains.kmpapp.data.model.AppVersion
-import com.jetbrains.kmpapp.data.update.startPlatformUpdate
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
@@ -62,21 +59,11 @@ import com.jetbrains.kmpapp.theme.SakuraLightColors
 import com.jetbrains.kmpapp.theme.ThemeOverlay
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.jetbrains.kmpapp.data.update.UpdateUrgency
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-
-private const val DOCS_BASE = "https://github.com/Vibe-Moments-Technologies/krasava-app/blob/main"
 
 private val LightColors = lightColorScheme(
     primary = Color(0xFF1E5BB0),
@@ -129,15 +116,12 @@ fun App() {
     val notesViewModel: NotesViewModel = koinViewModel()
     val servicesViewModel: ServicesViewModel = koinViewModel()
 
-    val betaChannel by otherViewModel.betaChannel.collectAsState()
-
     // Аналитика: одна стартовая метрика среза аудитории + трекеры изменений.
     // dock_config — каждый слот отдельным параметром: в панели Metrica
     // такое строится в графики, в отличие от строки через запятую.
     LaunchedEffect(Unit) {
         val params = mutableMapOf(
-            "target_type" to (selectedTarget?.type?.name ?: "none"),
-            "beta_channel" to betaChannel.toString()
+            "target_type" to (selectedTarget?.type?.name ?: "none")
         )
         // Срез по версиям: видно, на чём сидит аудитория. dev/contrib не
         // шлём — статистику иначе забивают наши же тестовые сборки;
@@ -187,15 +171,6 @@ fun App() {
                     }
                 } catch (_: Throwable) {}
             }
-
-            val updateResult by otherViewModel.updateResult.collectAsState()
-            var dismissedUpdateKey by rememberSaveable { mutableStateOf<String?>(null) }
-
-            UpdateDialog(
-                updateResult = updateResult,
-                dismissedUpdateKey = dismissedUpdateKey,
-                onDismiss = { dismissedUpdateKey = it }
-            )
 
             Box(modifier = Modifier.fillMaxSize()) {
                 Crossfade(targetState = currentTab) { tab ->
@@ -286,102 +261,6 @@ fun App() {
             }
         }
     }
-}
-
-/** Диалог обновления: критическое / новая версия / тестовая сборка. */
-@Composable
-private fun UpdateDialog(
-    updateResult: com.jetbrains.kmpapp.data.update.UpdateCheckResult?,
-    dismissedUpdateKey: String?,
-    onDismiss: (String) -> Unit
-) {
-    val activeUpdate = updateResult ?: return
-    if (!activeUpdate.hasUpdate) return
-
-    val updateKey = "${activeUpdate.latestVersion}_${activeUpdate.latestBuild}_${activeUpdate.urgency}"
-    val isCritical = activeUpdate.urgency == UpdateUrgency.CRITICAL
-    val isNewVersion = activeUpdate.urgency == UpdateUrgency.NEW_VERSION
-    val isPrereleaseUpdate = activeUpdate.isPrerelease
-
-    if (!(isCritical || isNewVersion) || dismissedUpdateKey == updateKey) return
-
-    AlertDialog(
-        onDismissRequest = {
-            if (!isCritical) onDismiss(updateKey)
-        },
-        icon = {
-            Icon(
-                imageVector = if (isCritical) Icons.Default.Warning else Icons.Default.SystemUpdate,
-                contentDescription = null,
-                tint = if (isCritical) Color(0xFFC084FC) else MaterialTheme.colorScheme.primary
-            )
-        },
-        title = {
-            Text(
-                text = when {
-                    isCritical -> "Критическое обновление!"
-                    isPrereleaseUpdate -> "Доступна тестовая версия"
-                    else -> "Доступна новая версия"
-                },
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    text = when {
-                        isCritical ->
-                            "Обнаружено критическое обновление безопасности/стабильности (сборка ${activeUpdate.latestBuild}). Рекомендуется установить его сейчас."
-                        isPrereleaseUpdate ->
-                            "Вышла тестовая сборка ${activeUpdate.latestVersion} (сборка ${activeUpdate.latestBuild}). Она может быть менее стабильной."
-                        else ->
-                            "Вышла версия ${activeUpdate.latestVersion} (сборка ${activeUpdate.latestBuild})."
-                    },
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                if (!activeUpdate.changelog.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = activeUpdate.changelog,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    startPlatformUpdate(
-                        browserUrl = activeUpdate.actionUrl,
-                        apkUrl = if (activeUpdate.storeUrl != null) null else activeUpdate.apkUrl
-                    )
-                    onDismiss(updateKey)
-                },
-                colors = if (isCritical) {
-                    ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF881337),
-                        contentColor = Color.White
-                    )
-                } else {
-                    ButtonDefaults.buttonColors()
-                }
-            ) {
-                Text("Обновить сейчас")
-            }
-        },
-        dismissButton = {
-            if (!isCritical) {
-                TextButton(onClick = { onDismiss(updateKey) }) {
-                    Text("Позже")
-                }
-            } else {
-                TextButton(onClick = { onDismiss(updateKey) }) {
-                    Text("Игнорировать", color = MaterialTheme.colorScheme.error)
-                }
-            }
-        }
-    )
 }
 
 /** Гейт согласия при первом запуске: без принятия приложение не открывается. */
