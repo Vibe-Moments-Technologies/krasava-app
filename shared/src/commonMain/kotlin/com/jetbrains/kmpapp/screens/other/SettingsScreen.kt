@@ -108,14 +108,10 @@ fun SettingsScreen(
     var customMinutesDraft by remember { mutableStateOf("") }
     var showNotificationsTargetDialog by remember { mutableStateOf(false) }
 
-    // Позиция скролла живёт в ViewModel: кастомный навигатор OtherScreen
-    // уничтожает корень при переходе в подраздел, rememberSaveable не выживает.
-    val scrollState = remember {
-        androidx.compose.foundation.ScrollState(viewModel.settingsScrollPosition)
-    }
-    androidx.compose.runtime.DisposableEffect(scrollState) {
-        onDispose { viewModel.settingsScrollPosition = scrollState.value }
-    }
+    // Скролл живёт в ViewModel: LayeredNavHost пересоздаёт этот экран в
+    // другом слое при переходе в подраздел — общий ScrollState переживает
+    // пересоздание, позиция не сбрасывается (как список расписания).
+    val scrollState = viewModel.settingsScrollState
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),

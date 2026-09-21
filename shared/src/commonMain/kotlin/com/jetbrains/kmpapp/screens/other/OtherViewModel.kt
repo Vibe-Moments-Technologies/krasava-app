@@ -197,10 +197,11 @@ class OtherViewModel(
     private val _activeSubScreen = MutableStateFlow(OtherSubScreen.ROOT)
     val activeSubScreen: StateFlow<OtherSubScreen> = _activeSubScreen.asStateFlow()
 
-    // Позиция скролла корневого экрана настроек. Живёт в ViewModel, потому что
-    // кастомный навигатор OtherScreen уничтожает корень при переходе в
-    // подраздел — rememberSaveable там не выживает.
-    var settingsScrollPosition: Int = 0
+    // Скролл корневого экрана настроек живёт в VM: LayeredNavHost пересоздаёт
+    // SettingsScreen в другом слое при переходе в подраздел (родитель под
+    // дочерним), remember-состояния там не выживают. Общий ScrollState
+    // переживает пересоздание экземпляров без save/restore.
+    val settingsScrollState = androidx.compose.foundation.ScrollState(0)
 
     fun navigateToSubScreen(subScreen: OtherSubScreen) {
         _activeSubScreen.value = subScreen
