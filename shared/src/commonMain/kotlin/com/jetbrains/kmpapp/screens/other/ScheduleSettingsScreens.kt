@@ -151,54 +151,7 @@ fun ScheduleCalendarSettingsScreen(
     }
 }
 
-// ── Параметры сервисов ───────────────────────────────────────
-
-@Composable
-fun ServiceSettingsScreen(
-    viewModel: OtherViewModel,
-    onBack: () -> Unit,
-    onOpenNotesSettings: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    PlatformBackHandler(onBack = onBack)
-
-    SettingsSubScreen(
-        title = "Параметры сервисов",
-        onBack = onBack,
-        modifier = modifier
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .clickable(onClick = onOpenNotesSettings)
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Конспекты",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "Настройки блокнота и заметок",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = "Открыть",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-}
-
-// ── Конспекты: настройки ─────────────────────────────────────
+// ── Параметры сервисов: Конспекты ────────────────────────────
 
 @Composable
 fun ServiceNotesSettingsScreen(

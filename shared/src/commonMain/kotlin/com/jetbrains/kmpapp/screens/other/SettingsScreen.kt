@@ -64,7 +64,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 
 @Composable
@@ -109,9 +108,14 @@ fun SettingsScreen(
     var customMinutesDraft by remember { mutableStateOf("") }
     var showNotificationsTargetDialog by remember { mutableStateOf(false) }
 
-    // rememberSaveable: позиция скролла сохраняется при навигации в подразделы
-    val scrollState = rememberSaveable(saver = androidx.compose.foundation.ScrollState.Saver) {
-        androidx.compose.foundation.ScrollState(0)
+    // Позиция скролла живёт в ViewModel: кастомный навигатор OtherScreen
+    // уничтожает корень при переходе в подраздел, rememberSaveable не выживает.
+    val scrollState = remember {
+        androidx.compose.foundation.ScrollState(viewModel.settingsScrollPosition)
+    }
+    androidx.compose.runtime.LaunchedEffect(scrollState) {
+        kotlinx.coroutines.flow.snapshotFlow { scrollState.value }
+            .collect { viewModel.settingsScrollPosition = it }
     }
 
     Scaffold(

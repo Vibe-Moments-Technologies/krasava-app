@@ -46,8 +46,7 @@ enum class OtherSubScreen(val depth: Int) {
     SCHEDULE_PROGRESS(2),
     SCHEDULE_CALENDAR(2),
     // Параметры сервисов
-    SERVICE_SETTINGS(2),
-    SERVICE_NOTES_SETTINGS(3),
+    SERVICE_NOTES_SETTINGS(2),
     RESOURCES(1),
     ABOUT(1),
     TEAM(2),
@@ -73,8 +72,7 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SCHEDULE_DISPLAY to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_PROGRESS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_CALENDAR to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SERVICE_SETTINGS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SERVICE_SETTINGS,
+    OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.TEAM to OtherSubScreen.ABOUT,
@@ -198,6 +196,11 @@ class OtherViewModel(
 
     private val _activeSubScreen = MutableStateFlow(OtherSubScreen.ROOT)
     val activeSubScreen: StateFlow<OtherSubScreen> = _activeSubScreen.asStateFlow()
+
+    // Позиция скролла корневого экрана настроек. Живёт в ViewModel, потому что
+    // кастомный навигатор OtherScreen уничтожает корень при переходе в
+    // подраздел — rememberSaveable там не выживает.
+    var settingsScrollPosition: Int = 0
 
     fun navigateToSubScreen(subScreen: OtherSubScreen) {
         _activeSubScreen.value = subScreen
