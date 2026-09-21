@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 APP_VERSION_FILE = "shared/src/commonMain/kotlin/com/jetbrains/kmpapp/data/model/AppVersion.kt"
-BUNDLE_ID = "ru.l1ratch.mireaschedule"
+BUNDLE_ID = "ru.vibemoments.krasava"
 TINT_COLOR = "4F46E5"
 APP_DESCRIPTION = (
     "Расписание пар, поиск свободных аудиторий, интерактивные карты "
@@ -96,7 +96,7 @@ def build_app_entry(repo, channel, version, ipa_url):
     return {
         "name": CHANNEL_APP_NAMES[channel],
         "bundleIdentifier": BUNDLE_ID,
-        "developerName": "l1ratch",
+        "developerName": "Vibe Moments Technologies",
         "localizedDescription": description,
         "iconURL": f"https://raw.githubusercontent.com/{repo}/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
         "version": version,
