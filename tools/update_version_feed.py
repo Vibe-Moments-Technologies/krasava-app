@@ -27,6 +27,7 @@ from pathlib import Path
 
 APP_VERSION_FILE = "shared/src/commonMain/kotlin/com/jetbrains/kmpapp/data/model/AppVersion.kt"
 BUNDLE_ID = "ru.vibemoments.krasava"
+DEVELOPER_NAME = "Vibe Moments Technologies"
 TINT_COLOR = "4F46E5"
 APP_DESCRIPTION = (
     "Расписание пар, поиск свободных аудиторий, интерактивные карты "
@@ -96,7 +97,7 @@ def build_app_entry(repo, channel, version, ipa_url):
     return {
         "name": CHANNEL_APP_NAMES[channel],
         "bundleIdentifier": BUNDLE_ID,
-        "developerName": "Vibe Moments Technologies",
+        "developerName": DEVELOPER_NAME,
         "localizedDescription": description,
         "iconURL": f"https://raw.githubusercontent.com/{repo}/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
         "version": version,
@@ -126,11 +127,18 @@ def build_source(repo, channel, version, ipa_url):
     entry = build_app_entry(repo, channel, version, ipa_url)
     # Держим только записи с известным каналом: legacy-записи старого формата
     # (без ключа "channel", например уехавшие в другой репо) вычищаются сами.
-    apps = [a for a in fetch_published_apps(repo)
-            if isinstance(a, dict)
-            and a.get("channel") in CHANNEL_ORDER
-            and a.get("channel") != channel
-            and a.get("name") != entry["name"]]
+    # Идентификационные поля сохранённых записей подтягиваем к текущим —
+    # записи, опубликованные до смены bundleId, чинятся без ручного вмешательства.
+    apps = []
+    for a in fetch_published_apps(repo):
+        if (isinstance(a, dict)
+                and a.get("channel") in CHANNEL_ORDER
+                and a.get("channel") != channel
+                and a.get("name") != entry["name"]):
+            a = dict(a)
+            a["bundleIdentifier"] = BUNDLE_ID
+            a["developerName"] = DEVELOPER_NAME
+            apps.append(a)
     apps.append(entry)
     apps.sort(key=lambda a: CHANNEL_ORDER.index(a.get("channel"))
               if a.get("channel") in CHANNEL_ORDER else len(CHANNEL_ORDER))
