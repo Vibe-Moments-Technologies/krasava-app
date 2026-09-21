@@ -113,9 +113,8 @@ fun SettingsScreen(
     val scrollState = remember {
         androidx.compose.foundation.ScrollState(viewModel.settingsScrollPosition)
     }
-    androidx.compose.runtime.LaunchedEffect(scrollState) {
-        kotlinx.coroutines.flow.snapshotFlow { scrollState.value }
-            .collect { viewModel.settingsScrollPosition = it }
+    androidx.compose.runtime.DisposableEffect(scrollState) {
+        onDispose { viewModel.settingsScrollPosition = scrollState.value }
     }
 
     Scaffold(
