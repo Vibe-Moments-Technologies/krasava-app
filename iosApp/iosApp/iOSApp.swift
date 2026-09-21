@@ -6,7 +6,9 @@ import Shared
 struct iOSApp: App {
     init() {
         KoinKt.doInitKoin()
-        if let configuration = AppMetricaConfiguration(apiKey: "fc0cde08-05c5-4718-96ee-e9674b8c33e7") {
+        // Ключ — из общего Kotlin-кода (AppAnalytics): единый источник,
+        // чтобы iOS и Android не разъехались по разным приложениям Metrica.
+        if let configuration = AppMetricaConfiguration(apiKey: AppAnalytics.shared.apiKey) {
             AppMetrica.activate(with: configuration)
         }
         AppAnalytics.shared.setEngine(engine: AppMetricaEngine())

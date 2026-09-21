@@ -87,6 +87,11 @@ jobs:
           validate-wrappers: false
 
       - name: 🔨 Run all tests + Build Android APK
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: ./gradlew :shared:allTests :androidApp:assembleDebug --stacktrace
 
       - name: 🏷️ Prepare preview APK

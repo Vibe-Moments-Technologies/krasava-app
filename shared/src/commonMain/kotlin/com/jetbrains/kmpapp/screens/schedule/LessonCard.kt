@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +62,7 @@ fun ScheduleSlotCard(
     showBreakProgress: Boolean = true,
     showAbbreviatedNames: Boolean = false,
     scheduleTargetType: ScheduleTargetType = ScheduleTargetType.GROUP,
+    noteTargetId: Int = -1,
     modifier: Modifier = Modifier
 ) {
     when (slot) {
@@ -74,6 +76,7 @@ fun ScheduleSlotCard(
                     showLessonProgress = showLessonProgress,
                     showAbbreviatedNames = showAbbreviatedNames,
                     scheduleTargetType = scheduleTargetType,
+                    noteTargetId = noteTargetId,
                     modifier = modifier
                 )
             } else {
@@ -88,6 +91,7 @@ fun ScheduleSlotCard(
                     showLessonProgress = showLessonProgress,
                     showAbbreviatedNames = showAbbreviatedNames,
                     scheduleTargetType = scheduleTargetType,
+                    noteTargetId = noteTargetId,
                     modifier = modifier
                 )
             }
@@ -115,18 +119,24 @@ fun LessonCard(
     showLessonProgress: Boolean = true,
     showAbbreviatedNames: Boolean = false,
     scheduleTargetType: ScheduleTargetType = ScheduleTargetType.GROUP,
+    noteTargetId: Int = -1,
     modifier: Modifier = Modifier,
     pageIndicator: Pair<Int, Int>? = null,
     horizontalMargin: androidx.compose.ui.unit.Dp = 16.dp
 ) {
     val (typeBg, typeTextColor) = getTypeBadgeColors(lesson.lessonType)
 
-    // Заметка к паре (R2): читаем из хранилища, показываем превью
+    // Заметка к паре (R2): реактивное чтение — превью появляется сразу после
+    // сохранения (StateFlow), а ключ точный по targetId+дата+пара: заметки
+    // чужих расписаний в карточку не попадают.
     val notesStorage: LessonNotesStorage = koinInject()
-    val notePreview = notesStorage.getLessonNoteByDate(
-        date = lesson.date.toString(),
-        bellNumber = lesson.bellNumber
-    )?.text
+    val allNotes by notesStorage.notes.collectAsState()
+    val notePreview = if (noteTargetId >= 0) {
+        val noteKey = notesStorage.lessonKey(noteTargetId, lesson.date.toString(), lesson.bellNumber)
+        allNotes.firstOrNull { it.noteKey == noteKey }?.text
+    } else {
+        null
+    }
 
     // ponytail: State протягивается вниз и читается ТОЛЬКО на сегодняшних
     // карточках: тик раз в 30 секунд пересобирает одну активную карточку,
@@ -420,6 +430,7 @@ fun MultiLessonCard(
     showLessonProgress: Boolean = true,
     showAbbreviatedNames: Boolean = false,
     scheduleTargetType: ScheduleTargetType = ScheduleTargetType.GROUP,
+    noteTargetId: Int = -1,
     modifier: Modifier = Modifier
 ) {
     val pagerState = rememberPagerState(pageCount = { lessons.size })
@@ -440,6 +451,7 @@ fun MultiLessonCard(
             showLessonProgress = showLessonProgress,
             showAbbreviatedNames = showAbbreviatedNames,
             scheduleTargetType = scheduleTargetType,
+            noteTargetId = noteTargetId,
             pageIndicator = lessons.size to pagerState.currentPage,
             horizontalMargin = 0.dp
         )

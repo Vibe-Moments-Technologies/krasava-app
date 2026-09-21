@@ -64,8 +64,7 @@ data class UpdateCheckResult(
  * ведётся средствами самого стора.
  */
 class AppUpdateChecker(
-    private val client: HttpClient,
-    private val syncManager: com.jetbrains.kmpapp.data.sync.UnifiedSyncManager
+    private val client: HttpClient
 ) {
     companion object {
         private const val GITHUB_REPO = AppVersion.GITHUB_REPO

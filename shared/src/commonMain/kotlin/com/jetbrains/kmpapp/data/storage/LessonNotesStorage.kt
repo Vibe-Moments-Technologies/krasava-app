@@ -72,12 +72,6 @@ class LessonNotesStorage(
     fun getLessonNote(targetId: Int, date: String, bellNumber: Int): LessonNote? =
         _notes.value.firstOrNull { it.noteKey == lessonKey(targetId, date, bellNumber) }
 
-    /** Поиск заметки к паре по дате+номеру без targetId (для карточки расписания). */
-    fun getLessonNoteByDate(date: String, bellNumber: Int): LessonNote? =
-        _notes.value.firstOrNull {
-            it.scope == NoteScope.LESSON && it.noteKey.endsWith("_${date}_$bellNumber")
-        }
-
     fun getSubjectNote(targetId: Int, subject: String): LessonNote? =
         _notes.value.firstOrNull { it.noteKey == subjectKey(targetId, subject) }
 

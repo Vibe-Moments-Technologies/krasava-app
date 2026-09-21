@@ -445,6 +445,9 @@ class ScheduleStorage(
         // Ручное включение тумблера = согласие; до ответа на диалог ничего не уходит
         if (enabled) _analyticsConsent.value = _analyticsConsent.value ?: true
         AppAnalytics.setEventsEnabled(enabled && _analyticsConsent.value != null)
+        // Opt-in/opt-out — единственное событие, которое шлём при выключении
+        // (до того как шлюз закрылся): важно знать долю отказов.
+        AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_ANALYTICS_CHANGED, mapOf("enabled" to enabled.toString()))
         scope.launch { platformStorage.saveString(KEY_ANALYTICS_ENABLED, enabled.toString()) }
     }
 

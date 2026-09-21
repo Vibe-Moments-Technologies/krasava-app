@@ -61,6 +61,7 @@ internal fun DaySchedulePage(
     showBreakProgress: Boolean,
     showAbbreviatedNames: Boolean,
     scheduleTargetType: ScheduleTargetType,
+    noteTargetId: Int,
     autoScrollToCurrentLesson: Boolean,
     canAutoScroll: (LocalDate) -> Boolean,
     markAutoScrolled: (LocalDate) -> Unit,
@@ -216,7 +217,8 @@ internal fun DaySchedulePage(
                     showLessonProgress = showLessonProgress,
                     showEmptyLessonProgress = showEmptyLessonProgress,
                     showAbbreviatedNames = showAbbreviatedNames,
-                    scheduleTargetType = scheduleTargetType
+                    scheduleTargetType = scheduleTargetType,
+                    noteTargetId = noteTargetId
                 )
             }
         }
