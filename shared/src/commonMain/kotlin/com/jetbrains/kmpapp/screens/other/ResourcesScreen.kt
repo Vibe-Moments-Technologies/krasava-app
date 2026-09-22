@@ -309,7 +309,29 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     title = "Стартап-клуб РТУ МИРЭА",
                     icon = Icons.Default.RocketLaunch,
                     accentColor = Color(0xFFFF9500),
-                    children = emptyList()
+                    children = listOf(
+                        ResourceLink(
+                            title = "Информация",
+                            description = "Информация с официального сайта о Стартап-клубе РТУ МИРЭА",
+                            symbol = "🔗",
+                            url = "https://www.mirea.ru/news/v-rtu-mirea-sostoyalos-otkrytie-startap-kluba/?ysclid=mucklirr211037720",
+                            accentColor = Color(0xFFFF9500)
+                        ),
+                        ResourceLink(
+                            title = "Сообщество",
+                            description = "Тг сообщество Стартап-клуба РТУ МИРЭА",
+                            symbol = "💬",
+                            url = "https://t.me/StartupClubRTUMIREA",
+                            accentColor = Color(0xFFFF9500)
+                        ),
+                        ResourceLink(
+                            title = "Беседа",
+                            description = "Тг беседа Стартап-клуба РТУ МИРЭА",
+                            symbol = "🗨️",
+                            url = "https://t.me/StartupClub_RTUMIREA",
+                            accentColor = Color(0xFFFF9500)
+                        )
+                    )
                 )
             )
         )
