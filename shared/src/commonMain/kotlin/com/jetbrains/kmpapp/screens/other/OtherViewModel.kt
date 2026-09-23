@@ -202,6 +202,21 @@ class OtherViewModel(
     // переживает пересоздание экземпляров без save/restore.
     val settingsScrollState = androidx.compose.foundation.ScrollState(0)
 
+    // Стек открытых папок «Другие ресурсы» живёт в VM по той же причине:
+    // свайп-назад обрабатывает LayeredNavHost, и стек должен переживать
+    // пересоздание ResourcesScreen, чтобы жест закрывал папку, а не экран.
+    val resourcesFolderStack = androidx.compose.runtime.mutableStateListOf<com.jetbrains.kmpapp.screens.other.ResourceFolder>()
+
+    fun popResourcesFolder(): Boolean {
+        if (resourcesFolderStack.isEmpty()) return false
+        resourcesFolderStack.removeAt(resourcesFolderStack.lastIndex)
+        return true
+    }
+
+    fun clearResourcesFolderStack() {
+        resourcesFolderStack.clear()
+    }
+
     fun navigateToSubScreen(subScreen: OtherSubScreen) {
         _activeSubScreen.value = subScreen
         // Сервисные подстраницы пишут свой service_open (с источником) —

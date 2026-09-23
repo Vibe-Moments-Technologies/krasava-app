@@ -49,12 +49,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,17 +56,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.SubcomposeAsyncImage
-import com.jetbrains.kmpapp.data.VkAvatarLoader
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
-import org.koin.compose.koinInject
+import kmp_app_template.shared.generated.resources.Res
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 data class StudentResource(
     val title: String,
@@ -142,7 +135,8 @@ data class ResourceFolder(
 
 /**
  * Ссылка внутри папки. [url] == null означает «в разработке»: никуда не ведёт.
- * [fetchAvatarFrom] — страница, с которой нужно подтянуть аватар (для ВК).
+ * [avatarRes] — статическая иконка из ресурсов (офлайн-приоритет: ничего
+ * не качаем в рантайме; при смене аватара — обновить PNG в composeResources).
  */
 data class ResourceLink(
     override val title: String,
@@ -150,18 +144,24 @@ data class ResourceLink(
     val symbol: String,
     val url: String?,
     val accentColor: Color,
-    val fetchAvatarFrom: String? = null
+    val avatarRes: DrawableResource? = null
 ) : ResourceEntry
 
-private fun vkLink(title: String, description: String, symbol: String, url: String, accent: Color) =
-    ResourceLink(
-        title = title,
-        description = description,
-        symbol = symbol,
-        url = url,
-        accentColor = accent,
-        fetchAvatarFrom = url
-    )
+private fun vkLink(
+    title: String,
+    description: String,
+    symbol: String,
+    url: String,
+    accent: Color,
+    avatar: DrawableResource
+) = ResourceLink(
+    title = title,
+    description = description,
+    symbol = symbol,
+    url = url,
+    accentColor = accent,
+    avatarRes = avatar
+)
 
 private fun plannedLink(title: String, description: String, accent: Color) =
     ResourceLink(
@@ -173,14 +173,14 @@ private fun plannedLink(title: String, description: String, accent: Color) =
     )
 
 private val INSTITUTE_VK_LINKS = listOf(
-    vkLink("ИКБ", "Институт кибербезопасности и цифровых технологий", "🐘", "https://vk.ru/ikb_sumirea", Color(0xFF007AFF)),
-    vkLink("ИИИ", "Институт искусственного интеллекта", "🤖", "https://vk.ru/iii_sumirea", Color(0xFF34C759)),
-    vkLink("ИИТ", "Институт информационных технологий", "🐼", "https://vk.ru/it_sumirea", Color(0xFF1C1C1E)),
-    vkLink("ИТУ", "Институт технологий управления", "🦕", "https://vk.ru/itu_sumirea", Color(0xFFFF3B30)),
-    vkLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", "🦁", "https://vk.ru/iptip_sumirea", Color(0xFFFFCC00)),
-    vkLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", "🐦‍🔥", "https://vk.ru/itht_sumirea", Color(0xFFFF2D55)),
-    vkLink("ИРИ", "Институте радиоэлектроники и информатики", "🦇", "https://vk.ru/iri_sumirea", Color(0xFFAF52DE)),
-    vkLink("КПК", "Колледж программирования и кибербезопасности", "🐦‍⬛", "https://vk.ru/college_sumirea", Color(0xFFFF9500)),
+    vkLink("ИКБ", "Институт кибербезопасности и цифровых технологий", "🐘", "https://vk.ru/ikb_sumirea", Color(0xFF007AFF), Res.drawable.vk_avatar_ikb),
+    vkLink("ИИИ", "Институт искусственного интеллекта", "🤖", "https://vk.ru/iii_sumirea", Color(0xFF34C759), Res.drawable.vk_avatar_iii),
+    vkLink("ИИТ", "Институт информационных технологий", "🐼", "https://vk.ru/it_sumirea", Color(0xFF1C1C1E), Res.drawable.vk_avatar_iit),
+    vkLink("ИТУ", "Институт технологий управления", "🦕", "https://vk.ru/itu_sumirea", Color(0xFFFF3B30), Res.drawable.vk_avatar_itu),
+    vkLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", "🦁", "https://vk.ru/iptip_sumirea", Color(0xFFFFCC00), Res.drawable.vk_avatar_iptip),
+    vkLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", "🐦‍🔥", "https://vk.ru/itht_sumirea", Color(0xFFFF2D55), Res.drawable.vk_avatar_itht),
+    vkLink("ИРИ", "Институт радиоэлектроники и информатики", "🦇", "https://vk.ru/iri_sumirea", Color(0xFFAF52DE), Res.drawable.vk_avatar_iri),
+    vkLink("КПК", "Колледж программирования и кибербезопасности", "🐦‍⬛", "https://vk.ru/college_sumirea", Color(0xFFFF9500), Res.drawable.vk_avatar_kpk),
     plannedLink("ПИШ", "Передовые инженерные школы", Color(0xFFFF2D55)),
     plannedLink("Фрязино", "Филиал РТУ МИРЭА в г. Фрязино", Color(0xFF5AC8FA)),
     plannedLink("Ставрополь", "Филиал РТУ МИРЭА в г. Ставрополе", Color(0xFF32ADD6))
@@ -199,7 +199,7 @@ private val INSTITUTE_TG_LINKS = listOf(
     plannedLink("ИТУ", "Институт технологий управления", Color(0xFFFF3B30)),
     plannedLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", Color(0xFFFFCC00)),
     plannedLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", Color(0xFFFF2D55)),
-    plannedLink("ИРИ", "Институте радиоэлектроники и информатики", Color(0xFFAF52DE)),
+    plannedLink("ИРИ", "Институт радиоэлектроники и информатики", Color(0xFFAF52DE)),
     plannedLink("КПК", "Колледж программирования и кибербезопасности", Color(0xFFFF9500)),
     plannedLink("ПИШ", "Передовые инженерные школы", Color(0xFFFF2D55)),
     plannedLink("Фрязино", "Филиал РТУ МИРЭА в г. Фрязино", Color(0xFF5AC8FA)),
@@ -304,7 +304,8 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             description = "ВК группа, где публикуются новости об организации",
                             symbol = "🤝",
                             url = "https://vk.ru/rtuprofkom",
-                            accent = Color(0xFF5856D6)
+                            accent = Color(0xFF5856D6),
+                            avatar = Res.drawable.vk_avatar_profkom
                         ),
                         ResourceLink(
                             title = "ТГ сообщество",
@@ -335,14 +336,14 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                         ),
                         ResourceLink(
                             title = "Сообщество",
-                            description = "Тг сообщество Стартап-клуба РТУ МИРЭА",
+                            description = "ТГ сообщество Стартап-клуба РТУ МИРЭА",
                             symbol = "💬",
                             url = "https://t.me/StartupClubRTUMIREA",
                             accentColor = Color(0xFFFF9500)
                         ),
                         ResourceLink(
                             title = "Беседа",
-                            description = "Тг беседа Стартап-клуба РТУ МИРЭА",
+                            description = "ТГ беседа Стартап-клуба РТУ МИРЭА",
                             symbol = "🗨️",
                             url = "https://t.me/StartupClub_RTUMIREA",
                             accentColor = Color(0xFFFF9500)
@@ -360,18 +361,25 @@ fun ResourcesScreen(
     modifier: Modifier = Modifier
 ) {
     val uriHandler = LocalUriHandler.current
-    val avatarLoader: VkAvatarLoader = koinInject()
+    val viewModel: OtherViewModel = org.koin.compose.viewmodel.koinViewModel()
 
-    // Стек открытых папок раздела «Другие ресурсы»: переход внутрь папки —
-    // вперёд, стрелка/системный «назад» — наружу.
-    val folderStack = remember { mutableStateListOf<ResourceFolder>() }
+    // Стек открытых папок живёт в VM: свайп-назад обрабатывает LayeredNavHost,
+    // и стек должен переживать пересоздание экрана (жест закрывает папку,
+    // а не выходит на «Другое»).
+    val folderStack = viewModel.resourcesFolderStack
     val currentFolder = folderStack.lastOrNull()
 
-    // Внутри папки системный «назад» закрывает папку, на корне — сам экран.
-    PlatformBackHandler(enabled = folderStack.isNotEmpty()) {
-        if (folderStack.isNotEmpty()) folderStack.removeAt(folderStack.lastIndex)
+    // Системный «назад» (кнопка Android): внутри папки — закрыть папку,
+    // на корне — выйти с экрана. Свайп перехватывается в LayeredNavHost.
+    PlatformBackHandler(enabled = true) {
+        if (!viewModel.popResourcesFolder()) onBack()
     }
-    PlatformBackHandler(enabled = folderStack.isEmpty(), onBack = onBack)
+
+    // При реальном выходе с экрана (а не при пересоздании слоя) сбрасываем
+    // стек: следующее открытие «Ресурсов» стартует с корня.
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { viewModel.clearResourcesFolderStack() }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -444,7 +452,6 @@ fun ResourcesScreen(
                             }
                             is ResourceLink -> ResourceLinkCard(
                                 link = child,
-                                avatarLoader = avatarLoader,
                                 uriHandler = uriHandler
                             )
                         }
@@ -592,19 +599,9 @@ private fun FolderCard(
 @Composable
 private fun ResourceLinkCard(
     link: ResourceLink,
-    avatarLoader: VkAvatarLoader,
     uriHandler: UriHandler,
     modifier: Modifier = Modifier
 ) {
-    // Аватар с ВК-страницы, если сеть позволила её отдать; иначе — символ.
-    var resolvedAvatar by remember(link.fetchAvatarFrom) { mutableStateOf<String?>(null) }
-    LaunchedEffect(link.fetchAvatarFrom) {
-        val page = link.fetchAvatarFrom
-        if (page != null) {
-            resolvedAvatar = avatarLoader.resolveAvatar(page)
-        }
-    }
-
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -612,7 +609,7 @@ private fun ResourceLinkCard(
     ) {
         Column(modifier = Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                LinkAvatar(link = link, resolvedAvatar = resolvedAvatar)
+                LinkAvatar(link = link)
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -696,7 +693,7 @@ private fun ResourceLinkCard(
 }
 
 @Composable
-private fun LinkAvatar(link: ResourceLink, resolvedAvatar: String?) {
+private fun LinkAvatar(link: ResourceLink) {
     if (link.url == null) {
         // Обозначение «загрузка»: аватара ещё нет, ресурс в разработке.
         Box(
@@ -716,17 +713,16 @@ private fun LinkAvatar(link: ResourceLink, resolvedAvatar: String?) {
         return
     }
 
-    val remote = resolvedAvatar
-    if (remote != null) {
-        SubcomposeAsyncImage(
-            model = remote,
+    val avatar = link.avatarRes
+    if (avatar != null) {
+        // Статическая иконка из ресурсов — офлайн-приоритет, ничего не качаем.
+        androidx.compose.foundation.Image(
+            painter = painterResource(avatar),
             contentDescription = "Аватар ${link.title}",
-            contentScale = ContentScale.Crop,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
             modifier = Modifier
                 .size(44.dp)
-                .clip(CircleShape),
-            loading = { SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor) },
-            error = { SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor) }
+                .clip(CircleShape)
         )
     } else {
         SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor)

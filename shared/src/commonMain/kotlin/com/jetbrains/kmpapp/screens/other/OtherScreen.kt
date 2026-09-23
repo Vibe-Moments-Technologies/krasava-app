@@ -82,6 +82,15 @@ fun OtherScreen(
         initiallyRevealed = remember { activeSubScreen != OtherSubScreen.ROOT },
         // Карта управляет горизонтальными жестами сама — свайп-назад не вешаем.
         swipeGestureEnabled = { it != OtherSubScreen.SERVICE_MAP },
+        // «Ресурсы»: внутри открытой папки свайп закрывает папку, а не экран.
+        onSwipeBackIntercepted = {
+            if (activeSubScreen == OtherSubScreen.RESOURCES && viewModel.resourcesFolderStack.isNotEmpty()) {
+                viewModel.popResourcesFolder()
+                true
+            } else {
+                false
+            }
+        },
         rootContent = {
             OtherMainContent(
                 viewModel = viewModel,
