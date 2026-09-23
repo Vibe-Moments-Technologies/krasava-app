@@ -26,6 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Domain
 import androidx.compose.material.icons.filled.FolderOpen
@@ -418,16 +419,20 @@ fun ResourcesScreen(
                     folderStack.add(OTHER_RESOURCES_ROOT)
                 }
             } else {
-                folder.children.forEach { child ->
-                    when (child) {
-                        is ResourceFolder -> FolderCard(folder = child) {
-                            folderStack.add(child)
+                if (folder.children.isEmpty()) {
+                    EmptyFolderPlaceholder()
+                } else {
+                    folder.children.forEach { child ->
+                        when (child) {
+                            is ResourceFolder -> FolderCard(folder = child) {
+                                folderStack.add(child)
+                            }
+                            is ResourceLink -> ResourceLinkCard(
+                                link = child,
+                                avatarLoader = avatarLoader,
+                                uriHandler = uriHandler
+                            )
                         }
-                        is ResourceLink -> ResourceLinkCard(
-                            link = child,
-                            avatarLoader = avatarLoader,
-                            uriHandler = uriHandler
-                        )
                     }
                 }
             }
@@ -730,6 +735,40 @@ private fun SymbolAvatar(symbol: String, accentColor: Color, modifier: Modifier 
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 2.dp)
         )
+    }
+}
+
+/** Пустая папка: показываем сообщение о технических работах. */
+@Composable
+private fun EmptyFolderPlaceholder() {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Build,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = "Ведутся технические работы",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
