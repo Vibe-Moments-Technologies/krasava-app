@@ -66,7 +66,7 @@ jobs:
       - name: 📚 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🔍 Debug: verify drawable resources present
+      - name: "🔍 Debug: verify drawable resources present"
         run: |
           echo "vk_avatar count: $(ls shared/src/commonMain/composeResources/drawable/ | grep -c vk_avatar || true)"
           ls shared/src/commonMain/composeResources/drawable/ | grep vk_avatar || echo "NO VK AVATARS IN CHECKOUT"
