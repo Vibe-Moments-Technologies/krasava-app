@@ -291,7 +291,7 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                 ResourceFolder(
                     title = "Студенческий союз РТУ МИРЭА",
                     icon = Icons.Default.GroupAdd,
-                    accentColor = Color(0xFF00C7BE),
+                    accentColor = Color(0xFF007AFF),
                     children = emptyList()
                 ),
                 ResourceFolder(
@@ -318,7 +318,7 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                 ResourceFolder(
                     title = "Студенческое научное общество",
                     icon = Icons.Default.Science,
-                    accentColor = Color(0xFF007AFF),
+                    accentColor = Color(0xFF34C759),
                     children = emptyList()
                 ),
                 ResourceFolder(
