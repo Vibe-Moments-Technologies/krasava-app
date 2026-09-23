@@ -78,18 +78,6 @@ internal fun ProjectSocialLinks() {
                 modifier = Modifier.weight(1f)
             )
             SocialIcon(
-                icon = DiscordMark,
-                tint = Color(0xFF5865F2),
-                contentDescription = "Discord",
-                onClick = {
-                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "discord"))
-                    val url = config.socialLinks.discord
-                    if (url.isNotBlank()) uriHandler.openUri(url)
-                    else toastMessage = "Discord-сервер скоро появится"
-                },
-                modifier = Modifier.weight(1f)
-            )
-            SocialIcon(
                 icon = BoostyMark,
                 tint = Color(0xFFF15F2F),
                 contentDescription = "Boosty",
@@ -165,16 +153,11 @@ private fun SocialIcon(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        // Широкие лого (Discord 640×512): оба размера явно из пропорции
-        // вьюпорта, иначе Icon сплющивает по одному измерению
-        val isWide = icon.viewportWidth > icon.viewportHeight * 1.1f
-        val h = if (isWide) 18.dp else 20.dp
-        val w = if (isWide) h * icon.viewportWidth / icon.viewportHeight else h
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = tint,
-            modifier = Modifier.size(width = w, height = h)
+            modifier = Modifier.size(20.dp)
         )
     }
 }
@@ -255,64 +238,6 @@ internal val TelegramMark: ImageVector by lazy {
             curveTo(16.882f, 7.243f, 17.102f, 7.268f, 17.245f, 7.383f)
             curveTo(17.365f, 7.480f, 17.398f, 7.611f, 17.414f, 7.703f)
             curveTo(17.434f, 7.816f, 17.447f, 8.007f, 17.437f, 8.161f)
-            close()
-        }
-    }.build()
-}
-
-/** Логотип Discord (Font Awesome brands, 640×512, чистые кубические кривые). */
-private val DiscordMark: ImageVector by lazy {
-    ImageVector.Builder(
-        name = "DiscordMark",
-        defaultWidth = 24.dp,
-        defaultHeight = 24.dp,
-        viewportWidth = 640f,
-        viewportHeight = 512f
-    ).apply {
-        path(fill = SolidColor(Color(0xFF5865F2))) {
-            moveTo(524.531f, 69.836f)
-            curveTo(524.031f, 69.086f, 523.767f, 69.136f, 523.081f, 69.136f)
-            curveTo(477.581f, 46.211f, 428.831f, 32.586f, 404.081f, 32.03f)
-            curveTo(403.081f, 32.03f, 402.158f, 32.53f, 402.03f, 32.94f)
-            curveTo(394.08f, 47.7f, 387.081f, 63.54f, 387.081f, 63.54f)
-            curveTo(342.531f, 58.586f, 299.281f, 58.586f, 252.655f, 63.54f)
-            curveTo(252.655f, 63.54f, 245.24f, 46.535f, 237.52f, 32.94f)
-            curveTo(237.391f, 32.53f, 236.469f, 32.03f, 235.469f, 32.03f)
-            curveTo(210.719f, 32.586f, 161.969f, 46.211f, 116.469f, 69.136f)
-            curveTo(116.077f, 69.366f, 115.75f, 69.694f, 115.585f, 69.811f)
-            curveTo(38.568f, 183.651f, 17.686f, 294.69f, 27.93f, 404.354f)
-            curveTo(28.03f, 404.954f, 28.43f, 405.655f, 28.695f, 405.729f)
-            curveTo(78.695f, 431.354f, 127.02f, 446.918f, 176.02f, 479.918f)
-            curveTo(176.52f, 480.418f, 177.583f, 480.242f, 178.083f, 479.242f)
-            curveTo(190.443f, 461.082f, 201.69f, 442.042f, 208.12f, 430.4f)
-            curveTo(208.64f, 429.36f, 208.101f, 428.28f, 207.101f, 427.812f)
-            curveTo(191.681f, 421.812f, 177.151f, 414.482f, 161.233f, 405.959f)
-            curveTo(160.233f, 405.459f, 160.148f, 403.959f, 161.048f, 403.126f)
-            curveTo(164.13f, 400.817f, 167.214f, 398.415f, 170.157f, 395.989f)
-            curveTo(170.957f, 395.275f, 172.057f, 395.733f, 173.057f, 395.989f)
-            curveTo(269.286f, 439.906f, 373.467f, 439.906f, 468.557f, 395.989f)
-            curveTo(469.557f, 395.733f, 470.481f, 395.275f, 471.481f, 395.989f)
-            curveTo(474.425f, 398.415f, 477.508f, 400.84f, 480.613f, 403.149f)
-            curveTo(481.513f, 403.982f, 481.451f, 405.482f, 480.451f, 405.982f)
-            curveTo(434.561f, 427.812f, 434.723f, 427.675f, 434.723f, 427.675f)
-            curveTo(433.723f, 428.14f, 433.285f, 429.36f, 433.805f, 430.4f)
-            curveTo(440.385f, 442.042f, 451.631f, 461.082f, 463.819f, 479.115f)
-            curveTo(464.319f, 480.115f, 465.382f, 480.291f, 465.882f, 479.791f)
-            curveTo(514.882f, 446.918f, 563.207f, 431.354f, 613.207f, 405.729f)
-            curveTo(613.572f, 405.655f, 613.972f, 404.954f, 614.072f, 404.354f)
-            curveTo(624.316f, 294.69f, 603.42f, 183.651f, 526.404f, 69.811f)
-            close()
-            moveTo(222.491f, 337.58f)
-            curveTo(193.519f, 337.58f, 169.647f, 310.993f, 169.647f, 278.341f)
-            curveTo(169.647f, 245.689f, 193.056f, 219.1f, 222.491f, 219.1f)
-            curveTo(252.156f, 219.1f, 275.797f, 245.92f, 275.334f, 278.339f)
-            curveTo(275.334f, 310.993f, 251.924f, 337.58f, 222.491f, 337.58f)
-            close()
-            moveTo(417.871f, 337.58f)
-            curveTo(388.9f, 337.58f, 365.028f, 310.993f, 365.028f, 278.341f)
-            curveTo(365.028f, 245.689f, 388.437f, 219.1f, 417.871f, 219.1f)
-            curveTo(447.538f, 219.1f, 471.178f, 245.92f, 470.715f, 278.339f)
-            curveTo(470.715f, 310.993f, 447.298f, 337.58f, 417.871f, 337.58f)
             close()
         }
     }.build()

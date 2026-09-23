@@ -18,6 +18,5 @@ data class RemoteConfig(
 data class SocialLinks(
     val github: String = "https://github.com/Vibe-Moments-Technologies/krasava-app",
     val telegram: String = "https://t.me/MIREA_Schedule",
-    val discord: String = "",
-    val boosty: String = ""
+    val boosty: String = "https://boosty.to/vibe.moments.technologies"
 )
