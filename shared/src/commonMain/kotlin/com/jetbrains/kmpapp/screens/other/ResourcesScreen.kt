@@ -298,7 +298,22 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     title = "Профсоюзная организация РТУ МИРЭА",
                     icon = Icons.Default.Handshake,
                     accentColor = Color(0xFF5856D6),
-                    children = emptyList()
+                    children = listOf(
+                        vkLink(
+                            title = "ВК сообщество",
+                            description = "ВК группа, где публикуются новости об организации",
+                            symbol = "🤝",
+                            url = "https://vk.ru/rtuprofkom",
+                            accent = Color(0xFF5856D6)
+                        ),
+                        ResourceLink(
+                            title = "ТГ сообщество",
+                            description = "Официальный ТГ канал организации",
+                            symbol = "📢",
+                            url = "https://t.me/mireaprofkom",
+                            accentColor = Color(0xFF5856D6)
+                        )
+                    )
                 ),
                 ResourceFolder(
                     title = "Студенческое научное общество",
