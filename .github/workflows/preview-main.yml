@@ -97,6 +97,16 @@ jobs:
       - name: 🧹 Clean compose resource generation (force fresh accessors)
         run: rm -rf shared/build/generated/compose shared/build/processedResources
 
+      - name: 🔬 Diagnostic: run resource accessor generation in isolation
+        run: |
+          ./gradlew :shared:generateResourceAccessorsForCommonMain --info 2>&1 | tail -30
+          echo "=== generated files ==="
+          find shared/build/generated -name "*.kt" 2>/dev/null | head -20 || echo "NO GENERATED FILES"
+          echo "=== vk_avatar in generated ==="
+          grep -rl "vk_avatar" shared/build/generated/ 2>/dev/null || echo "NO VK_AVATAR IN GENERATED OUTPUT"
+          echo "=== drawable count in generated ==="
+          grep -c "DrawableResource" shared/build/generated/compose/resourceGenerator/kotlin/commonMainResourceAccessors/kmp_app_template/shared/generated/resources/Drawable0.commonMain.kt 2>/dev/null || echo "Drawable0.commonMain.kt NOT FOUND"
+
       - name: 🔨 Run all tests + Build Android APK
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
