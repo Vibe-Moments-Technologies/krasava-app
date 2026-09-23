@@ -85,6 +85,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
+          # Кеш отключён: генерация аксессоров Compose-ресурсов отдавала
+          # старый Res.kt без новых PNG (Unresolved reference vk_avatar_*).
+          cache-disabled: true
 
       - name: 🔨 Run all tests + Build Android APK
         env:
@@ -138,6 +141,9 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
+          # Кеш отключён: генерация аксессоров Compose-ресурсов отдавала
+          # старый Res.kt без новых PNG (Unresolved reference vk_avatar_*).
+          cache-disabled: true
         env:
           ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
