@@ -494,7 +494,7 @@ private fun OfficialResourceCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = res.url.removePrefix("https://").removeSuffix("/"),
+                        text = displayWithoutProtocol(res.url),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontSize = 11.5.sp
@@ -622,7 +622,7 @@ private fun ResourceLinkCard(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = link.url?.removePrefix("https://")?.removeSuffix("/") ?: "В разработке",
+                        text = link.url?.let(::displayWithoutProtocol) ?: "В разработке",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (link.url != null) {
                             MaterialTheme.colorScheme.primary
@@ -786,6 +786,10 @@ private fun EmptyFolderPlaceholder() {
         }
     }
 }
+
+/** URL без протокола (https://, http://) и завершающего слэша — для отображения. */
+private fun displayWithoutProtocol(url: String): String =
+    url.removePrefix("https://").removePrefix("http://").removePrefix("https:").removePrefix("http:").removeSuffix("/")
 
 private fun linkButtonLabel(url: String): String = when {
     url.contains("t.me") -> "Перейти в Telegram"
