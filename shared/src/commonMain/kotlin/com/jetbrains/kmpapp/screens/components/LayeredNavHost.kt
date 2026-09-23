@@ -53,10 +53,6 @@ fun LayeredNavHost(
     initiallyRevealed: Boolean = false,
     // Свайп-назад не для всех экранов: карта управляет жестом сама.
     swipeGestureEnabled: (screen: Any?) -> Boolean = { true },
-    // Перехват свайпа-назад: экран с внутренней навигацией (папки в
-    // «Ресурсах») может поглотить жест вместо закрытия слоя.
-    // Возвращает true = жест обработан внутренней навигацией.
-    onSwipeBackIntercepted: (() -> Boolean)? = null,
     modifier: Modifier = Modifier,
     rootContent: @Composable () -> Unit,
     screenContent: @Composable (screen: Any?, back: () -> Unit) -> Unit
@@ -147,7 +143,6 @@ fun LayeredNavHost(
                     restartKey = screen,
                     gestureEnabled = swipeGestureEnabled(screen),
                     isCommitted = { committed },
-                    onIntercept = onSwipeBackIntercepted,
                     onCommit = { velocity -> back(velocity) }
                 )
         ) {
@@ -167,7 +162,6 @@ private fun Modifier.swipeBackLayer(
     restartKey: Any?,
     gestureEnabled: Boolean,
     isCommitted: () -> Boolean,
-    onIntercept: (() -> Boolean)?,
     onCommit: (velocityPxPerSec: Float) -> Unit
 ): Modifier = composed {
     var startedAtEdge by remember { mutableStateOf(false) }
@@ -199,16 +193,7 @@ private fun Modifier.swipeBackLayer(
                     // Скорость жеста передаётся в анимацию — страница уходит
                     // с той же скоростью, с которой её отпустили (без рывка).
                     val shouldGoBack = vx >= flingVelocityPx || layerX.floatValue >= max(120f, widthPx * 0.25f)
-                    if (shouldGoBack && onIntercept?.invoke() == true) {
-                        // Жест поглощён внутренней навигацией (папка закрыта):
-                        // слой остаётся на месте, отскок анимации.
-                        scope.launch {
-                            animate(
-                                layerX.floatValue, 0f,
-                                animationSpec = tween(200)
-                            ) { v, _ -> layerX.floatValue = v }
-                        }
-                    } else if (shouldGoBack) {
+                    if (shouldGoBack) {
                         onCommit(vx)
                     } else {
                         scope.launch {

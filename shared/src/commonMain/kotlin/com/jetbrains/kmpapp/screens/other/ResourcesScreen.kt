@@ -71,9 +71,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import com.jetbrains.kmpapp.data.VkAvatarLoader
+import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
 
 data class StudentResource(
     val title: String,
@@ -362,25 +362,59 @@ fun ResourcesScreen(
 ) {
     val uriHandler = LocalUriHandler.current
     val avatarLoader: VkAvatarLoader = koinInject()
-    val viewModel: OtherViewModel = koinViewModel()
 
-    // Стек открытых папок живёт в VM: свайп-назад обрабатывает LayeredNavHost,
-    // и стек должен переживать пересоздание экрана (жест закрывает папку,
-    // а не выходит на «Другое»).
-    val folderStack = viewModel.resourcesFolderStack
-    val currentFolder = folderStack.lastOrNull()
+    // Путь открытых папок — штатная схема «родитель под дочерним», как в
+    // TasksScreen/ServicesScreen: каждая папка — слой вложенного
+    // LayeredNavHost; назад (жест, стрелка, системная кнопка) снимает
+    // последний слой с общим выездом анимации.
+    val folderStack = remember { mutableStateListOf<ResourceFolder>() }
+    val stackSnapshot = folderStack.toList().takeIf { it.isNotEmpty() }
+    // Скролл корня переживает переходы по папкам: хост перерисовывает корень
+    // в другом слое (под дочерней папкой).
+    val rootScrollState = rememberScrollState()
 
-    // Системный «назад» (кнопка Android): внутри папки — закрыть папку,
-    // на корне — выйти с экрана. Свайп перехватывается в LayeredNavHost.
-    PlatformBackHandler(enabled = true) {
-        if (!viewModel.popResourcesFolder()) onBack()
-    }
+    // Системный «назад» на корне — выход с экрана. Когда папка открыта,
+    // поверх встаёт её собственный PlatformBackHandler (Android: LIFO).
+    PlatformBackHandler(onBack = onBack)
 
-    // При реальном выходе с экрана сбрасываем стек.
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { viewModel.clearResourcesFolderStack() }
-    }
+    LayeredNavHost(
+        screen = stackSnapshot,
+        parentScreen = stackSnapshot?.dropLast(1)?.takeIf { it.isNotEmpty() },
+        onBackToParent = {
+            if (folderStack.isNotEmpty()) folderStack.removeAt(folderStack.lastIndex)
+        },
+        rootContent = {
+            ResourcesRootContent(
+                scrollState = rootScrollState,
+                uriHandler = uriHandler,
+                onBack = onBack,
+                onOpenFolder = { folderStack.add(it) }
+            )
+        },
+        screenContent = { path, back ->
+            @Suppress("UNCHECKED_CAST")
+            val folder = (path as List<ResourceFolder>).last()
+            PlatformBackHandler(onBack = back)
+            FolderContentScreen(
+                folder = folder,
+                avatarLoader = avatarLoader,
+                uriHandler = uriHandler,
+                onBack = back,
+                onOpenFolder = { folderStack.add(it) }
+            )
+        },
+        modifier = modifier.fillMaxSize()
+    )
+}
 
+/** Корень раздела: официальные сервисы + папка «Другие ресурсы». */
+@Composable
+private fun ResourcesRootContent(
+    scrollState: androidx.compose.foundation.ScrollState,
+    uriHandler: UriHandler,
+    onBack: () -> Unit,
+    onOpenFolder: (ResourceFolder) -> Unit
+) {
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
@@ -392,13 +426,7 @@ fun ResourcesScreen(
                     .padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = {
-                    if (folderStack.isNotEmpty()) {
-                        folderStack.removeAt(folderStack.lastIndex)
-                    } else {
-                        onBack()
-                    }
-                }) {
+                IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "Назад"
@@ -406,14 +434,75 @@ fun ResourcesScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = currentFolder?.title ?: "Ресурсы университета",
+                    text = "Ресурсы университета",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
             }
-        },
-        modifier = modifier
-            .fillMaxSize()
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(scrollState)
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "Официальные цифровые сервисы РТУ МИРЭА, необходимые для учебы и взаимодействия с университетом.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 20.sp,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+
+            STUDENT_RESOURCES.forEach { res ->
+                OfficialResourceCard(res = res, uriHandler = uriHandler)
+            }
+
+            // «Другие ресурсы» — в самом низу раздела.
+            FolderCard(folder = OTHER_RESOURCES_ROOT) { onOpenFolder(OTHER_RESOURCES_ROOT) }
+
+            Spacer(modifier = Modifier.height(80.dp))
+        }
+    }
+}
+
+/** Слой папки: её подпапки и ссылки, «назад» снимает слой. */
+@Composable
+private fun FolderContentScreen(
+    folder: ResourceFolder,
+    avatarLoader: VkAvatarLoader,
+    uriHandler: UriHandler,
+    onBack: () -> Unit,
+    onOpenFolder: (ResourceFolder) -> Unit
+) {
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад"
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = folder.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -423,39 +512,17 @@ fun ResourcesScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            val folder = currentFolder
-            if (folder == null) {
-                Text(
-                    text = "Официальные цифровые сервисы РТУ МИРЭА, необходимые для учебы и взаимодействия с университетом.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp)
-                )
-
-                STUDENT_RESOURCES.forEach { res ->
-                    OfficialResourceCard(res = res, uriHandler = uriHandler)
-                }
-
-                // «Другие ресурсы» — в самом низу раздела.
-                FolderCard(folder = OTHER_RESOURCES_ROOT) {
-                    folderStack.add(OTHER_RESOURCES_ROOT)
-                }
+            if (folder.children.isEmpty()) {
+                EmptyFolderPlaceholder()
             } else {
-                if (folder.children.isEmpty()) {
-                    EmptyFolderPlaceholder()
-                } else {
-                    folder.children.forEach { child ->
-                        when (child) {
-                            is ResourceFolder -> FolderCard(folder = child) {
-                                folderStack.add(child)
-                            }
-                            is ResourceLink -> ResourceLinkCard(
-                                link = child,
-                                avatarLoader = avatarLoader,
-                                uriHandler = uriHandler
-                            )
-                        }
+                folder.children.forEach { child ->
+                    when (child) {
+                        is ResourceFolder -> FolderCard(folder = child) { onOpenFolder(child) }
+                        is ResourceLink -> ResourceLinkCard(
+                            link = child,
+                            avatarLoader = avatarLoader,
+                            uriHandler = uriHandler
+                        )
                     }
                 }
             }
