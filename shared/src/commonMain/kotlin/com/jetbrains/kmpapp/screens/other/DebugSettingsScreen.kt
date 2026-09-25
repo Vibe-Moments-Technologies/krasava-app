@@ -44,6 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.DebugConfig
+import com.jetbrains.kmpapp.data.analytics.AppDiagnostics
+import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 
@@ -107,12 +109,18 @@ fun DebugSettingsScreen(
             )
 
             // Диагностика (Sentry): opt-in для тестировщиков. Выключена —
-            // наружу не уходит ничего вообще.
+            // наружу не уходит ничего вообще. На тестовых каналах (dev/beta/
+            // contrib) сбор обязателен: тумблер заблокирован во включённом состоянии.
             DebugSwitchCard(
                 title = "Отправка диагностики",
-                subtitle = "Краши и ошибки уходят в Sentry. Только для тестировщиков: " +
-                    "включайте на время отладки, данные покидают устройство.",
-                checked = diagnosticsEnabled,
+                subtitle = if (AppDiagnostics.isForced) {
+                    "Тестовая сборка (канал ${AppVersion.BUILD_CHANNEL}): диагностика включена всегда."
+                } else {
+                    "Краши и ошибки уходят в Sentry. Только для тестировщиков: " +
+                        "включайте на время отладки, данные покидают устройство."
+                },
+                checked = diagnosticsEnabled || AppDiagnostics.isForced,
+                enabled = !AppDiagnostics.isForced,
                 onCheckedChange = viewModel::setDiagnosticsEnabled
             )
 
@@ -310,14 +318,15 @@ private fun DebugSwitchCard(
     title: String,
     subtitle: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    enabled: Boolean = true
 ) {
     Card(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier.fillMaxWidth()
     ) {
-        DebugSwitchRow(title, subtitle, checked, onCheckedChange, Modifier.padding(18.dp))
+        DebugSwitchRow(title, subtitle, checked, onCheckedChange, Modifier.padding(18.dp), enabled)
     }
 }
 
@@ -327,7 +336,8 @@ private fun DebugSwitchRow(
     subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -339,6 +349,6 @@ private fun DebugSwitchRow(
             Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }

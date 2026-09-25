@@ -172,9 +172,20 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            DEBUG_INFORMATION_FORMAT=dwarf \
+            DEBUG_INFORMATION_FORMAT=dwarf-with-dsym \
             COMPILER_INDEX_STORE_ENABLE=NO \
             build
+
+      - name: 🕯️ Upload dSYM to Sentry
+        continue-on-error: true
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          curl -sL https://sentry.io/get-cli/ | bash
+          cd iosApp
+          sentry-cli debug-files upload --org l1ratch-dev --project kotlin \
+            build/Build/Products/Release-iphoneos \
+            ../shared/build/xcode-frameworks
 
       - name: 📦 Package Unsigned IPA
         run: |
