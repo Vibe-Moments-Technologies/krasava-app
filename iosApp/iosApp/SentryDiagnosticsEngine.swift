@@ -13,4 +13,8 @@ final class SentryDiagnosticsEngine: DiagnosticsEngine {
     func stop() {
         SentrySDK.close()
     }
+
+    func capture(message: String) {
+        SentrySDK.capture(message: message)
+    }
 }

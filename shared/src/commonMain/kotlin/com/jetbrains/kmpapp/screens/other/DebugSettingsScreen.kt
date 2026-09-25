@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.screens.other
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -12,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -31,7 +31,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -63,6 +62,7 @@ fun DebugSettingsScreen(
     val storageStats by viewModel.storageStats.collectAsState()
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
+    var testEventSent by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.refreshStorageStats()
@@ -97,20 +97,28 @@ fun DebugSettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(viewModel.scrollState("debug"))
                 .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            SectionTitle("Режимы")
             DebugSwitchCard(
                 title = "Имитировать оффлайн",
                 subtitle = "Использовать сохранённые данные без сети",
                 checked = simulateOffline,
                 onCheckedChange = DebugConfig::setOfflineSimulated
             )
+            DebugSwitchCard(
+                title = "Координатная плоскость на картах",
+                subtitle = "Сетка координат поверх карт для отладки геометрии",
+                checked = mapCoordinatePlane,
+                onCheckedChange = DebugConfig::setMapCoordinatePlaneEnabled
+            )
 
             // Диагностика (Sentry): opt-in для тестировщиков. Выключена —
             // наружу не уходит ничего вообще. На тестовых каналах (dev/beta/
             // contrib) сбор обязателен: тумблер заблокирован во включённом состоянии.
+            SectionTitle("Диагностика")
             DebugSwitchCard(
                 title = "Отправка диагностики",
                 subtitle = if (AppDiagnostics.isForced) {
@@ -123,105 +131,79 @@ fun DebugSettingsScreen(
                 enabled = !AppDiagnostics.isForced,
                 onCheckedChange = viewModel::setDiagnosticsEnabled
             )
+            DebugCard {
+                Text(
+                    "Проверка связи",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "Отправляет тестовое событие в Sentry. Через минуту оно появится в проекте — " +
+                        "значит, канал диагностики живой.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = {
+                        AppDiagnostics.sendTestEvent()
+                        testEventSent = true
+                    },
+                    enabled = !testEventSent,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (testEventSent) "Отправлено ✓" else "Отправить тестовое событие")
+                }
+            }
 
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Управление кешем", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            SectionTitle("Хранилище")
+            DebugCard {
+                Text(
+                    "Расписаний: ${storageStats.schedulesCount} · пар: ${storageStats.lessonsCount} · размер: ${storageStats.formatBytes(storageStats.totalSizeBytes)}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = { showClearCacheDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Очистить кеш расписаний")
+                }
+                Text(
+                    "Сохранённые группы и настройки останутся.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (NotificationsManager.supportsNotifications) {
+                SectionTitle("Уведомления")
+                DebugCard {
                     Text(
-                        "Расписаний: ${storageStats.schedulesCount} · пар: ${storageStats.lessonsCount} · размер: ${storageStats.formatBytes(storageStats.totalSizeBytes)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    OutlinedButton(
-                        onClick = { showClearCacheDialog = true },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Очистить кеш расписаний")
-                    }
-                    Text(
-                        "Сохранённые группы и настройки останутся.",
+                        "Мгновенная доставка или будильник через минуту.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-            }
-
-            // Тест уведомлений: мгновенная доставка и будильник через минуту.
-            if (NotificationsManager.supportsNotifications) {
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Тест уведомлений", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Отправить тестовое уведомление сейчас или запланировать его на минуту вперёд.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        OutlinedButton(
-                            onClick = { NotificationsManager.sendTest(1_500L) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Отправить сейчас")
-                        }
-                        OutlinedButton(
-                            onClick = { NotificationsManager.sendTest(60_000L) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Запланировать через 1 минуту")
-                        }
+                    OutlinedButton(
+                        onClick = { NotificationsManager.sendTest(1_500L) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Отправить сейчас")
+                    }
+                    OutlinedButton(
+                        onClick = { NotificationsManager.sendTest(60_000L) },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Запланировать через 1 минуту")
                     }
                 }
             }
 
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            SectionTitle("Эксперименты")
+            DebugCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Координатная плоскость на картах",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Сетка координат поверх карт для отладки геометрии",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = mapCoordinatePlane,
-                        onCheckedChange = DebugConfig::setMapCoordinatePlaneEnabled
-                    )
-                }
-            }
-Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onOpenExperimentalSettings)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(18.dp),
+                        .clickable(onClick = onOpenExperimentalSettings),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -231,7 +213,7 @@ Card(
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = "Скрытые возможности и секреты",
                             style = MaterialTheme.typography.bodySmall,
@@ -253,6 +235,7 @@ Card(
                 }
             }
 
+            SectionTitle("Опасная зона")
             Card(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
@@ -314,6 +297,34 @@ Card(
 }
 
 @Composable
+private fun SectionTitle(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, top = 8.dp)
+    )
+}
+
+@Composable
+private fun DebugCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content
+        )
+    }
+}
+
+@Composable
 private fun DebugSwitchCard(
     title: String,
     subtitle: String,
@@ -321,34 +332,18 @@ private fun DebugSwitchCard(
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true
 ) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        DebugSwitchRow(title, subtitle, checked, onCheckedChange, Modifier.padding(18.dp), enabled)
-    }
-}
-
-@Composable
-private fun DebugSwitchRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    DebugCard {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(Modifier.width(12.dp))
+            Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
         }
-        Spacer(Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }

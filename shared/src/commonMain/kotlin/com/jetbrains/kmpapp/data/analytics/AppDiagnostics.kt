@@ -18,6 +18,7 @@ import com.jetbrains.kmpapp.data.model.AppVersion
 interface DiagnosticsEngine {
     fun start(dsn: String)
     fun stop()
+    fun capture(message: String)
 }
 
 object AppDiagnostics {
@@ -29,6 +30,7 @@ object AppDiagnostics {
 
     private var engine: DiagnosticsEngine? = null
     private var enabled = false
+    private var active = false
 
     fun setEngine(engine: DiagnosticsEngine) {
         this.engine = engine
@@ -41,8 +43,14 @@ object AppDiagnostics {
         apply()
     }
 
+    /** Кнопка «тест» в меню отладки: событие-маркер, что канал живой. */
+    fun sendTestEvent() {
+        if (active) engine?.capture("Тест диагностики: ${AppVersion.DISPLAY_VERSION}, канал ${AppVersion.BUILD_CHANNEL}")
+    }
+
     private fun apply() {
-        if (isForced || enabled) {
+        active = isForced || enabled
+        if (active) {
             if (DSN.isNotBlank()) engine?.start(DSN)
         } else {
             engine?.stop()

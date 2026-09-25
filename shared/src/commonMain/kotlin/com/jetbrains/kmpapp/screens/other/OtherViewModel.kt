@@ -132,6 +132,13 @@ class OtherViewModel(
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = repository.diagnosticsEnabled
+
+    // Скролл подэкранов «Другое» живёт в VM: LayeredNavHost пересоздаёт экран
+    // в другом слое при переходе родитель↔дочка, remember-состояния гибнут.
+    // Один общий реестр по ключу вместо простыни отдельных полей.
+    private val scrollStates = mutableMapOf<String, androidx.compose.foundation.ScrollState>()
+    fun scrollState(key: String): androidx.compose.foundation.ScrollState =
+        scrollStates.getOrPut(key) { androidx.compose.foundation.ScrollState(0) }
     val dockTabs: StateFlow<List<AppTab>> = repository.dockTabs
     val appIcon: StateFlow<String> = repository.appIcon
     val notificationsEnabled: StateFlow<Boolean> = repository.notificationsEnabled

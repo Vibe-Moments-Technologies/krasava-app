@@ -15,4 +15,8 @@ class AndroidDiagnostics : DiagnosticsEngine {
     override fun stop() {
         io.sentry.Sentry.close()
     }
+
+    override fun capture(message: String) {
+        io.sentry.Sentry.captureMessage(message)
+    }
 }
