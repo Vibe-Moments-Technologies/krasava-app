@@ -173,7 +173,7 @@ jobs:
         run: |
           curl -sL https://sentry.io/get-cli/ | bash
           cd iosApp
-          sentry-cli debug-files upload --org l1ratch-dev --project kotlin \
+          sentry-cli debug-files upload --org l1ratch-dev --project krasava-app \
             build/Build/Products/Release-iphoneos \
             ../shared/build/xcode-frameworks
 
