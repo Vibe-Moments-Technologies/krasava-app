@@ -16,7 +16,7 @@ interface DiagnosticsEngine {
 
 object AppDiagnostics {
     /** DSN проекта sentry.io. Пусто = диагностика не запускается даже с тумблера. */
-    const val DSN = ""
+    const val DSN = "https://d7e91a261452273e3edf89df0a5f947d@o4512147900137472.ingest.de.sentry.io/4512147904659536"
 
     private var engine: DiagnosticsEngine? = null
     private var enabled = false
