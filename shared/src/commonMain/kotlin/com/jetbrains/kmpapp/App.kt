@@ -3,14 +3,9 @@ package com.jetbrains.kmpapp
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,10 +22,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.jetbrains.kmpapp.data.ScheduleRepository
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
-import com.jetbrains.kmpapp.data.analytics.platformName
-import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
@@ -57,11 +48,6 @@ import com.jetbrains.kmpapp.theme.MatrixLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
 import com.jetbrains.kmpapp.theme.SakuraLightColors
 import com.jetbrains.kmpapp.theme.ThemeOverlay
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -105,8 +91,6 @@ fun App() {
     val themeMode by repository.themeMode.collectAsState()
     val themeOverlay by repository.themeOverlay.collectAsState()
     val dockTabs by repository.dockTabs.collectAsState()
-    val selectedTarget by repository.selectedTarget.collectAsState()
-    val analyticsConsent by repository.analyticsConsent.collectAsState()
 
     val scheduleViewModel: ScheduleViewModel = koinViewModel()
     val otherViewModel: OtherViewModel = koinViewModel()
@@ -115,32 +99,6 @@ fun App() {
     val compareViewModel: CompareScheduleViewModel = koinViewModel()
     val notesViewModel: NotesViewModel = koinViewModel()
     val servicesViewModel: ServicesViewModel = koinViewModel()
-
-    // Аналитика: одна стартовая метрика среза аудитории + трекеры изменений.
-    // dock_config — каждый слот отдельным параметром: в панели Metrica
-    // такое строится в графики, в отличие от строки через запятую.
-    LaunchedEffect(Unit) {
-        val params = mutableMapOf(
-            "target_type" to (selectedTarget?.type?.name ?: "none")
-        )
-        // Срез по версиям: видно, на чём сидит аудитория. dev/contrib не
-        // шлём — статистику иначе забивают наши же тестовые сборки;
-        // stable/beta/rc различимы суффиксом версии.
-        val channel = AppVersion.BUILD_CHANNEL
-        if (channel == "stable" || channel == "beta" || channel == "rc") {
-            params["version"] = AppVersion.VERSION_NAME
-            params["platform"] = platformName()
-        }
-        AppAnalytics.logEvent(AnalyticsEvents.SESSION_OPEN, params)
-    }
-    LaunchedEffect(dockTabs) {
-        val params = mutableMapOf("count" to dockTabs.size.toString())
-        dockTabs.forEachIndexed { index, tab -> params["slot_${index + 1}"] = tab.name }
-        AppAnalytics.logEvent(AnalyticsEvents.SESSION_DOCK_CONFIG, params)
-    }
-    LaunchedEffect(selectedTarget) {
-        selectedTarget?.let { AppAnalytics.logEvent(AnalyticsEvents.SCHEDULE_TARGET_TYPE, mapOf("type" to it.type.name)) }
-    }
 
     val systemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
@@ -225,7 +183,6 @@ fun App() {
                         currentTab = currentTab,
                         onTabSelected = {
                             currentTab = it
-                            AppAnalytics.logEvent(AnalyticsEvents.NAV_TAB_OPEN, mapOf("tab" to it.name))
                         },
                         onTabReselected = { tab ->
                             when (tab) {
@@ -253,69 +210,6 @@ fun App() {
                     )
                 }
             }
-
-            // Единый гейт при первом запуске. Без подтверждения приложением
-            // пользоваться нельзя — поэтому у диалога нет кнопки отказа.
-            if (analyticsConsent == null) {
-                ConsentDialog(onAccept = { repository.setAnalyticsConsent(true) })
-            }
         }
     }
-}
-
-/** Гейт согласия при первом запуске: без принятия приложение не открывается. */
-@Composable
-private fun ConsentDialog(onAccept: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = { },
-        title = {
-            Text(
-                "Привет! 👋",
-                fontWeight = FontWeight.Bold
-            )
-        },
-        text = {
-            Column {
-                Text(
-                    "Для улучшения приложения мы собираем некоторые " +
-                        "анонимизированные диагностические и аналитические данные.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Spacer(Modifier.height(12.dp))
-                // Обязательный пункт
-                Row(verticalAlignment = Alignment.Top) {
-                    Text("•", color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp))
-                    Text(
-                        "Диагностика сбоев и ошибок — обязательна, " +
-                            "помогает находить и исправлять проблемы.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                // Опциональный пункт
-                Row(verticalAlignment = Alignment.Top) {
-                    Text("•", color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(end = 8.dp))
-                    Column {
-                        Text(
-                            "Аналитика использования — необязательна, " +
-                                "помогает понимать, какие функции важны.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            "Можно отключить в любой момент в настройках.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            Button(onClick = onAccept) {
-                Text("Продолжить")
-            }
-        }
-    )
 }

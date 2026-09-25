@@ -57,6 +57,7 @@ fun DebugSettingsScreen(
     PlatformBackHandler(onBack = onBack)
     val simulateOffline by DebugConfig.isOfflineSimulated.collectAsState()
     val mapCoordinatePlane by DebugConfig.isMapCoordinatePlaneEnabled.collectAsState()
+    val diagnosticsEnabled by viewModel.diagnosticsEnabled.collectAsState()
     val storageStats by viewModel.storageStats.collectAsState()
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
@@ -103,6 +104,16 @@ fun DebugSettingsScreen(
                 subtitle = "Использовать сохранённые данные без сети",
                 checked = simulateOffline,
                 onCheckedChange = DebugConfig::setOfflineSimulated
+            )
+
+            // Диагностика (Sentry): opt-in для тестировщиков. Выключена —
+            // наружу не уходит ничего вообще.
+            DebugSwitchCard(
+                title = "Отправка диагностики",
+                subtitle = "Краши и ошибки уходят в Sentry. Только для тестировщиков: " +
+                    "включайте на время отладки, данные покидают устройство.",
+                checked = diagnosticsEnabled,
+                onCheckedChange = viewModel::setDiagnosticsEnabled
             )
 
             Card(

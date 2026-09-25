@@ -9,8 +9,6 @@ import com.jetbrains.kmpapp.data.model.ScheduleDiff
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.network.detectVpnActive
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.parser.MireaICalParser
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -147,8 +145,7 @@ class ScheduleRepository(
     val isMatrixTheme: StateFlow<Boolean> = storage.isMatrixTheme
     val cheatsAgreed: StateFlow<Boolean?> = storage.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = storage.cheatsBlocked
-    val analyticsEnabled: StateFlow<Boolean> = storage.analyticsEnabled
-    val analyticsConsent: StateFlow<Boolean?> = storage.analyticsConsent
+    val diagnosticsEnabled: StateFlow<Boolean> = storage.diagnosticsEnabled
     val appIcon: StateFlow<String> = storage.appIcon
     val notificationsEnabled: StateFlow<Boolean> = storage.notificationsEnabled
     val notifyMinutesBefore: StateFlow<Int> = storage.notifyMinutesBefore
@@ -234,8 +231,7 @@ class ScheduleRepository(
     fun setMatrixTheme(enabled: Boolean) = storage.setMatrixTheme(enabled)
     fun setCheatsAgreed(agreed: Boolean?) = storage.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = storage.setCheatsBlocked(blocked)
-    fun setAnalyticsEnabled(enabled: Boolean) = storage.setAnalyticsEnabled(enabled)
-    fun setAnalyticsConsent(accepted: Boolean) = storage.setAnalyticsConsent(accepted)
+    fun setDiagnosticsEnabled(enabled: Boolean) = storage.setDiagnosticsEnabled(enabled)
     fun setAppIcon(name: String) = storage.setAppIcon(name)
     fun setNotificationsEnabled(enabled: Boolean) = storage.setNotificationsEnabled(enabled)
     fun setNotifyMinutesBefore(minutes: Int) = storage.setNotifyMinutesBefore(minutes)
@@ -342,10 +338,6 @@ class ScheduleRepository(
             val now = Clock.System.now().toEpochMilliseconds()
             storage.setLastSyncTime(target.id, now)
             _errorMessage.value = null
-            AppAnalytics.logEvent(
-                AnalyticsEvents.SCHEDULE_REFRESH,
-                mapOf("result" to "ok", "vpn_active" to detectVpnActive().toString())
-            )
             if (!silent) {
                 _refreshStatus.value = com.jetbrains.kmpapp.data.model.RefreshStatus.Success()
             }
@@ -359,14 +351,6 @@ class ScheduleRepository(
         } catch (e: Exception) {
             println("refreshSchedule error for ${target.targetTitle}: ${e.message}")
             val code = com.jetbrains.kmpapp.data.model.AppErrorCode.fromException(e)
-            AppAnalytics.logEvent(
-                AnalyticsEvents.ERROR_SCHEDULE_LOAD,
-                mapOf(
-                    "result" to "error",
-                    "code" to code.code,
-                    "vpn_active" to detectVpnActive().toString()
-                )
-            )
             _refreshStatus.value = com.jetbrains.kmpapp.data.model.RefreshStatus.Error(code)
             // Only show user-facing full-screen error if there is NO cached data at all
             val cached = storage.getLessons(target.id)

@@ -35,8 +35,6 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Surface
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.RefreshStatus
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -257,7 +255,6 @@ private fun ScheduleMainContent(
                 // VPN расписание не обновится — предупреждаем заранее.
                 if (isVpnActive && vpnWarningEnabled && !isVpnBannerDismissed) {
                     LaunchedEffect(Unit) {
-                        AppAnalytics.logEvent(AnalyticsEvents.FEATURE_VPN_BANNER_SHOWN)
                     }
                     Surface(
                         shape = RoundedCornerShape(12.dp),

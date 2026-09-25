@@ -3,8 +3,8 @@ package com.jetbrains.kmpapp
 import android.app.Application
 import android.content.Context
 import android.view.inputmethod.InputMethodManager
-import com.jetbrains.kmpapp.data.analytics.AndroidAnalytics
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
+import com.jetbrains.kmpapp.data.analytics.AndroidDiagnostics
+import com.jetbrains.kmpapp.data.analytics.AppDiagnostics
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.storage.AndroidContextProvider
 import com.jetbrains.kmpapp.di.initKoin
@@ -18,7 +18,8 @@ class ScheduleApp : Application() {
         super.onCreate()
         AndroidContextProvider.context = this
         initKoin()
-        AppAnalytics.setEngine(AndroidAnalytics())
+        // Диагностика (Sentry) поднимется сама, если включён тумблер в отладке.
+        AppDiagnostics.setEngine(AndroidDiagnostics())
         // Движок напоминаний: секция «Уведомления» в настройках видна там,
         // где движок зарегистрирован (Android и iOS симметричны).
         NotificationsManager.setEngine(AndroidNotificationsEngine)

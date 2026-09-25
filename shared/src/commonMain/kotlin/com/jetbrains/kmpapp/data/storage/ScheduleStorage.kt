@@ -1,7 +1,6 @@
 package com.jetbrains.kmpapp.data.storage
 
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
+import com.jetbrains.kmpapp.data.analytics.AppDiagnostics
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.model.Lesson
@@ -88,12 +87,9 @@ class ScheduleStorage(
     private val _cheatsBlocked = MutableStateFlow(false)
     val cheatsBlocked: StateFlow<Boolean> = _cheatsBlocked.asStateFlow()
 
-    private val _analyticsEnabled = MutableStateFlow(true)
-    val analyticsEnabled: StateFlow<Boolean> = _analyticsEnabled.asStateFlow()
-
-    // null = согласие ещё не спрашивали: первый вход ИЛИ обновление со старой версии
-    private val _analyticsConsent = MutableStateFlow<Boolean?>(null)
-    val analyticsConsent: StateFlow<Boolean?> = _analyticsConsent.asStateFlow()
+    // Диагностика (Sentry) — opt-in из скрытого меню отладки, по умолчанию выключена.
+    private val _diagnosticsEnabled = MutableStateFlow(false)
+    val diagnosticsEnabled: StateFlow<Boolean> = _diagnosticsEnabled.asStateFlow()
 
     private val _appIcon = MutableStateFlow(AppIconManager.ICON_DEFAULT)
     val appIcon: StateFlow<String> = _appIcon.asStateFlow()
@@ -150,10 +146,8 @@ class ScheduleStorage(
         _themeOverlay.value = loadThemeOverlay()
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
-        _analyticsEnabled.value = loadBooleanFlag(KEY_ANALYTICS_ENABLED, true)
-        _analyticsConsent.value = nullableFlag(KEY_ANALYTICS_CONSENT)
-        // До первого ответа на диалог согласия ничего не отправляем.
-        AppAnalytics.setEventsEnabled(_analyticsEnabled.value && _analyticsConsent.value != null)
+        _diagnosticsEnabled.value = loadBooleanFlag(KEY_DIAGNOSTICS_ENABLED, false)
+        AppDiagnostics.setEnabled(_diagnosticsEnabled.value)
         // Миграция иконки: прошлые «Новая светлая/тёмная» и «Старая»
         // (AppIconClassic) слились в дефолт; неизвестные значения → дефолт.
         _appIcon.value = when (val saved = platformStorage.getString(KEY_APP_ICON)) {
@@ -289,7 +283,6 @@ class ScheduleStorage(
     }
 
     fun setThemeMode(mode: ThemeMode) {
-        val changed = _themeMode.value != mode
         _themeMode.value = mode
         scope.launch {
             try {
@@ -298,7 +291,6 @@ class ScheduleStorage(
                 println("Failed to persist themeMode: ${e.message}")
             }
         }
-        if (changed) AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_THEME_SET, mapOf("mode" to mode.name))
     }
 
     fun setShowEmptyLessons(enabled: Boolean) {
@@ -404,7 +396,6 @@ class ScheduleStorage(
     }
 
     fun setThemeOverlay(overlay: ThemeOverlay) {
-        val changed = _themeOverlay.value != overlay
         _themeOverlay.value = overlay
         scope.launch {
             try {
@@ -416,7 +407,6 @@ class ScheduleStorage(
                 println("Failed to persist theme overlay: ${e.message}")
             }
         }
-        if (changed) AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_THEME_OVERLAY_SET, mapOf("overlay" to overlay.name))
     }
 
     fun setCyberpunkTheme(enabled: Boolean) {
@@ -440,26 +430,11 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_CHEATS_BLOCKED, blocked.toString()) }
     }
 
-    fun setAnalyticsEnabled(enabled: Boolean) {
-        _analyticsEnabled.value = enabled
-        // Ручное включение тумблера = согласие; до ответа на диалог ничего не уходит
-        if (enabled) _analyticsConsent.value = _analyticsConsent.value ?: true
-        AppAnalytics.setEventsEnabled(enabled && _analyticsConsent.value != null)
-        // Opt-in/opt-out — единственное событие, которое шлём при выключении
-        // (до того как шлюз закрылся): важно знать долю отказов.
-        AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_ANALYTICS_CHANGED, mapOf("enabled" to enabled.toString()))
-        scope.launch { platformStorage.saveString(KEY_ANALYTICS_ENABLED, enabled.toString()) }
-    }
-
-    /** Ответ на диалог первого запуска: сразу задаёт и согласие, и тумблер. */
-    fun setAnalyticsConsent(accepted: Boolean) {
-        _analyticsConsent.value = accepted
-        _analyticsEnabled.value = accepted
-        AppAnalytics.setEventsEnabled(accepted)
-        scope.launch {
-            platformStorage.saveString(KEY_ANALYTICS_CONSENT, accepted.toString())
-            platformStorage.saveString(KEY_ANALYTICS_ENABLED, accepted.toString())
-        }
+    /** Диагностика (Sentry): включение запускает SDK, выключение — останавливает. */
+    fun setDiagnosticsEnabled(enabled: Boolean) {
+        _diagnosticsEnabled.value = enabled
+        AppDiagnostics.setEnabled(enabled)
+        scope.launch { platformStorage.saveString(KEY_DIAGNOSTICS_ENABLED, enabled.toString()) }
     }
 
     /** Выбор иконки приложения; применяется немедленно (iOS), хранится для UI. */
@@ -469,7 +444,6 @@ class ScheduleStorage(
         AppIconManager.apply(name)
         scope.launch { platformStorage.saveString(KEY_APP_ICON, name) }
         if (changed) {
-            AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_APP_ICON_CHANGED, mapOf("icon" to name))
         }
     }
 
@@ -485,10 +459,6 @@ class ScheduleStorage(
         }
         scope.launch { platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, enabled.toString()) }
         if (changed) {
-            AppAnalytics.logEvent(AnalyticsEvents.SETTINGS_NOTIFICATIONS_CHANGED, mapOf(
-                "enabled" to enabled.toString(),
-                "minutes_before" to _notifyMinutesBefore.value.toString()
-            ))
         }
     }
 
@@ -579,13 +549,6 @@ class ScheduleStorage(
         // Аналитика: только тип (GROUP/TEACHER/AUDITORIUM) и количество —
         // ни id, ни название группы/преподавателя наружу не уходят.
         if (wasNew) {
-            AppAnalytics.logEvent(
-                AnalyticsEvents.SCHEDULE_TARGET_ADDED,
-                mapOf(
-                    "type" to target.type.name,
-                    "count" to _savedTargets.value.size.toString()
-                )
-            )
         }
     }
 
@@ -611,13 +574,6 @@ class ScheduleStorage(
         }
         persistTargets()
         if (removed != null) {
-            AppAnalytics.logEvent(
-                AnalyticsEvents.SCHEDULE_TARGET_REMOVED,
-                mapOf(
-                    "type" to removed.type.name,
-                    "count" to _savedTargets.value.size.toString()
-                )
-            )
         }
     }
 
@@ -710,8 +666,7 @@ class ScheduleStorage(
     fun resetAllData() {
         val cheatsAgreedBefore = _cheatsAgreed.value
         val cheatsBlockedBefore = _cheatsBlocked.value
-        val analyticsEnabledBefore = _analyticsEnabled.value
-        val analyticsConsentBefore = _analyticsConsent.value
+        val diagnosticsEnabledBefore = _diagnosticsEnabled.value
         val notificationsEnabledBefore = _notificationsEnabled.value
         val notifyMinutesBeforeBefore = _notifyMinutesBefore.value
         val askBeforeNoteDeleteBefore = _askBeforeNoteDelete.value
@@ -733,8 +688,7 @@ class ScheduleStorage(
         _themeOverlay.value = ThemeOverlay.NONE
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
-        _analyticsEnabled.value = analyticsEnabledBefore
-        _analyticsConsent.value = analyticsConsentBefore
+        _diagnosticsEnabled.value = diagnosticsEnabledBefore
         _notificationsEnabled.value = notificationsEnabledBefore
         _notificationsTargetId.value = null
         _vpnWarningEnabled.value = true
@@ -747,9 +701,7 @@ class ScheduleStorage(
             if (cheatsAgreedBefore == null) platformStorage.remove(KEY_CHEATS_AGREED)
             else platformStorage.saveString(KEY_CHEATS_AGREED, cheatsAgreedBefore.toString())
             platformStorage.saveString(KEY_CHEATS_BLOCKED, cheatsBlockedBefore.toString())
-            platformStorage.saveString(KEY_ANALYTICS_ENABLED, analyticsEnabledBefore.toString())
-            if (analyticsConsentBefore == null) platformStorage.remove(KEY_ANALYTICS_CONSENT)
-            else platformStorage.saveString(KEY_ANALYTICS_CONSENT, analyticsConsentBefore.toString())
+            platformStorage.saveString(KEY_DIAGNOSTICS_ENABLED, diagnosticsEnabledBefore.toString())
             platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, notificationsEnabledBefore.toString())
             platformStorage.remove(KEY_NOTIFICATIONS_TARGET_ID)
             platformStorage.saveString(KEY_VPN_WARNING_ENABLED, true.toString())
@@ -840,8 +792,7 @@ class ScheduleStorage(
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
         private const val KEY_CHEATS_AGREED = "krasava_cheats_agreed"
         private const val KEY_CHEATS_BLOCKED = "krasava_cheats_blocked"
-        private const val KEY_ANALYTICS_ENABLED = "krasava_analytics_enabled"
-        private const val KEY_ANALYTICS_CONSENT = "krasava_analytics_consent"
+        private const val KEY_DIAGNOSTICS_ENABLED = "krasava_diagnostics_enabled"
         private const val KEY_APP_ICON = "krasava_app_icon"
         private const val KEY_NOTIFICATIONS_ENABLED = "krasava_notifications_enabled"
         private const val KEY_NOTIFICATIONS_TARGET_ID = "krasava_notifications_target_id"

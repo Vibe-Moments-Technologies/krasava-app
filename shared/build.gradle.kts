@@ -37,7 +37,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
-            implementation(libs.appmetrica.analytics)
+            implementation(libs.sentry.android)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -72,15 +72,4 @@ kotlin {
 
 dependencies {
     androidRuntimeClasspath(libs.compose.uiTooling)
-}
-
-// AppMetrica optional modules are not used by this app.
-configurations.configureEach {
-    exclude(group = "io.appmetrica.analytics", module = "analytics-ad-revenue")
-    exclude(group = "io.appmetrica.analytics", module = "analytics-billing")
-    exclude(group = "io.appmetrica.analytics", module = "analytics-location")
-    exclude(group = "io.appmetrica.analytics", module = "analytics-screenshot")
-    exclude(group = "io.appmetrica.analytics", module = "analytics-id-sync")
-    exclude(group = "io.appmetrica.analytics", module = "analytics-identifiers")
-    exclude(group = "com.google.android.gms", module = "play-services-ads-identifier")
 }

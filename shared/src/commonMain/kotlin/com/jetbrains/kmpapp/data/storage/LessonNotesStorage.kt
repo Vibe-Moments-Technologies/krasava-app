@@ -1,7 +1,5 @@
 package com.jetbrains.kmpapp.data.storage
 
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.LessonNote
 import com.jetbrains.kmpapp.data.model.NoteScope
 import kotlinx.coroutines.CoroutineScope
@@ -98,7 +96,6 @@ class LessonNotesStorage(
         }
         persist()
         if (text.isNotBlank()) {
-            AppAnalytics.logEvent(AnalyticsEvents.FEATURE_NOTE_ADDED, mapOf("scope" to "lesson"))
         }
     }
 
@@ -120,14 +117,12 @@ class LessonNotesStorage(
         }
         persist()
         if (text.isNotBlank()) {
-            AppAnalytics.logEvent(AnalyticsEvents.FEATURE_NOTE_ADDED, mapOf("scope" to "subject"))
         }
     }
 
     fun deleteNote(noteId: String) {
         _notes.update { list -> list.filter { it.id != noteId } }
         persist()
-        AppAnalytics.logEvent(AnalyticsEvents.FEATURE_NOTE_REMOVED)
     }
 
     // ── Каскадное удаление ────────────────────────────────────

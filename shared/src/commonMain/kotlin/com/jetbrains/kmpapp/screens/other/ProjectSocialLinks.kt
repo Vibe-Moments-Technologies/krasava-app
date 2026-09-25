@@ -33,8 +33,6 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.config.RemoteConfigLoader
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
@@ -62,7 +60,6 @@ internal fun ProjectSocialLinks() {
                 tint = MaterialTheme.colorScheme.onSurface,
                 contentDescription = "GitHub",
                 onClick = {
-                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "github"))
                     uriHandler.openUri(config.socialLinks.github)
                 },
                 modifier = Modifier.weight(1f)
@@ -72,7 +69,6 @@ internal fun ProjectSocialLinks() {
                 tint = Color(0xFF29A9EB),
                 contentDescription = "Telegram",
                 onClick = {
-                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "telegram"))
                     uriHandler.openUri(config.socialLinks.telegram)
                 },
                 modifier = Modifier.weight(1f)
@@ -82,7 +78,6 @@ internal fun ProjectSocialLinks() {
                 tint = Color(0xFFF15F2F),
                 contentDescription = "Boosty",
                 onClick = {
-                    AppAnalytics.logEvent(AnalyticsEvents.NAV_SOCIAL_OPEN, mapOf("network" to "boosty"))
                     val url = config.socialLinks.boosty
                     if (url.isNotBlank()) uriHandler.openUri(url)
                     else toastMessage = "Поддержка разработчиков скоро появится"

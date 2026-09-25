@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
@@ -91,7 +90,6 @@ fun SettingsScreen(
     val showAbbreviatedNames by viewModel.showAbbreviatedNames.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
     val isSakuraTheme by viewModel.isSakuraTheme.collectAsState()
-    val analyticsEnabled by viewModel.analyticsEnabled.collectAsState()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
     val notifyMinutesBefore by viewModel.notifyMinutesBefore.collectAsState()
     val notificationsTargetId by viewModel.notificationsTargetId.collectAsState()
@@ -511,36 +509,6 @@ fun SettingsScreen(
                     Switch(
                         checked = vpnWarningEnabled,
                         onCheckedChange = { viewModel.setVpnWarningEnabled(it) }
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Отправлять анонимную статистику",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Помогает находить падения и понимать, какие разделы чаще используются. Анонимно, без личных данных",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Switch(
-                        checked = analyticsEnabled,
-                        onCheckedChange = { viewModel.setAnalyticsEnabled(it) }
                     )
                 }
             }

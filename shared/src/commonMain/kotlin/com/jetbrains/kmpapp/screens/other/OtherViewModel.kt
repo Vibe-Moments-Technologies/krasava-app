@@ -5,8 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.TaskRepository
 import com.jetbrains.kmpapp.data.DebugConfig
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
 import com.jetbrains.kmpapp.data.model.StorageStats
@@ -133,8 +131,8 @@ class OtherViewModel(
     val isMatrixTheme: StateFlow<Boolean> = repository.isMatrixTheme
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
+    val diagnosticsEnabled: StateFlow<Boolean> = repository.diagnosticsEnabled
     val dockTabs: StateFlow<List<AppTab>> = repository.dockTabs
-    val analyticsEnabled: StateFlow<Boolean> = repository.analyticsEnabled
     val appIcon: StateFlow<String> = repository.appIcon
     val notificationsEnabled: StateFlow<Boolean> = repository.notificationsEnabled
     val notifyMinutesBefore: StateFlow<Int> = repository.notifyMinutesBefore
@@ -181,7 +179,7 @@ class OtherViewModel(
     fun setMatrixTheme(enabled: Boolean) = repository.setMatrixTheme(enabled)
     fun setCheatsAgreed(agreed: Boolean?) = repository.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = repository.setCheatsBlocked(blocked)
-    fun setAnalyticsEnabled(enabled: Boolean) = repository.setAnalyticsEnabled(enabled)
+    fun setDiagnosticsEnabled(enabled: Boolean) = repository.setDiagnosticsEnabled(enabled)
     fun setAppIcon(name: String) = repository.setAppIcon(name)
     fun setNotificationsEnabled(enabled: Boolean) = repository.setNotificationsEnabled(enabled)
     fun setNotifyMinutesBefore(minutes: Int) = repository.setNotifyMinutesBefore(minutes)
@@ -207,7 +205,6 @@ class OtherViewModel(
         // Сервисные подстраницы пишут свой service_open (с источником) —
         // здесь их не дублируем, иначе в панели двойной счёт.
         if (subScreen != OtherSubScreen.ROOT && !subScreen.isServiceScreen) {
-            AppAnalytics.logEvent(AnalyticsEvents.NAV_SCREEN_VIEW, mapOf("screen" to subScreen.name))
         }
     }
 

@@ -3,8 +3,6 @@ package com.jetbrains.kmpapp.screens.schedule
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.ScheduleRepository
-import com.jetbrains.kmpapp.data.analytics.AnalyticsEvents
-import com.jetbrains.kmpapp.data.analytics.AppAnalytics
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.ScheduleSlot
@@ -215,7 +213,6 @@ class ScheduleViewModel(
     fun selectLessonForDetail(lesson: Lesson?) {
         _selectedLessonForDetail.value = lesson
         if (lesson != null) {
-            AppAnalytics.logEvent(AnalyticsEvents.FEATURE_LESSON_DETAIL, mapOf("screen" to "lesson_detail"))
         }
     }
 
