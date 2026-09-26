@@ -67,3 +67,4 @@ images/
 *.keystore
 *.jks
 *.p12
+.tmp-ghpages/
