@@ -7,7 +7,10 @@ import WidgetKit
 /// UserDefaults(suiteName:) без entitlements не падает, а пишет в изолированную
 /// песочницу — проверяем контейнер явно, чтобы не врать, что синхронизировали.
 enum WidgetSync {
-    static let suiteName = "group.ru.vibemoments.krasava"
+    // Группа из mobileprovision, которым переподписывается IPA: профиль
+    // разрешает только group.c2fefdd0db2e255e.* — своя группа невозможна.
+    // Совпадает с WidgetData.suiteName в KrasavaWidget.swift.
+    static let suiteName = "group.c2fefdd0db2e255e.1"
     static let key = "widget_snapshot"
 
     static func push() {

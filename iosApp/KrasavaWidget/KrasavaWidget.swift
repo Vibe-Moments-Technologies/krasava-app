@@ -21,7 +21,10 @@ struct WSnapshot: Decodable {
 }
 
 enum WidgetData {
-    static let suiteName = "group.ru.vibemoments.krasava"
+    // Группа из профиля переподписи (см. WidgetSync.swift): профиль владельца
+    // сертификата разрешает только group.c2fefdd0db2e255e.*, свою группу
+    // зарегистрировать нельзя — поэтому константа одна на оба бинарника.
+    static let suiteName = "group.c2fefdd0db2e255e.1"
     static let key = "widget_snapshot"
 
     enum State {
