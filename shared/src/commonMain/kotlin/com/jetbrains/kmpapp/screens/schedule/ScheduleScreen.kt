@@ -72,7 +72,9 @@ import kotlin.math.abs
 @Composable
 fun ScheduleScreen(
     viewModel: ScheduleViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Не null при скрытом доке: шестерёнка в топбаре открывает «Другое».
+    onOpenOther: (() -> Unit)? = null
 ) {
     val selectedLessonForDetail by viewModel.selectedLessonForDetail.collectAsState()
 
@@ -82,7 +84,7 @@ fun ScheduleScreen(
         onBackToParent = { viewModel.selectLessonForDetail(null) },
         // Возврат из другой вкладки с открытым детальным экраном — без въезда.
         initiallyRevealed = remember { selectedLessonForDetail != null },
-        rootContent = { ScheduleMainContent(viewModel = viewModel) },
+        rootContent = { ScheduleMainContent(viewModel = viewModel, onOpenOther = onOpenOther) },
         screenContent = { detailLesson, back ->
             LessonDetailScreen(
                 lesson = detailLesson as Lesson,
@@ -98,7 +100,8 @@ fun ScheduleScreen(
 @Composable
 private fun ScheduleMainContent(
     viewModel: ScheduleViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenOther: (() -> Unit)? = null
 ) {
     val savedTargets by viewModel.savedTargets.collectAsState()
     val selectedTarget by viewModel.selectedTarget.collectAsState()
@@ -177,7 +180,8 @@ private fun ScheduleMainContent(
                 onAddClick = { showAddSheet = true },
                 calendarBadgeDay = if (selectedTarget != null && calendarCollapsed) selectedDate.day else null,
                 onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
-                onCalendarBadgeLongClick = { showMonthPicker = true }
+                onCalendarBadgeLongClick = { showMonthPicker = true },
+                onOpenOtherClick = onOpenOther
             )
         },
         modifier = modifier.fillMaxSize()

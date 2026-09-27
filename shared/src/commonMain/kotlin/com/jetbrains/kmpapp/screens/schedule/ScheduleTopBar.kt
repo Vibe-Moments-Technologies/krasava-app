@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -64,7 +65,9 @@ fun ScheduleTopBar(
     // Тап — развернуть ленту, долгое нажатие — месячный календарь.
     calendarBadgeDay: Int? = null,
     onCalendarBadgeClick: () -> Unit = {},
-    onCalendarBadgeLongClick: () -> Unit = {}
+    onCalendarBadgeLongClick: () -> Unit = {},
+    // Видна при скрытом доке: открывает «Другое» подстраницей расписания.
+    onOpenOtherClick: (() -> Unit)? = null
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
 
@@ -217,6 +220,21 @@ fun ScheduleTopBar(
                     contentDescription = "Добавить расписание",
                     modifier = Modifier.size(22.dp)
                 )
+            }
+
+            if (onOpenOtherClick != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = onOpenOtherClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Другое",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
         }
     }

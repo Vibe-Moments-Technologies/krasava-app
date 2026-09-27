@@ -73,6 +73,10 @@ class ScheduleStorage(
     private val _dockTabs = MutableStateFlow<List<AppTab>>(DEFAULT_DOCK_TABS)
     val dockTabs: StateFlow<List<AppTab>> = _dockTabs.asStateFlow()
 
+    /** Док скрыт целиком: «Другое» открывается шестерёнкой на странице расписания. */
+    private val _dockHidden = MutableStateFlow(false)
+    val dockHidden: StateFlow<Boolean> = _dockHidden.asStateFlow()
+
     private val _themeOverlay = MutableStateFlow(ThemeOverlay.NONE)
     val themeOverlay: StateFlow<ThemeOverlay> = _themeOverlay.asStateFlow()
 
@@ -162,6 +166,7 @@ class ScheduleStorage(
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
+        _dockHidden.value = loadBooleanFlag(KEY_DOCK_HIDDEN, false)
     }
 
     private fun loadBooleanFlag(key: String, default: Boolean): Boolean = try {
@@ -517,6 +522,17 @@ class ScheduleStorage(
         }
     }
 
+    fun setDockHidden(hidden: Boolean) {
+        _dockHidden.value = hidden
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_DOCK_HIDDEN, hidden.toString())
+            } catch (e: Exception) {
+                println("Failed to persist dock hidden flag: ${e.message}")
+            }
+        }
+    }
+
     private fun sanitizeDockTabs(tabs: List<AppTab>): List<AppTab> {
         return try {
             var middle = tabs.filter { !it.isFixed }.distinct().take(3)
@@ -685,6 +701,7 @@ class ScheduleStorage(
         _showAbbreviatedNames.value = false
         _themeMode.value = ThemeMode.SYSTEM
         _dockTabs.value = DEFAULT_DOCK_TABS
+        _dockHidden.value = false
         _themeOverlay.value = ThemeOverlay.NONE
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
@@ -707,6 +724,7 @@ class ScheduleStorage(
             platformStorage.saveString(KEY_VPN_WARNING_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, notifyMinutesBeforeBefore.toString())
             platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, askBeforeNoteDeleteBefore.toString())
+            platformStorage.saveString(KEY_DOCK_HIDDEN, false.toString())
             platformStorage.saveString(KEY_NOTES, json.encodeToString(_notePages.value))
         }
     }
@@ -786,6 +804,7 @@ class ScheduleStorage(
         private const val KEY_SHOW_ABBREVIATED_NAMES = "krasava_show_abbreviated_names"
         private const val KEY_APP_THEME = "krasava_app_theme"
         private const val KEY_DOCK_TABS = "krasava_dock_tabs_order"
+        private const val KEY_DOCK_HIDDEN = "krasava_dock_hidden"
         private const val KEY_SAKURA_THEME = "krasava_sakura_theme_secret"
         private const val KEY_CYBERPUNK_THEME = "krasava_cyberpunk_theme_secret"
         private const val KEY_MATRIX_THEME = "krasava_matrix_theme_secret"

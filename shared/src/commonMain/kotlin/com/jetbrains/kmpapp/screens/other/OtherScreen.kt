@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -61,11 +62,18 @@ fun OtherScreen(
     compareViewModel: com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel = org.koin.compose.viewmodel.koinViewModel(),
     notesViewModel: com.jetbrains.kmpapp.screens.notes.NotesViewModel = org.koin.compose.viewmodel.koinViewModel(),
     onNavigateToTab: (AppTab) -> Unit = {},
+    // Не null при скрытом доке: «Другое» — подстраница расписания,
+    // стрелка/свайп/системный «назад» возвращают к расписанию.
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val activeSubScreen by viewModel.activeSubScreen.collectAsState()
     val updateResult by viewModel.updateResult.collectAsState()
     val uriHandler = LocalUriHandler.current
+
+    if (onBack != null) {
+        com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = onBack)
+    }
 
     val childScreen = activeSubScreen.takeIf { it != OtherSubScreen.ROOT }
     LayeredNavHost(
@@ -84,7 +92,8 @@ fun OtherScreen(
             OtherMainContent(
                 viewModel = viewModel,
                 onNavigate = { viewModel.navigateToSubScreen(it) },
-                onNavigateToTab = onNavigateToTab
+                onNavigateToTab = onNavigateToTab,
+                onBack = onBack
             )
         },
         screenContent = { subScreen, back ->
@@ -192,23 +201,29 @@ private fun OtherMainContent(
     viewModel: OtherViewModel,
     onNavigate: (OtherSubScreen) -> Unit,
     onNavigateToTab: (AppTab) -> Unit,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val savedTargets by viewModel.savedTargets.collectAsState()
     val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsState()
     val updateResult by viewModel.updateResult.collectAsState()
     val dockTabs by viewModel.dockTabs.collectAsState()
+    val dockHidden by viewModel.dockHidden.collectAsState()
     val uriHandler = LocalUriHandler.current
-    val hiddenTabs = remember(dockTabs) {
-        // Если раздел «Сервисы» в доке — блок в «Другом» скрыт целиком
-        // (правило владельца), вне зависимости от остальных вкладок.
-        if (dockTabs.take(5).contains(AppTab.SERVICES)) {
-            emptyList()
-        } else {
-            // Сам «Сервисы» в блок не входит: это контейнер, а не сервис,
-            // добавляется в док из настроек дока.
-            AppTab.entries.filter {
-                it != AppTab.OTHER && it != AppTab.SERVICES && it !in dockTabs.take(5)
+    val hiddenTabs = remember(dockTabs, dockHidden) {
+        when {
+            // Док скрыт: все разделы, кроме «Другого», живут блоками здесь.
+            // Контейнер «Сервисы» не показываем — реальные сервисы и так в блоке.
+            dockHidden -> AppTab.entries.filter { it != AppTab.OTHER && it != AppTab.SERVICES }
+            // Если раздел «Сервисы» в доке — блок в «Другом» скрыт целиком
+            // (правило владельца), вне зависимости от остальных вкладок.
+            dockTabs.take(5).contains(AppTab.SERVICES) -> emptyList()
+            else -> {
+                // Сам «Сервисы» в блок не входит: это контейнер, а не сервис,
+                // добавляется в док из настроек дока.
+                AppTab.entries.filter {
+                    it != AppTab.OTHER && it != AppTab.SERVICES && it !in dockTabs.take(5)
+                }
             }
         }
     }
@@ -238,12 +253,26 @@ private fun OtherMainContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Другое",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад"
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(4.dp))
+                    }
+                    Text(
+                        text = "Другое",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
                 IconButton(onClick = { onNavigate(OtherSubScreen.ABOUT) }) {
                     Icon(
                         imageVector = Icons.Outlined.Info,

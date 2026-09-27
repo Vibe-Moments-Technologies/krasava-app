@@ -25,6 +25,7 @@ import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
+import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleScreen
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
 import com.jetbrains.kmpapp.screens.map.MapScreen
@@ -91,6 +92,7 @@ fun App() {
     val themeMode by repository.themeMode.collectAsState()
     val themeOverlay by repository.themeOverlay.collectAsState()
     val dockTabs by repository.dockTabs.collectAsState()
+    val dockHidden by repository.dockHidden.collectAsState()
 
     val scheduleViewModel: ScheduleViewModel = koinViewModel()
     val otherViewModel: OtherViewModel = koinViewModel()
@@ -120,6 +122,23 @@ fun App() {
             color = MaterialTheme.colorScheme.background
         ) {
             var currentTab by remember { mutableStateOf(AppTab.SCHEDULE) }
+            // Скрытый док: «Другое» — не вкладка, а подстраница расписания
+            // (шестерёнка в топбаре, назад — стрелка/свайп/системная кнопка).
+            var showOtherAsChild by remember { mutableStateOf(false) }
+
+            LaunchedEffect(dockHidden) {
+                if (dockHidden) {
+                    when (currentTab) {
+                        AppTab.OTHER -> showOtherAsChild = true
+                        AppTab.SCHEDULE -> {}
+                        // Остальные вкладки без дока недостижимы — возвращаемся к расписанию.
+                        else -> currentTab = AppTab.SCHEDULE
+                    }
+                } else if (showOtherAsChild) {
+                    currentTab = AppTab.OTHER
+                    showOtherAsChild = false
+                }
+            }
 
             LaunchedEffect(Unit) {
                 kotlinx.coroutines.delay(2000)
@@ -131,6 +150,29 @@ fun App() {
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
+                if (dockHidden) {
+                    // Док скрыт: корень — расписание, «Другое» открывается
+                    // дочерним слоем (шестерёнка в топбаре) со свайпом-назад.
+                    LayeredNavHost(
+                        screen = if (showOtherAsChild) AppTab.OTHER else null,
+                        parentScreen = null,
+                        onBackToParent = { showOtherAsChild = false },
+                        initiallyRevealed = showOtherAsChild,
+                        rootContent = {
+                            ScheduleScreen(
+                                viewModel = scheduleViewModel,
+                                onOpenOther = { showOtherAsChild = true }
+                            )
+                        },
+                        screenContent = { _, back ->
+                            OtherScreen(
+                                viewModel = otherViewModel,
+                                onNavigateToTab = { currentTab = it },
+                                onBack = back
+                            )
+                        }
+                    )
+                } else {
                 Crossfade(targetState = currentTab) { tab ->
                     when (tab) {
                         AppTab.SCHEDULE -> {
@@ -208,6 +250,7 @@ fun App() {
                         backModeTab = backModeTab,
                         modifier = Modifier.align(Alignment.BottomCenter)
                     )
+                }
                 }
             }
         }

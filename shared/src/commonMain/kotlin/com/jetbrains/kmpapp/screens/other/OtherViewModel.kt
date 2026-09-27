@@ -140,6 +140,7 @@ class OtherViewModel(
     fun scrollState(key: String): androidx.compose.foundation.ScrollState =
         scrollStates.getOrPut(key) { androidx.compose.foundation.ScrollState(0) }
     val dockTabs: StateFlow<List<AppTab>> = repository.dockTabs
+    val dockHidden: StateFlow<Boolean> = repository.dockHidden
     val appIcon: StateFlow<String> = repository.appIcon
     val notificationsEnabled: StateFlow<Boolean> = repository.notificationsEnabled
     val notifyMinutesBefore: StateFlow<Int> = repository.notifyMinutesBefore
@@ -196,6 +197,10 @@ class OtherViewModel(
 
     fun setDockTabs(tabs: List<AppTab>) {
         repository.setDockTabs(tabs)
+    }
+
+    fun setDockHidden(hidden: Boolean) {
+        repository.setDockHidden(hidden)
     }
 
     private val _activeSubScreen = MutableStateFlow(OtherSubScreen.ROOT)
