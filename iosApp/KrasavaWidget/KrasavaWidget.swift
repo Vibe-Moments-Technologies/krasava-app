@@ -114,7 +114,7 @@ struct LessonRow: View {
     let showDate: Bool
 
     var body: some View {
-        HStack(alignment = .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(lesson.start)
                     .font(.caption).bold()
