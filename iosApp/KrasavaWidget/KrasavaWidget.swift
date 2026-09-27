@@ -24,10 +24,30 @@ enum WidgetData {
     static let suiteName = "group.ru.vibemoments.krasava"
     static let key = "widget_snapshot"
 
-    static func load() -> WSnapshot? {
+    enum State {
+        /// У процесса нет entitlements на App Group — переподпись не добавила группу.
+        case noGroup
+        /// Группа есть, но приложение ещё ничего не написало (или у приложения нет группы).
+        case noData
+        /// Группа есть, данные есть, но не читаются.
+        case badData
+        case ok(WSnapshot)
+    }
+
+    static func load() -> State {
+        // containerURL, в отличие от UserDefaults(suiteName:), возвращает nil
+        // без entitlements — это единственный честный способ понять,
+        // что группа не прописана в подписи этого процесса.
+        guard FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: suiteName) != nil else {
+            return .noGroup
+        }
         guard let defaults = UserDefaults(suiteName: suiteName),
-              let json = defaults.string(forKey: key) else { return nil }
-        return try? JSONDecoder().decode(WSnapshot.self, from: Data(json.utf8))
+              let json = defaults.string(forKey: key) else { return .noData }
+        guard let snap = try? JSONDecoder().decode(WSnapshot.self, from: Data(json.utf8)) else {
+            return .badData
+        }
+        return .ok(snap)
     }
 }
 
@@ -73,19 +93,30 @@ extension WLesson {
 struct Entry: TimelineEntry {
     let date: Date
     let snapshot: WSnapshot?
+    let state: WidgetData.State
+
+    /// Для снапшота галереи виджетов и превью — «идеальный» вариант.
+    static func preview(_ snapshot: WSnapshot? = nil, date: Date = Date()) -> Entry {
+        Entry(date: date, snapshot: snapshot, state: snapshot.map { .ok($0) } ?? .noData)
+    }
 }
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> Entry {
-        Entry(date: Date(), snapshot: nil)
+        Entry.preview()
     }
 
     func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
-        completion(Entry(date: Date(), snapshot: WidgetData.load()))
+        let state = WidgetData.load()
+        let snap: WSnapshot?
+        if case .ok(let s) = state { snap = s } else { snap = nil }
+        completion(Entry(date: Date(), snapshot: snap, state: state))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-        let snap = WidgetData.load()
+        let state = WidgetData.load()
+        let snap: WSnapshot?
+        if case .ok(let s) = state { snap = s } else { snap = nil }
         let now = Date()
         var dates: [Date] = []
         // Границы пар: начало/конец каждой предстоящей — виджет обновится
@@ -163,19 +194,53 @@ struct KrasavaWidgetView: View {
             if let snap = entry.snapshot {
                 content(snap)
             } else {
-                VStack(spacing: 6) {
-                    Image(systemName: "calendar.badge.plus")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    Text("Добавьте расписание в приложении")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .padding()
+                emptyState
             }
         }
         .containerBackgroundCompat()
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        switch entry.state {
+        case .noGroup:
+            VStack(spacing: 6) {
+                Image(systemName: "exclamationmark.shield")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+                Text("Нет App Group в подписи")
+                    .font(.caption).bold()
+                Text("Переподпишите приложение и виджет с группой group.ru.vibemoments.krasava")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+        case .badData:
+            VStack(spacing: 6) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.title2)
+                    .foregroundColor(.orange)
+                Text("Данные виджета не читаются")
+                    .font(.caption).bold()
+                Text("Обновите снапшот: откройте приложение и сверните его")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+        case .noData, .ok:
+            VStack(spacing: 6) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.title2)
+                    .foregroundColor(.secondary)
+                Text("Добавьте расписание в приложении")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .padding()
+        }
     }
 
     @ViewBuilder

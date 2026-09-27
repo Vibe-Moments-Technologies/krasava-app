@@ -3,14 +3,18 @@ import Shared
 import WidgetKit
 
 /// Запись снапшота расписания в App Group для виджета.
-/// Нет контейнера (сборка без App Group в подписи) — молча пропускаем.
+/// Нет контейнера (сборка/подпись без App Group) — молча пропускаем:
+/// UserDefaults(suiteName:) без entitlements не падает, а пишет в изолированную
+/// песочницу — проверяем контейнер явно, чтобы не врать, что синхронизировали.
 enum WidgetSync {
     static let suiteName = "group.ru.vibemoments.krasava"
     static let key = "widget_snapshot"
 
     static func push() {
-        guard let json = WidgetBridge.shared.snapshotJson(),
-              let defaults = UserDefaults(suiteName: suiteName) else { return }
+        guard FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: suiteName) != nil,
+            let json = WidgetBridge.shared.snapshotJson(),
+            let defaults = UserDefaults(suiteName: suiteName) else { return }
         defaults.set(json, forKey: key)
         WidgetCenter.shared.reloadAllTimelines()
     }
