@@ -132,8 +132,8 @@ struct Provider: TimelineProvider {
         }
         dates.append(now.addingTimeInterval(3600))
 
-        var entries = [Entry(date: now, snapshot: snap)]
-        entries += dates.sorted().prefix(10).map { Entry(date: $0, snapshot: snap) }
+        var entries = [Entry(date: now, snapshot: snap, state: state)]
+        entries += dates.sorted().prefix(10).map { Entry(date: $0, snapshot: snap, state: state) }
         completion(Timeline(entries: entries, policy: .atEnd))
     }
 }
