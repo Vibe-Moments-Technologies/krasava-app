@@ -180,7 +180,7 @@ fun OtherScreen(
                 }
                 OtherSubScreen.SERVICE_MAP -> {
                     com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)
-                    com.jetbrains.kmpapp.screens.map.MapScreen()
+                    com.jetbrains.kmpapp.screens.map.MapScreen(onBack = back)
                 }
                 OtherSubScreen.SERVICE_NOTES -> {
                     com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)

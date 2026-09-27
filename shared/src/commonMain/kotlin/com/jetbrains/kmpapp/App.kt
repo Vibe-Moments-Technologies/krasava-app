@@ -122,23 +122,6 @@ fun App() {
             color = MaterialTheme.colorScheme.background
         ) {
             var currentTab by remember { mutableStateOf(AppTab.SCHEDULE) }
-            // Скрытый док: «Другое» — не вкладка, а подстраница расписания
-            // (шестерёнка в топбаре, назад — стрелка/свайп/системная кнопка).
-            var showOtherAsChild by remember { mutableStateOf(false) }
-
-            LaunchedEffect(dockHidden) {
-                if (dockHidden) {
-                    when (currentTab) {
-                        AppTab.OTHER -> showOtherAsChild = true
-                        AppTab.SCHEDULE -> {}
-                        // Остальные вкладки без дока недостижимы — возвращаемся к расписанию.
-                        else -> currentTab = AppTab.SCHEDULE
-                    }
-                } else if (showOtherAsChild) {
-                    currentTab = AppTab.OTHER
-                    showOtherAsChild = false
-                }
-            }
 
             LaunchedEffect(Unit) {
                 kotlinx.coroutines.delay(2000)
@@ -151,17 +134,21 @@ fun App() {
 
             Box(modifier = Modifier.fillMaxSize()) {
                 if (dockHidden) {
-                    // Док скрыт: корень — расписание, «Другое» открывается
-                    // дочерним слоем (шестерёнка в топбаре) со свайпом-назад.
+                    // Док скрыт: корень — расписание, «Другое» — его дочерний
+                    // слой (шестерёнка в топбаре, назад — стрелка/свайп/системная).
+                    // Единый источник истины — currentTab: при переключении
+                    // тумблера из «Другого» нет кадра-вспышки другой страницы.
                     LayeredNavHost(
-                        screen = if (showOtherAsChild) AppTab.OTHER else null,
+                        screen = if (currentTab == AppTab.OTHER) AppTab.OTHER else null,
                         parentScreen = null,
-                        onBackToParent = { showOtherAsChild = false },
-                        initiallyRevealed = showOtherAsChild,
+                        onBackToParent = { currentTab = AppTab.SCHEDULE },
+                        // Только на момент создания ветки: если док скрыли,
+                        // уже находясь в «Другом», — показать сразу, без въезда.
+                        initiallyRevealed = remember { currentTab == AppTab.OTHER },
                         rootContent = {
                             ScheduleScreen(
                                 viewModel = scheduleViewModel,
-                                onOpenOther = { showOtherAsChild = true }
+                                onOpenOther = { currentTab = AppTab.OTHER }
                             )
                         },
                         screenContent = { _, back ->

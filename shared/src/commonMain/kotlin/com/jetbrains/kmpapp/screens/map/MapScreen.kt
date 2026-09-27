@@ -77,7 +77,11 @@ import kotlin.math.roundToInt
 
 @Composable
 fun MapScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Не null, когда карта открыта подстраницей (например, из «Другого»
+    // при скрытом доке): свайп-назад здесь отключён — карта управляет
+    // жестами сама, поэтому выход нужен видимой кнопкой.
+    onBack: (() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
     val controller = remember { CampusMapController() }
@@ -194,6 +198,15 @@ fun MapScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (onBack != null) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Назад"
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Box(modifier = Modifier.weight(1f)) {
                     Surface(
                         color = MaterialTheme.colorScheme.surfaceContainer,

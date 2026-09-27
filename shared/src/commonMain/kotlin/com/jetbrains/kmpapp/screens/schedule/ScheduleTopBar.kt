@@ -31,7 +31,6 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -224,14 +223,13 @@ fun ScheduleTopBar(
 
             if (onOpenOtherClick != null) {
                 Spacer(modifier = Modifier.width(8.dp))
-                IconButton(
+                FilledIconButton(
                     onClick = onOpenOtherClick,
                     modifier = Modifier.size(40.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Settings,
                         contentDescription = "Другое",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
                 }

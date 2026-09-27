@@ -34,7 +34,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -60,7 +59,6 @@ fun DockSettingsScreen(
     PlatformBackHandler(onBack = onBack)
 
     val dockTabs by viewModel.dockTabs.collectAsState()
-    val dockHidden by viewModel.dockHidden.collectAsState()
     val availableHiddenTabs = AppTab.entries.filter { it !in dockTabs }
     // Сервисы закреплены, если в доке нет ни одного другого скрываемого
     // раздела: минус по ним не работает, показывает подсказку.
@@ -117,33 +115,6 @@ fun DockSettingsScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp)
                 )
-            }
-
-            // Скрыть док целиком: «Другое» становится подстраницей расписания
-            // (шестерёнка в топбаре), все сервисы — блоками внутри «Другого».
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Скрывать панель навигации", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Нижняя панель исчезнет. «Другое» будет открываться шестерёнкой на странице расписания, а все сервисы станут блоками внутри «Другого».",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Switch(checked = dockHidden, onCheckedChange = viewModel::setDockHidden)
-                }
             }
 
             // Section 1: Active in Dock
