@@ -50,4 +50,52 @@ enum AppGroupLocator {
         }
         return nil
     }
+
+    /// Все группы из профиля (для диагностики в меню отладки).
+    static func profileGroups() -> [String] {
+        let appBundleURL = Bundle.main.bundleURL
+        guard let profileURL = Bundle(url: appBundleURL)?
+            .url(forResource: "embedded", withExtension: "mobileprovision"),
+            let data = try? Data(contentsOf: profileURL),
+            let text = String(data: data, encoding: .isoLatin1),
+            let start = text.range(of: "<?xml"),
+            let end = text.range(of: "</plist>", range: start.lowerBound..<text.endIndex),
+            let plist = try? PropertyListSerialization.propertyList(
+                from: Data(String(text[start.lowerBound..<end.upperBound]).utf8),
+                options: [], format: nil) as? [String: Any],
+            let entitlements = plist["Entitlements"] as? [String: Any],
+            let groups = entitlements["com.apple.security.application-groups"] as? [String] else {
+            return []
+        }
+        return groups
+    }
+
+    /// Диагностика для меню отладки: что этот процесс видит.
+    static func debugInfo() -> String {
+        var lines: [String] = []
+        lines.append("bundleId: \(Bundle.main.bundleIdentifier ?? "?")")
+        let profileGroups = profileGroups()
+        lines.append("групп в профиле: \(profileGroups.count)")
+        for g in profileGroups {
+            let alive = FileManager.default.containerURL(
+                forSecurityApplicationGroupIdentifier: g) != nil
+            lines.append("  \(g) — контейнер: \(alive ? "есть" : "нет")")
+        }
+        if profileGroups.isEmpty {
+            lines.append("  (embedded.mobileprovision не найден или без групп)")
+        }
+        if let suite = availableSuiteName() {
+            lines.append("выбранная группа: \(suite)")
+        } else {
+            lines.append("выбранная группа: нет доступного контейнера")
+        }
+        return lines.joined(separator: "\n")
+    }
+}
+
+/// Движок для общего AppRuntimeInfo (меню отладки).
+final class AppGroupInfoEngine: AppRuntimeInfoEngine {
+    func debugInfo() -> String {
+        AppGroupLocator.debugInfo()
+    }
 }

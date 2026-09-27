@@ -35,6 +35,7 @@ struct iOSApp: App {
         notifications.sweepStaleLessonReminders()
         NotificationPresenter.shared.attach()
         VpnStatus.shared.setEngine(newEngine: VpnEngine())
+        AppRuntimeInfo.shared.setEngine(newEngine: AppGroupInfoEngine())
     }
 
     var body: some Scene {

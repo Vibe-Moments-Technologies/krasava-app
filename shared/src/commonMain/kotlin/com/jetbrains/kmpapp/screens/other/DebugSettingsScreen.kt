@@ -46,6 +46,7 @@ import com.jetbrains.kmpapp.data.DebugConfig
 import com.jetbrains.kmpapp.data.analytics.AppDiagnostics
 import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
+import com.jetbrains.kmpapp.data.widget.AppRuntimeInfo
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 
 @Composable
@@ -131,6 +132,23 @@ fun DebugSettingsScreen(
                 enabled = !AppDiagnostics.isForced,
                 onCheckedChange = viewModel::setDiagnosticsEnabled
             )
+            DebugCard {
+                Text(
+                    "Сведения о приложении",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    "bundle id, профиль подписи, App Group виджета и доступность контейнеров.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    AppRuntimeInfo.debugInfo(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
             DebugCard {
                 Text(
                     "Проверка связи",
