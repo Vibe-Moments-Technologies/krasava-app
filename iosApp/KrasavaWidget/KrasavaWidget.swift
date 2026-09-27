@@ -95,7 +95,8 @@ struct Provider: TimelineProvider {
             if let e = l.endDate, e > now { dates.append(e) }
         }
         // Полночь + почасовая страховка (на случай рассинхрона данных).
-        if let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now)) as Date? {
+        let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now))
+        if let midnight = midnight {
             dates.append(midnight)
         }
         dates.append(now.addingTimeInterval(3600))
@@ -182,14 +183,15 @@ struct KrasavaWidgetView: View {
         let now = entry.date
         let current = snap.lessons.first { $0.isCurrent(at: now) }
         let upcoming = snap.lessons.filter { $0.isUpcoming(at: now) }
+        let all = (current.map { [$0] } ?? []) + upcoming
 
         switch family {
         case .systemSmall:
             smallView(snap: snap, current: current, upcoming: upcoming)
         case .systemMedium:
-            listView(snap: snap, lessons: Array((current.map { [$0] } ?? []) + upcoming).prefix(3), title: nil, compact: true)
+            listView(snap: snap, lessons: Array(all.prefix(3)), title: nil, compact: true)
         case .systemLarge:
-            listView(snap: snap, lessons: Array((current.map { [$0] } ?? []) + upcoming).prefix(10), title: nil, compact: false)
+            listView(snap: snap, lessons: Array(all.prefix(10)), title: nil, compact: false)
         default:
             smallView(snap: snap, current: current, upcoming: upcoming)
         }
