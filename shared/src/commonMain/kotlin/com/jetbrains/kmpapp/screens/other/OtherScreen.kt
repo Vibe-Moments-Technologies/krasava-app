@@ -53,6 +53,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
+import com.jetbrains.kmpapp.screens.components.isService
 
 @Composable
 fun OtherScreen(
@@ -212,19 +213,14 @@ private fun OtherMainContent(
     val uriHandler = LocalUriHandler.current
     val hiddenTabs = remember(dockTabs, dockHidden) {
         when {
-            // Док скрыт: все разделы, кроме «Другого», живут блоками здесь.
-            // Контейнер «Сервисы» не показываем — реальные сервисы и так в блоке.
-            dockHidden -> AppTab.entries.filter { it != AppTab.OTHER && it != AppTab.SERVICES }
+            // Док скрыт: все сервисы живут блоками здесь. «Расписание» и
+            // «Другое» — фиксированные вкладки, не сервисы (isService),
+            // контейнер «Сервисы» дублировал бы сам блок.
+            dockHidden -> AppTab.entries.filter { it.isService }
             // Если раздел «Сервисы» в доке — блок в «Другом» скрыт целиком
             // (правило владельца), вне зависимости от остальных вкладок.
             dockTabs.take(5).contains(AppTab.SERVICES) -> emptyList()
-            else -> {
-                // Сам «Сервисы» в блок не входит: это контейнер, а не сервис,
-                // добавляется в док из настроек дока.
-                AppTab.entries.filter {
-                    it != AppTab.OTHER && it != AppTab.SERVICES && it !in dockTabs.take(5)
-                }
-            }
+            else -> AppTab.entries.filter { it.isService && it !in dockTabs.take(5) }
         }
     }
     // Сервис из блока открывается подстраницей «Другого» (назад — свайп и
