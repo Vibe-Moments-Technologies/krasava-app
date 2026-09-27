@@ -3,21 +3,17 @@ import Shared
 import WidgetKit
 
 /// Запись снапшота расписания в App Group для виджета.
-/// Нет контейнера (сборка/подпись без App Group) — молча пропускаем:
-/// UserDefaults(suiteName:) без entitlements не падает, а пишет в изолированную
-/// песочницу — проверяем контейнер явно, чтобы не врать, что синхронизировали.
+/// Группа определяется в рантайме из профиля, которым подписали приложение
+/// (GBox/esign/дистрибутив) — см. AppGroupLocator. Нет контейнера — молча
+/// пропускаем: UserDefaults(suiteName:) без entitlements не падает, а пишет
+/// в изолированную песочницу — проверяем контейнер явно.
 enum WidgetSync {
-    // Группа из mobileprovision, которым переподписывается IPA: профиль
-    // разрешает только group.c2fefdd0db2e255e.* — своя группа невозможна.
-    // Совпадает с WidgetData.suiteName в KrasavaWidget.swift.
-    static let suiteName = "group.c2fefdd0db2e255e.1"
     static let key = "widget_snapshot"
 
     static func push() {
-        guard FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: suiteName) != nil,
-            let json = WidgetBridge.shared.snapshotJson(),
-            let defaults = UserDefaults(suiteName: suiteName) else { return }
+        guard let suite = AppGroupLocator.availableSuiteName(),
+              let json = WidgetBridge.shared.snapshotJson(),
+              let defaults = UserDefaults(suiteName: suite) else { return }
         defaults.set(json, forKey: key)
         WidgetCenter.shared.reloadAllTimelines()
     }

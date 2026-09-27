@@ -21,10 +21,6 @@ struct WSnapshot: Decodable {
 }
 
 enum WidgetData {
-    // Группа из профиля переподписи (см. WidgetSync.swift): профиль владельца
-    // сертификата разрешает только group.c2fefdd0db2e255e.*, свою группу
-    // зарегистрировать нельзя — поэтому константа одна на оба бинарника.
-    static let suiteName = "group.c2fefdd0db2e255e.1"
     static let key = "widget_snapshot"
 
     enum State {
@@ -38,14 +34,10 @@ enum WidgetData {
     }
 
     static func load() -> State {
-        // containerURL, в отличие от UserDefaults(suiteName:), возвращает nil
-        // без entitlements — это единственный честный способ понять,
-        // что группа не прописана в подписи этого процесса.
-        guard FileManager.default.containerURL(
-            forSecurityApplicationGroupIdentifier: suiteName) != nil else {
-            return .noGroup
-        }
-        guard let defaults = UserDefaults(suiteName: suiteName),
+        // Группа определяется из профиля подписи (см. AppGroupLocator):
+        // приложение может быть переподписано любым инструментом.
+        guard let suite = AppGroupLocator.availableSuiteName() else { return .noGroup }
+        guard let defaults = UserDefaults(suiteName: suite),
               let json = defaults.string(forKey: key) else { return .noData }
         guard let snap = try? JSONDecoder().decode(WSnapshot.self, from: Data(json.utf8)) else {
             return .badData

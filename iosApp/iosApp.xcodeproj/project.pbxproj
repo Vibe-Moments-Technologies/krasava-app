@@ -16,6 +16,8 @@
 		AA2000000000000000000002 /* AppIconEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA2000000000000000000003 /* AppIconEngine.swift */; };
 		BB0000000000000000000011 /* KrasavaWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000001 /* KrasavaWidget.swift */; };
 		BB0000000000000000000012 /* KrasavaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000005 /* KrasavaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		BB0000000000000000000013 /* AppGroupLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* AppGroupLocator.swift */; };
+		BB0000000000000000000014 /* AppGroupLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* AppGroupLocator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,6 +59,7 @@
 		BB0000000000000000000003 /* KrasavaWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KrasavaWidget.entitlements; sourceTree = "<group>"; };
 		BB0000000000000000000004 /* iosApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iosApp.entitlements; sourceTree = "<group>"; };
 		BB0000000000000000000005 /* KrasavaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KrasavaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		BB0000000000000000000006 /* AppGroupLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupLocator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,6 +133,7 @@
 				7555FF82242A565900829871 /* ContentView.swift */,
 				7555FF8C242A565B00829871 /* Info.plist */,
 				BB0000000000000000000004 /* iosApp.entitlements */,
+				BB0000000000000000000006 /* AppGroupLocator.swift */,
 				2152FB032600AC8F00CF470E /* iOSApp.swift */,
 				AA1000000000000000000003 /* SentryDiagnosticsEngine.swift */,
 				AA2000000000000000000003 /* AppIconEngine.swift */,
@@ -279,6 +283,7 @@
 				7555FF83242A565900829871 /* ContentView.swift in Sources */,
 				AA1000000000000000000002 /* SentryDiagnosticsEngine.swift in Sources */,
 				AA2000000000000000000002 /* AppIconEngine.swift in Sources */,
+				BB0000000000000000000013 /* AppGroupLocator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -287,6 +292,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB0000000000000000000011 /* KrasavaWidget.swift in Sources */,
+				BB0000000000000000000014 /* AppGroupLocator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
