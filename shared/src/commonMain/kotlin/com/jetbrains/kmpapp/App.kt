@@ -124,6 +124,8 @@ fun App() {
             var currentTab by remember { mutableStateOf(AppTab.SCHEDULE) }
 
             LaunchedEffect(Unit) {
+                // Мост для виджетов: платформенный код забирает снапшот через него.
+                com.jetbrains.kmpapp.data.widget.WidgetBridge.attach(repository)
                 kotlinx.coroutines.delay(2000)
                 try {
                     if (!repository.isLowPowerMode.value) {
