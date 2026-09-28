@@ -1,5 +1,4 @@
 import Foundation
-import Shared
 
 /// Определение App Group в рантайме: чем бы приложение ни переподписали
 /// (GBox, esign, Sideloadly, дистрибутив Xcode), профиль лежит в бандле в
@@ -91,12 +90,5 @@ enum AppGroupLocator {
             lines.append("выбранная группа: нет доступного контейнера")
         }
         return lines.joined(separator: "\n")
-    }
-}
-
-/// Движок для общего AppRuntimeInfo (меню отладки).
-final class AppGroupInfoEngine: AppRuntimeInfoEngine {
-    func debugInfo() -> String {
-        AppGroupLocator.debugInfo()
     }
 }
