@@ -104,16 +104,9 @@ object MireaICalParser {
             ?: props["SUMMARY"]?.firstOrNull()
             ?: return null
 
-        val rawType = props["X-META-LESSON_TYPE"]?.firstOrNull()
-            ?: props["X-META-FULL_LESSON_TYPE"]?.firstOrNull() ?: ""
-        val lessonType = when {
-            // «доп» раньше «пр»: иначе «доп. практика» уедет в PRACTICE.
-            rawType.contains("доп", ignoreCase = true) -> LessonType.ADDITIONAL
-            rawType.contains("лк", ignoreCase = true) || rawType.contains("лек", ignoreCase = true) -> LessonType.LECTURE
-            rawType.contains("пр", ignoreCase = true) || rawType.contains("прак", ignoreCase = true) -> LessonType.PRACTICE
-            rawType.contains("лаб", ignoreCase = true) -> LessonType.LAB
-            else -> LessonType.OTHER
-        }
+        val rawType = props["X-META-LESSON_TYPE"]?.firstOrNull() ?: ""
+        val fullType = props["X-META-FULL_LESSON_TYPE"]?.firstOrNull() ?: ""
+        val lessonType = resolveLessonType(rawType, fullType)
 
         val teachers = props["X-META-TEACHER"] ?: emptyList()
         val classrooms = props["X-META-AUDITORIUM"] ?: props["LOCATION"] ?: emptyList()
@@ -168,6 +161,52 @@ object MireaICalParser {
                 date = date,
                 groups = groups.filter { it.isNotBlank() }
             )
+        }
+    }
+
+    /**
+     * Определяет тип занятия. Сначала по полному имени (X-META-FULL_LESSON_TYPE) —
+     * оно надёжнее, т.к. филиалы используют свои аббревиатуры (ЛЕК, ЗД, КОНС).
+     * Если полное имя не распознано — по аббревиатуре (X-META-LESSON_TYPE).
+     */
+    private fun resolveLessonType(rawType: String, fullType: String): LessonType {
+        val byFull = resolveByFullName(fullType)
+        if (byFull != null) return byFull
+        return resolveByAbbreviation(rawType)
+    }
+
+    private fun resolveByFullName(fullType: String): LessonType? {
+        val v = fullType.trim().lowercase().replace('ё', 'е')
+        if (v.isEmpty()) return null
+        return when {
+            v.startsWith("доп") -> LessonType.ADDITIONAL
+            v.startsWith("лекц") -> LessonType.LECTURE
+            v.startsWith("практическ") -> LessonType.PRACTICE
+            v.startsWith("лабораторн") -> LessonType.LAB
+            v.startsWith("экзамен") -> LessonType.EXAM
+            v.startsWith("зачет") -> LessonType.CREDIT
+            v.startsWith("курсовая") -> LessonType.COURSE_WORK
+            v.startsWith("курсовой") -> LessonType.COURSE_WORK
+            v.startsWith("консультац") -> LessonType.CONSULTATION
+            v.startsWith("самостоятельн") -> LessonType.INDIVIDUAL_WORK
+            else -> null
+        }
+    }
+
+    private fun resolveByAbbreviation(rawType: String): LessonType {
+        val v = rawType.trim().uppercase()
+        return when {
+            // «доп» раньше «пр»: иначе «доп. практика» уедет в PRACTICE.
+            v.contains("ДОП") -> LessonType.ADDITIONAL
+            v.contains("ЛК") || v.contains("ЛЕК") -> LessonType.LECTURE
+            v.contains("ПР") || v.contains("ПРАК") -> LessonType.PRACTICE
+            v.contains("ЛАБ") || v.contains("ЛР") -> LessonType.LAB
+            v.contains("ЭКЗ") || v == "Э" -> LessonType.EXAM
+            v.contains("ЗАЧ") || v == "З" || v.contains("ЗД") || v.contains("ДЗ") -> LessonType.CREDIT
+            v.contains("КР") -> LessonType.COURSE_WORK
+            v.contains("КОНС") || v.contains("КТ") -> LessonType.CONSULTATION
+            v.contains("СР") -> LessonType.INDIVIDUAL_WORK
+            else -> LessonType.OTHER
         }
     }
 

@@ -31,6 +31,11 @@ enum class LessonType(val displayName: String, val shortName: String) {
     LECTURE("Лекция", "ЛК"),
     PRACTICE("Практика", "ПР"),
     LAB("Лабораторная", "ЛАБ"),
+    EXAM("Экзамен", "ЭКЗ"),
+    CREDIT("Зачёт", "ЗАЧ"),
+    COURSE_WORK("Курсовая", "КР"),
+    CONSULTATION("Консультация", "КОНС"),
+    INDIVIDUAL_WORK("Самост. работа", "СР"),
     OTHER("Занятие", "ДР"),
     ADDITIONAL("Доп. занятие", "ДОП")
 }

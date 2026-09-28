@@ -608,6 +608,26 @@ private val TYPE_BADGE_COLORS = mapOf(
         Color(0xFF7C2D12) to Color(0xFFFED7AA),
         Color(0xFFFED7AA) to Color(0xFFC2410C)
     ),
+    LessonType.EXAM to listOf(
+        Color(0xFF7F1D1D) to Color(0xFFFECACA),
+        Color(0xFFFECACA) to Color(0xFFB91C1C)
+    ),
+    LessonType.CREDIT to listOf(
+        Color(0xFF134E4A) to Color(0xFF99F6E4),
+        Color(0xFF99F6E4) to Color(0xFF0F766E)
+    ),
+    LessonType.COURSE_WORK to listOf(
+        Color(0xFF713F12) to Color(0xFFFDE68A),
+        Color(0xFFFDE68A) to Color(0xFFA16207)
+    ),
+    LessonType.CONSULTATION to listOf(
+        Color(0xFF312E81) to Color(0xFFC7D2FE),
+        Color(0xFFC7D2FE) to Color(0xFF4338CA)
+    ),
+    LessonType.INDIVIDUAL_WORK to listOf(
+        Color(0xFF334155) to Color(0xFFCBD5E1),
+        Color(0xFFCBD5E1) to Color(0xFF475569)
+    ),
     LessonType.OTHER to listOf(
         Color(0xFF581C87) to Color(0xFFE9D5FF),
         Color(0xFFE9D5FF) to Color(0xFF7E22CE)

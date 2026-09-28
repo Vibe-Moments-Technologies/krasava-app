@@ -310,6 +310,9 @@ fun LessonDetailScreen(
                                     colorHex = DefaultSubjectColors[colorIdx],
                                     importance = SubjectImportance.MEDIUM,
                                     assessmentType = when (lesson.lessonType) {
+                                        LessonType.EXAM -> AssessmentType.EXAM
+                                        LessonType.CREDIT -> AssessmentType.TEST
+                                        LessonType.COURSE_WORK -> AssessmentType.COURSE_WORK
                                         LessonType.LAB -> AssessmentType.CREDIT
                                         LessonType.PRACTICE -> AssessmentType.TEST
                                         else -> AssessmentType.EXAM

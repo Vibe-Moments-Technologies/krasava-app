@@ -14,6 +14,7 @@ class MireaICalParserLessonsTest {
 
     private fun event(
         type: String,
+        fullType: String? = null,
         start: String = "20260915T090000",
         end: String = "20260915T103000",
         rrule: String? = null,
@@ -26,6 +27,7 @@ class MireaICalParserLessonsTest {
         sb.appendLine("DTEND;TZID=Europe/Moscow:$end")
         sb.appendLine("SUMMARY:Тестовый предмет")
         sb.appendLine("X-META-LESSON_TYPE:$type")
+        if (fullType != null) sb.appendLine("X-META-FULL_LESSON_TYPE:$fullType")
         sb.appendLine("TRANSP:$transp")
         sb.appendLine("UID:test-uid")
         if (rrule != null) sb.appendLine("RRULE:$rrule")
@@ -54,8 +56,42 @@ class MireaICalParserLessonsTest {
         assertEquals(LessonType.PRACTICE, parseSingle(event("Практические занятия")).lessonType)
         assertEquals(LessonType.LAB, parseSingle(event("ЛАБ")).lessonType)
         assertEquals(LessonType.LAB, parseSingle(event("Лабораторная работа")).lessonType)
-        assertEquals(LessonType.OTHER, parseSingle(event("Экзамен")).lessonType)
+        assertEquals(LessonType.EXAM, parseSingle(event("Экзамен")).lessonType)
         assertEquals(LessonType.OTHER, parseSingle(event("")).lessonType)
+    }
+
+    @Test
+    fun sessionTypes() {
+        assertEquals(LessonType.EXAM, parseSingle(event("ЭКЗ")).lessonType)
+        assertEquals(LessonType.EXAM, parseSingle(event("Э")).lessonType)
+        assertEquals(LessonType.CREDIT, parseSingle(event("ЗАЧ")).lessonType)
+        assertEquals(LessonType.CREDIT, parseSingle(event("З")).lessonType)
+        assertEquals(LessonType.CREDIT, parseSingle(event("ЗД")).lessonType)
+        assertEquals(LessonType.CREDIT, parseSingle(event("ДЗ")).lessonType)
+        assertEquals(LessonType.COURSE_WORK, parseSingle(event("КР")).lessonType)
+        assertEquals(LessonType.CONSULTATION, parseSingle(event("КОНС")).lessonType)
+        assertEquals(LessonType.CONSULTATION, parseSingle(event("КТ")).lessonType)
+        assertEquals(LessonType.INDIVIDUAL_WORK, parseSingle(event("СР")).lessonType)
+    }
+
+    @Test
+    fun branchAbbreviations() {
+        // Филиалы используют свои аббревиатуры
+        assertEquals(LessonType.LECTURE, parseSingle(event("ЛЕК")).lessonType)
+        assertEquals(LessonType.LAB, parseSingle(event("ЛР")).lessonType)
+    }
+
+    @Test
+    fun fullLessonTypeTakesPriority() {
+        // Полное имя надёжнее аббревиатуры: «ЗД» может быть чем угодно,
+        // но «Зачёт дифференцированный» — однозначно зачёт.
+        assertEquals(LessonType.CREDIT, parseSingle(event("ЗД", fullType = "Зачёт дифференцированный")).lessonType)
+        assertEquals(LessonType.LECTURE, parseSingle(event("ЛЕК", fullType = "Лекции")).lessonType)
+        assertEquals(LessonType.PRACTICE, parseSingle(event("ПР", fullType = "Практические занятия")).lessonType)
+        // Нераспознанное полное имя → fallback на аббревиатуру
+        assertEquals(LessonType.LAB, parseSingle(event("ЛАБ", fullType = "Неизвестный вид")).lessonType)
+        // Пустая аббревиатура + полное имя
+        assertEquals(LessonType.COURSE_WORK, parseSingle(event("", fullType = "Курсовая работа")).lessonType)
     }
 
     // ── Номера пар по времени ─────────────────────────────────
