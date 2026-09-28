@@ -1,4 +1,5 @@
 import Foundation
+import Security
 
 /// Определение App Group в рантайме: чем бы приложение ни переподписали
 /// (GBox, esign, Sideloadly, дистрибутив Xcode), профиль лежит в бандле в
@@ -41,8 +42,12 @@ enum AppGroupLocator {
     }
 
     /// Первый контейнер, который реально доступен этому процессу.
+    /// Порядок источников: подпись бинарника (истина), профиль в бандле,
+    /// fallback для дистрибутивной подписи.
     static func availableSuiteName() -> String? {
-        for group in [fromProfile(), fallback].compactMap({ $0 }) {
+        let candidates = (signatureGroups().first.map { [$0] } ?? [])
+            + [fromProfile(), fallback].compactMap({ $0 })
+        for group in candidates {
             if FileManager.default.containerURL(
                 forSecurityApplicationGroupIdentifier: group) != nil {
                 return group
@@ -70,20 +75,50 @@ enum AppGroupLocator {
         return groups
     }
 
+    /// Группы из СОБСТВЕННОЙ подписи бинарника (SecStaticCode) — то, что
+    /// реально вшил инструмент переподписи. Истина в последней инстанции:
+    /// контейнер существует только если группа есть здесь.
+    static func signatureGroups() -> [String] {
+        var staticCode: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &staticCode) == errSecSuccess,
+              let code = staticCode else { return [] }
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(
+                  code, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
+              let dict = info as? [String: Any],
+              let entitlements = dict[kSecCodeInfoEntitlementsDict as String] as? [String: Any],
+              let groups = entitlements["com.apple.security.application-groups"] as? [String] else {
+            return []
+        }
+        return groups
+    }
+
     /// Диагностика для меню отладки: что этот процесс видит.
     static func debugInfo() -> String {
         var lines: [String] = []
         lines.append("bundleId: \(Bundle.main.bundleIdentifier ?? "?")")
-        let profileGroups = profileGroups()
-        lines.append("групп в профиле: \(profileGroups.count)")
-        for g in profileGroups {
+        let sigGroups = signatureGroups()
+        lines.append("групп в подписи: \(sigGroups.count)")
+        for g in sigGroups {
             let alive = FileManager.default.containerURL(
                 forSecurityApplicationGroupIdentifier: g) != nil
             lines.append("  \(g) — контейнер: \(alive ? "есть" : "нет")")
         }
+        if sigGroups.isEmpty {
+            lines.append("  (в подписи нет App Group — инструмент переподписи их не вшил)")
+        }
+        let profileGroups = profileGroups()
+        lines.append("групп в профиле: \(profileGroups.count)")
         if profileGroups.isEmpty {
             lines.append("  (embedded.mobileprovision не найден или без групп)")
         }
+        // Корень бандла: что реально лежит рядом с бинарником.
+        let root = (try? FileManager.default.contentsOfDirectory(
+            atPath: Bundle.main.bundlePath)) ?? []
+        let interesting = root.filter {
+            $0.hasSuffix(".mobileprovision") || $0 == "_CodeSignature" || $0 == "PlugIns"
+        }
+        lines.append("в бандле: \(interesting.isEmpty ? "пусто (нет профиля/подписи/расширений)" : interesting.sorted().joined(separator: ", "))")
         if let suite = availableSuiteName() {
             lines.append("выбранная группа: \(suite)")
         } else {
