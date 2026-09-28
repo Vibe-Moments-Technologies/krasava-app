@@ -2,6 +2,15 @@ import SwiftUI
 import Shared
 import WidgetKit
 
+/// Движок для общего AppRuntimeInfo (карточка «Сведения о приложении»
+/// в меню отладки). Живёт здесь, а не в AppGroupLocator.swift: локатор
+/// компилируется и в таргет виджета, где фреймворк Shared не линкуется.
+final class AppGroupInfoEngine: AppRuntimeInfoEngine {
+    func debugInfo() -> String {
+        AppGroupLocator.debugInfo()
+    }
+}
+
 /// Запись снапшота расписания в App Group для виджета.
 /// Группа определяется в рантайме из профиля, которым подписали приложение
 /// (GBox/esign/дистрибутив) — см. AppGroupLocator. Нет контейнера — молча
