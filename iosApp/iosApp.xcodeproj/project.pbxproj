@@ -18,6 +18,7 @@
 		BB0000000000000000000012 /* KrasavaWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000005 /* KrasavaWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		BB0000000000000000000013 /* AppGroupLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* AppGroupLocator.swift */; };
 		BB0000000000000000000014 /* AppGroupLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* AppGroupLocator.swift */; };
+		BB0000000000000000000015 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000007 /* Security.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,7 @@
 		BB0000000000000000000004 /* iosApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iosApp.entitlements; sourceTree = "<group>"; };
 		BB0000000000000000000005 /* KrasavaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KrasavaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB0000000000000000000006 /* AppGroupLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupLocator.swift; sourceTree = "<group>"; };
+		BB0000000000000000000007 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -68,6 +70,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA1000000000000000000004 /* Sentry in Frameworks */,
+				BB0000000000000000000015 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +78,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB0000000000000000000015 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +96,7 @@
 		42799AB246E5F90AF97AA0EF /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				BB0000000000000000000007 /* Security.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
