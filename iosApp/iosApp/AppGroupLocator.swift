@@ -81,9 +81,9 @@ enum AppGroupLocator {
     /// Xcode 16.4 не экспортирует Code Signing C API в Swift-модуль Security,
     /// поэтому вызываем через dlopen/dlsym — работает независимо от module map.
     static func signatureGroups() -> [String] {
-        // RTLD_DEFAULT — поиск по всем загруженным библиотекам (Security.framework
-        // слинкован в бинарник, его символы в глобальной таблице).
-        guard let createSym = dlsym(RTLD_DEFAULT, "SecStaticCodeCreateWithPath") else { return [] }
+        // RTLD_DEFAULT = ((void*)-1) — макрос, в Swift не экспортируется.
+        let rtldDefault = UnsafeMutableRawPointer(bitPattern: -1)
+        guard let createSym = dlsym(rtldDefault, "SecStaticCodeCreateWithPath") else { return [] }
 
         // SecStaticCodeCreateWithPath(CFURL, SecCSFlags, SecStaticCode*) -> OSStatus
         typealias CreateFn = @convention(c) (CFURL, UInt32, UnsafeMutablePointer<CFTypeRef?>) -> Int32
@@ -96,7 +96,7 @@ enum AppGroupLocator {
 
         // SecCodeCopySigningInformation(SecCode, SecCSFlags, CFDictionary*) -> OSStatus
         typealias CopyInfoFn = @convention(c) (CFTypeRef, UInt32, UnsafeMutablePointer<CFDictionary?>) -> Int32
-        guard let copyInfoSym = dlsym(RTLD_DEFAULT, "SecCodeCopySigningInformation") else { return [] }
+        guard let copyInfoSym = dlsym(rtldDefault, "SecCodeCopySigningInformation") else { return [] }
         let copyInfoFn = unsafeBitCast(copyInfoSym, to: CopyInfoFn.self)
 
         var info: CFDictionary?
