@@ -1,4 +1,5 @@
 import Foundation
+import Shared
 
 /// Определение App Group в рантайме: чем бы приложение ни переподписали
 /// (GBox, esign, Sideloadly, дистрибутив Xcode), профиль лежит в бандле в
