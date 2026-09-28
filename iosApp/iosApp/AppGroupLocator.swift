@@ -1,5 +1,4 @@
 import Foundation
-import Security
 
 /// Определение App Group в рантайме: чем бы приложение ни переподписали
 /// (GBox, esign, Sideloadly, дистрибутив Xcode), профиль лежит в бандле в
@@ -75,21 +74,39 @@ enum AppGroupLocator {
         return groups
     }
 
-    /// Группы из СОБСТВЕННОЙ подписи бинарника (SecStaticCode) — то, что
-    /// реально вшил инструмент переподписи. Истина в последней инстанции:
-    /// контейнер существует только если группа есть здесь.
+    /// Группы из СОБСТВЕННОЙ подписи бинарника — то, что реально вшил
+    /// инструмент переподписи. Истина в последней инстанции: контейнер
+    /// существует только если группа есть здесь.
+    ///
+    /// Xcode 16.4 не экспортирует Code Signing C API в Swift-модуль Security,
+    /// поэтому вызываем через dlopen/dlsym — работает независимо от module map.
     static func signatureGroups() -> [String] {
-        var staticCode: SecStaticCode?
-        guard SecStaticCodeCreateWithPath(Bundle.main.bundleURL as CFURL, [], &staticCode) == errSecSuccess,
+        // RTLD_DEFAULT — поиск по всем загруженным библиотекам (Security.framework
+        // слинкован в бинарник, его символы в глобальной таблице).
+        guard let createSym = dlsym(RTLD_DEFAULT, "SecStaticCodeCreateWithPath") else { return [] }
+
+        // SecStaticCodeCreateWithPath(CFURL, SecCSFlags, SecStaticCode*) -> OSStatus
+        typealias CreateFn = @convention(c) (CFURL, UInt32, UnsafeMutablePointer<CFTypeRef?>) -> Int32
+        let createFn = unsafeBitCast(createSym, to: CreateFn.self)
+
+        var staticCode: CFTypeRef?
+        // kSecCSDefaultFlags = 0
+        guard createFn(Bundle.main.bundleURL as CFURL, 0, &staticCode) == 0,
               let code = staticCode else { return [] }
+
+        // SecCodeCopySigningInformation(SecCode, SecCSFlags, CFDictionary*) -> OSStatus
+        typealias CopyInfoFn = @convention(c) (CFTypeRef, UInt32, UnsafeMutablePointer<CFDictionary?>) -> Int32
+        guard let copyInfoSym = dlsym(RTLD_DEFAULT, "SecCodeCopySigningInformation") else { return [] }
+        let copyInfoFn = unsafeBitCast(copyInfoSym, to: CopyInfoFn.self)
+
         var info: CFDictionary?
-        guard SecCodeCopySigningInformation(
-                  code, SecCSFlags(rawValue: kSecCSSigningInformation), &info) == errSecSuccess,
-              let dict = info as? [String: Any],
-              let entitlements = dict[kSecCodeInfoEntitlementsDict as String] as? [String: Any],
-              let groups = entitlements["com.apple.security.application-groups"] as? [String] else {
-            return []
-        }
+        // kSecCSSigningInformation = 2
+        guard copyInfoFn(code, 2, &info) == 0,
+              let dict = info as? [String: Any] else { return [] }
+
+        // kSecCodeInfoEntitlementsDict = "entitlements"
+        guard let entitlements = dict["entitlements"] as? [String: Any],
+              let groups = entitlements["com.apple.security.application-groups"] as? [String] else { return [] }
         return groups
     }
 
