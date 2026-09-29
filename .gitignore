@@ -68,3 +68,7 @@ images/
 *.jks
 *.p12
 .tmp-ghpages/
+
+# Internal docs - not for git
+ROOM_FACTS_TZ.md
+.tmp-ghpages/
