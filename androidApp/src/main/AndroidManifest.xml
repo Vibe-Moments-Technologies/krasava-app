@@ -3,6 +3,8 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Сетевой статус для детектора VPN (ConnectivityManager.getActiveNetwork) -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <!-- Напоминания о занятиях: показ (API 33+) и точные будильники -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission
