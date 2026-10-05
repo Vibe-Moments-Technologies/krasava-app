@@ -56,7 +56,8 @@ enum class OtherSubScreen(val depth: Int) {
     SERVICE_TASKS(1),
     SERVICE_MAP(1),
     SERVICE_NOTES(1),
-    SERVICE_COMPARE(1)
+    SERVICE_COMPARE(1),
+    SERVICE_GAMES(1)
 }
 
 /** Родитель подстраницы для послойной навигации (null = корень). */
@@ -81,7 +82,8 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SERVICE_TASKS to OtherSubScreen.ROOT,
     OtherSubScreen.SERVICE_MAP to OtherSubScreen.ROOT,
     OtherSubScreen.SERVICE_NOTES to OtherSubScreen.ROOT,
-    OtherSubScreen.SERVICE_COMPARE to OtherSubScreen.ROOT
+    OtherSubScreen.SERVICE_COMPARE to OtherSubScreen.ROOT,
+    OtherSubScreen.SERVICE_GAMES to OtherSubScreen.ROOT
 )
 
 fun OtherSubScreen.parent(): OtherSubScreen? =
@@ -94,6 +96,7 @@ fun AppTab.toServiceSubScreen(): OtherSubScreen? = when (this) {
     AppTab.MAP -> OtherSubScreen.SERVICE_MAP
     AppTab.NOTES -> OtherSubScreen.SERVICE_NOTES
     AppTab.COMPARE -> OtherSubScreen.SERVICE_COMPARE
+    AppTab.GAMES -> OtherSubScreen.SERVICE_GAMES
     else -> null
 }
 
@@ -104,7 +107,8 @@ val OtherSubScreen.isServiceScreen: Boolean
         OtherSubScreen.SERVICE_TASKS,
         OtherSubScreen.SERVICE_MAP,
         OtherSubScreen.SERVICE_NOTES,
-        OtherSubScreen.SERVICE_COMPARE
+        OtherSubScreen.SERVICE_COMPARE,
+        OtherSubScreen.SERVICE_GAMES
     )
 
 class OtherViewModel(

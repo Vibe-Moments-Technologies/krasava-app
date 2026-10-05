@@ -53,7 +53,10 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
+import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import com.jetbrains.kmpapp.screens.components.isService
+import com.jetbrains.kmpapp.screens.games.GamesScreen
+import com.jetbrains.kmpapp.screens.games.GamesViewModel
 
 @Composable
 fun OtherScreen(
@@ -62,6 +65,7 @@ fun OtherScreen(
     freeRoomsViewModel: com.jetbrains.kmpapp.screens.rooms.FreeRoomsViewModel = org.koin.compose.viewmodel.koinViewModel(),
     compareViewModel: com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel = org.koin.compose.viewmodel.koinViewModel(),
     notesViewModel: com.jetbrains.kmpapp.screens.notes.NotesViewModel = org.koin.compose.viewmodel.koinViewModel(),
+    gamesViewModel: GamesViewModel = org.koin.compose.viewmodel.koinViewModel(),
     onNavigateToTab: (AppTab) -> Unit = {},
     // Не null при скрытом доке: «Другое» — подстраница расписания,
     // стрелка/свайп/системный «назад» возвращают к расписанию.
@@ -190,6 +194,10 @@ fun OtherScreen(
                 OtherSubScreen.SERVICE_COMPARE -> {
                     com.jetbrains.kmpapp.screens.components.PlatformBackHandler(onBack = back)
                     com.jetbrains.kmpapp.screens.compare.CompareScheduleScreen(viewModel = compareViewModel)
+                }
+                OtherSubScreen.SERVICE_GAMES -> {
+                    PlatformBackHandler(onBack = back)
+                    GamesScreen(viewModel = gamesViewModel)
                 }
             }
         },

@@ -41,6 +41,8 @@ import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
 import com.jetbrains.kmpapp.screens.map.MapScreen
 import com.jetbrains.kmpapp.screens.notes.NotesScreen
 import com.jetbrains.kmpapp.screens.notes.NotesViewModel
+import com.jetbrains.kmpapp.screens.games.GamesScreen
+import com.jetbrains.kmpapp.screens.games.GamesViewModel
 import com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen
 import com.jetbrains.kmpapp.screens.rooms.FreeRoomsViewModel
 import com.jetbrains.kmpapp.screens.tasks.TasksScreen
@@ -74,7 +76,8 @@ private val SERVICE_DESCRIPTIONS = mapOf(
     AppTab.TASKS to "Дедлайны и задания по предметам",
     AppTab.MAP to "Интерактивные схемы этажей корпусов",
     AppTab.NOTES to "Заметки с цветными полями, хранятся на устройстве",
-    AppTab.COMPARE to "Сравнение расписаний нескольких групп"
+    AppTab.COMPARE to "Сравнение расписаний нескольких групп",
+    AppTab.GAMES to "Сапер и другие игры с рекордами"
 )
 
 // Развёрнутые имена только на этой странице; в доке и блоке — краткие.
@@ -90,6 +93,7 @@ fun ServicesScreen(
     freeRoomsViewModel: FreeRoomsViewModel = org.koin.compose.viewmodel.koinViewModel(),
     compareViewModel: CompareScheduleViewModel = org.koin.compose.viewmodel.koinViewModel(),
     notesViewModel: NotesViewModel = org.koin.compose.viewmodel.koinViewModel(),
+    gamesViewModel: GamesViewModel = org.koin.compose.viewmodel.koinViewModel(),
     modifier: Modifier = Modifier
 ) {
     val activeService by viewModel.activeService.collectAsState()
@@ -160,6 +164,10 @@ fun ServicesScreen(
                 AppTab.COMPARE -> {
                     PlatformBackHandler(onBack = back)
                     CompareScheduleScreen(viewModel = compareViewModel)
+                }
+                AppTab.GAMES -> {
+                    PlatformBackHandler(onBack = back)
+                    GamesScreen(viewModel = gamesViewModel)
                 }
                 else -> {}
             }

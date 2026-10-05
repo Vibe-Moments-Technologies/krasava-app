@@ -38,6 +38,8 @@ import com.jetbrains.kmpapp.screens.rooms.FreeRoomsViewModel
 import com.jetbrains.kmpapp.screens.schedule.ScheduleScreen
 import com.jetbrains.kmpapp.screens.schedule.ScheduleViewModel
 import com.jetbrains.kmpapp.screens.services.ServicesScreen
+import com.jetbrains.kmpapp.screens.games.GamesScreen
+import com.jetbrains.kmpapp.screens.games.GamesViewModel
 import com.jetbrains.kmpapp.screens.services.ServicesViewModel
 import com.jetbrains.kmpapp.screens.other.isServiceScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksScreen
@@ -101,6 +103,7 @@ fun App() {
     val compareViewModel: CompareScheduleViewModel = koinViewModel()
     val notesViewModel: NotesViewModel = koinViewModel()
     val servicesViewModel: ServicesViewModel = koinViewModel()
+    val gamesViewModel: GamesViewModel = koinViewModel()
 
     val systemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
@@ -156,6 +159,7 @@ fun App() {
                         screenContent = { _, back ->
                             OtherScreen(
                                 viewModel = otherViewModel,
+                                gamesViewModel = gamesViewModel,
                                 onNavigateToTab = { currentTab = it },
                                 onBack = back
                             )
@@ -182,15 +186,20 @@ fun App() {
                         AppTab.COMPARE -> {
                             CompareScheduleScreen(viewModel = compareViewModel)
                         }
+                        AppTab.GAMES -> {
+                            GamesScreen(viewModel = gamesViewModel)
+                        }
                         AppTab.SERVICES -> {
                             ServicesScreen(
                                 viewModel = servicesViewModel,
+                                gamesViewModel = gamesViewModel,
                                 dockTabs = dockTabs
                             )
                         }
                         AppTab.OTHER -> {
                             OtherScreen(
                                 viewModel = otherViewModel,
+                                gamesViewModel = gamesViewModel,
                                 onNavigateToTab = { currentTab = it }
                             )
                         }
@@ -205,9 +214,11 @@ fun App() {
                     // иконка раздела меняется на «назад» (тап = возврат).
                     val servicesActiveService by servicesViewModel.activeService.collectAsState()
                     val otherSubScreen by otherViewModel.activeSubScreen.collectAsState()
+                    val activeGame by gamesViewModel.activeGame.collectAsState()
                     val backModeTab = when {
                         currentTab == AppTab.SERVICES && servicesActiveService != null -> AppTab.SERVICES
                         currentTab == AppTab.OTHER && otherSubScreen.isServiceScreen -> AppTab.OTHER
+                        currentTab == AppTab.GAMES && activeGame != null -> AppTab.GAMES
                         else -> null
                     }
                     FloatingDock(
@@ -227,6 +238,9 @@ fun App() {
                                 AppTab.MAP -> {}
                                 AppTab.NOTES -> {}
                                 AppTab.COMPARE -> {}
+                                AppTab.GAMES -> {
+                                    gamesViewModel.closeGame()
+                                }
                                 AppTab.SERVICES -> {
                                     servicesViewModel.closeService()
                                 }
