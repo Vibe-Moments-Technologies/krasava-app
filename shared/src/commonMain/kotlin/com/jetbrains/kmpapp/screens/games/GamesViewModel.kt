@@ -46,6 +46,10 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     private val _flagMode = MutableStateFlow(false)
     val flagMode: StateFlow<Boolean> = _flagMode.asStateFlow()
 
+    /** Клетка, на которой подорвались: для каскадной анимации вскрытия мин. */
+    private val _boomIndex = MutableStateFlow<Int?>(null)
+    val boomIndex: StateFlow<Int?> = _boomIndex.asStateFlow()
+
     /**
      * Рекорды всех вариантов «Сапера»: ключ — [recordKey] варианта,
      * значение — время и дата постановки. Меню показывает рекорд каждой
@@ -88,6 +92,7 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         _board.value = null
         _status.value = MinesweeperStatus.READY
         _elapsedSeconds.value = 0
+        _boomIndex.value = null
     }
 
     fun toggleFlagMode() {
@@ -150,7 +155,10 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         _board.value = updated
         val cell = updated[x, y]
         _status.value = when {
-            cell.isMine -> MinesweeperStatus.LOST
+            cell.isMine -> {
+                _boomIndex.value = updated.index(x, y)
+                MinesweeperStatus.LOST
+            }
             updated.isWon -> MinesweeperStatus.WON
             else -> MinesweeperStatus.PLAYING
         }

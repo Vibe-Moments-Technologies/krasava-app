@@ -52,14 +52,16 @@ data class MinesweeperBoard(
 
     operator fun get(x: Int, y: Int): MinesweeperCell = cells[index(x, y)]
 
-    val mineCount: Int get() = cells.count { it.isMine }
+    // Подсчёты кэшируются: на 64×48 это 3072 клетки, а без кэша каждое
+    // обращение (шапка, проверка победы, каждый тап) сканирует список заново.
+    val mineCount: Int by lazy { cells.count { it.isMine } }
 
-    val flagCount: Int get() = cells.count { it.isFlagged }
+    val flagCount: Int by lazy { cells.count { it.isFlagged } }
 
     /** Остаток мин = всего мин − выставленных флагов (может уйти в минус). */
     val remainingMines: Int get() = mineCount - flagCount
 
-    val revealedSafeCount: Int get() = cells.count { it.isRevealed && !it.isMine }
+    val revealedSafeCount: Int by lazy { cells.count { it.isRevealed && !it.isMine } }
 
     val safeCellCount: Int get() = cells.size - mineCount
 
@@ -89,38 +91,76 @@ object MinesweeperEngine {
     ): MinesweeperBoard {
         require(width > 0 && height > 0) { "Некорректный размер поля ${width}x$height" }
         val total = width * height
-        val safeZone = HashSet<Int>()
+        // Булев массив вместо HashSet: проверка «здесь мина?» становится O(1)
+        // без хэширования, а для поля 64×48 это 3072 обращения на генерацию.
+        val minePlaced = BooleanArray(total)
+        val inSafeZone = BooleanArray(total)
         if (safeX in 0 until width && safeY in 0 until height) {
             for (dy in -1..1) {
                 for (dx in -1..1) {
                     val nx = safeX + dx
                     val ny = safeY + dy
                     if (nx in 0 until width && ny in 0 until height) {
-                        safeZone.add(ny * width + nx)
+                        inSafeZone[ny * width + nx] = true
                     }
                 }
             }
         }
-        // Столько мин, сколько вообще помещается вне безопасной зоны.
-        val candidates = (0 until total).filter { it !in safeZone }.toMutableList()
-        val mineCount = mines.coerceIn(0, candidates.size)
-        candidates.shuffle(random)
-        val mineIndexes = HashSet<Int>()
+        // Двухсторонний partition: безопасные клетки уезжают в конец массива.
+        // После него первые `candidates` индексов — только «игровые» клетки.
+        val order = IntArray(total) { it }
+        var lo = 0
+        var hi = total - 1
+        while (lo <= hi) {
+            if (inSafeZone[order[lo]]) {
+                val swap = order[lo]
+                order[lo] = order[hi]
+                order[hi] = swap
+                hi--
+            } else {
+                lo++
+            }
+        }
+        val candidates = hi + 1
+        val mineCount = mines.coerceIn(0, candidates)
+        // Частичный Fisher–Yates: берём первые mineCount «игровых» клеток.
         for (i in 0 until mineCount) {
-            mineIndexes.add(candidates[i])
+            val slot = i + random.nextInt(candidates - i)
+            val a = order[i]
+            order[i] = order[slot]
+            order[slot] = a
+            minePlaced[order[i]] = true
+        }
+        // Соседи считаются «от мины»: +8 инкрементов на мину вместо вложенного
+        // обхода всех клеток — на 777 минах это 6216 операций вместо 24 576.
+        val adjacent = IntArray(total)
+        for (index in 0 until total) {
+            if (!minePlaced[index]) continue
+            val x = index % width
+            val y = index / width
+            for (dy in -1..1) {
+                val ny = y + dy
+                if (ny < 0 || ny >= height) continue
+                for (dx in -1..1) {
+                    if (dx == 0 && dy == 0) continue
+                    val nx = x + dx
+                    if (nx < 0 || nx >= width) continue
+                    adjacent[ny * width + nx]++
+                }
+            }
         }
         val cells = ArrayList<MinesweeperCell>(total)
         for (index in 0 until total) {
-            val x = index % width
-            val y = index / width
-            val isMine = index in mineIndexes
-            var adjacent = 0
-            if (!isMine) {
-                neighbours(width, height, x, y).forEach { (nx, ny) ->
-                    if (ny * width + nx in mineIndexes) adjacent++
-                }
-            }
-            cells.add(MinesweeperCell(x = x, y = y, isMine = isMine, adjacentMines = adjacent))
+            val isMine = minePlaced[index]
+            cells.add(
+                MinesweeperCell(
+                    x = index % width,
+                    y = index / width,
+                    isMine = isMine,
+                    // У самой мины счётчик соседей остаётся нулевым.
+                    adjacentMines = if (isMine) 0 else adjacent[index]
+                )
+            )
         }
         return MinesweeperBoard(width = width, height = height, cells = cells)
     }
@@ -153,9 +193,16 @@ object MinesweeperEngine {
             cells[index] = cell.copy(isRevealed = true)
             // Область раскрывается только с нулевой клетки.
             if (cell.adjacentMines == 0) {
-                neighbours(board.width, board.height, cell.x, cell.y).forEach { (nx, ny) ->
-                    val next = ny * board.width + nx
-                    if (next !in visited) stack.addLast(next)
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        if (dx == 0 && dy == 0) continue
+                        val nx = cell.x + dx
+                        val ny = cell.y + dy
+                        if (nx in 0 until board.width && ny in 0 until board.height) {
+                            val next = ny * board.width + nx
+                            if (next !in visited) stack.addLast(next)
+                        }
+                    }
                 }
             }
         }
@@ -183,20 +230,4 @@ object MinesweeperEngine {
                 }
             }
         )
-
-    /** Соседние клетки (8 штук) в границах поля. */
-    private fun neighbours(width: Int, height: Int, x: Int, y: Int): List<Pair<Int, Int>> {
-        val result = ArrayList<Pair<Int, Int>>(8)
-        for (dy in -1..1) {
-            for (dx in -1..1) {
-                if (dx == 0 && dy == 0) continue
-                val nx = x + dx
-                val ny = y + dy
-                if (nx in 0 until width && ny in 0 until height) {
-                    result.add(nx to ny)
-                }
-            }
-        }
-        return result
-    }
 }

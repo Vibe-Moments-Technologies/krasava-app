@@ -1,9 +1,17 @@
 package com.jetbrains.kmpapp.screens.games
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,42 +22,68 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.PointerInputChange
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.math.min
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.floor
 
 /**
- * Игра «Сапер». Поле рисуется сеткой клеток: тап открывает клетку,
- * долгое нажатие ставит флаг, двойной тап по числу открывает остаток
- * области вокруг него, если вокруг выставлены все флаги.
+ * Игра «Сапер». Поле рисуется одним Canvas: тап открывает клетку, долгое
+ * нажатие ставит флаг, двойной тап по числу открывает остаток области
+ * вокруг него, если вокруг выставлены все флаги. Щипок и кнопки масштабируют
+ * поле, перетаскивание двигает его по экрану.
  */
 @Composable
 fun MinesweeperScreen(
@@ -62,6 +96,7 @@ fun MinesweeperScreen(
     val elapsed by viewModel.elapsedSeconds.collectAsState()
     val flagMode by viewModel.flagMode.collectAsState()
     val difficulty by viewModel.difficulty.collectAsState()
+    val boomIndex by viewModel.boomIndex.collectAsState()
 
     Column(
         modifier = modifier
@@ -119,25 +154,16 @@ fun MinesweeperScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            contentAlignment = Alignment.Center
-        ) {
-            MinesweeperGrid(
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+            MinesweeperField(
                 width = difficulty.width,
                 height = difficulty.height,
                 board = board,
-                onCellClick = { index ->
-                    viewModel.onCellClick(index)
-                },
-                onCellLongClick = { index ->
-                    viewModel.onCellLongClick(index)
-                },
-                onCellDoubleClick = { index ->
-                    viewModel.onCellDoubleClick(index)
-                }
+                status = status,
+                boomIndex = boomIndex,
+                onCellClick = { viewModel.onCellClick(it) },
+                onCellLongClick = { viewModel.onCellLongClick(it) },
+                onCellDoubleClick = { viewModel.onCellDoubleClick(it) }
             )
         }
 
@@ -240,129 +266,591 @@ private fun ResultCard(
 /** Поле: клетки одинаковые, размер подбирается под свободное место. */
 private val MinCellSize = 20.dp
 
+/** Потолок масштаба: клетку крупнее этого размера считать незачем. */
+private val MaxCellSize = 72.dp
+
+/** Клетки мельче этого размера тапом не открываются — только приблизив поле. */
+private val MinTapCellSize = 14.dp
+
+private const val RevealAnimMillis = 180f
+private const val FlagAnimMillis = 260f
+private const val DoubleTapMillis = 320L
+
+/** Зона у левого края, где живёт свайп «назад»: там поле не перетаскиваем. */
+private val EdgeSwipeZonePx = 200f
+
+private val EaseOutBack = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
+
+private enum class GestureMode { Tap, Pan, Pinch, Cancelled }
+
 /**
- * Поле рисуется сеткой клеток одинакового размера. Размер клетки — это то,
- * сколько места останется под поле после шапки и панелей. На больших
- * вариантах (30×16 и больше) клетка упёрлась бы в непригодный для тапа
- * размер, поэтому снизу стоит минимум: если поле не помещается — клетки
- * берут минимальный размер, а само поле прокручивается в обе стороны.
+ * Поле «Сапёра» одним Canvas: клетки, сетка, превью нажатия и анимации
+ * рисуются здесь, поэтому большое поле не создаёт тысячи нод и не
+ * тормозит. Масштаб и сдвиг — матрица трансформации в момент отрисовки,
+ * поэтому щипок и кнопки масштаба не пересоздают композицию.
  */
 @Composable
-private fun MinesweeperGrid(
+private fun MinesweeperField(
     width: Int,
     height: Int,
     board: MinesweeperBoard?,
+    status: MinesweeperStatus,
+    boomIndex: Int?,
     onCellClick: (Int) -> Unit,
     onCellLongClick: (Int) -> Unit,
     onCellDoubleClick: (Int) -> Unit
 ) {
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        // Если ограничение по высоте бесконечно (поле ещё не измерено) —
-        // считаем клетку по ширине, иначе получится нулевой размер.
-        val byWidth = maxWidth / width.coerceAtLeast(1)
-        val byHeight = maxHeight / height.coerceAtLeast(1)
-        val fitted = if (byHeight.value.isFinite()) minOf(byWidth, byHeight) else byWidth
-        val cell = maxOf(fitted, MinCellSize)
-        val needsScroll = cell * width > maxWidth || cell * height > maxHeight
-        val horizontalState = rememberScrollState()
-        val verticalState = rememberScrollState()
-        val contentModifier = Modifier
-            .size(cell * width, cell * height)
-            .clip(RoundedCornerShape(8.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+    val scheme = MaterialTheme.colorScheme
+    val textMeasurer = rememberTextMeasurer()
+    val scope = rememberCoroutineScope()
 
-        Box(
+    // Масштаб — обычное состояние, а не Animatable: щипок обрабатывается
+    // внутри awaitEachGesture, где suspend-вызовы (snapTo/animateTo) запрещены
+    // restricted-scope. Плавность кнопкам даёт animate() в отдельной корутине.
+    var zoomLevel by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    var framesNeeded by remember { mutableStateOf(false) }
+    val animClock = remember { mutableLongStateOf(0L) }
+
+    // Метки времени раскрытия и установки флага: по ним рисуются анимации.
+    var revealAt by remember { mutableStateOf(LongArray(0)) }
+    var flagAt by remember { mutableStateOf(LongArray(0)) }
+    var prevRevealed = remember { BooleanArray(0) }
+    var prevFlagged = remember { BooleanArray(0) }
+    var lastActionIndex by remember { mutableStateOf(-1) }
+
+    var pressedCell by remember { mutableStateOf(-1) }
+    var pressedSince by remember { mutableStateOf(0L) }
+
+    var lastTapCell by remember { mutableStateOf(-1) }
+    var lastTapTime by remember { mutableStateOf(0L) }
+
+    var hintVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(hintVisible) {
+        if (hintVisible) {
+            delay(2500)
+            hintVisible = false
+        }
+    }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val viewportW = maxWidth
+        val viewportH = maxHeight
+        val fitCell = minOf(viewportW / width, viewportH / height)
+        val baseCell = maxOf(fitCell, MinCellSize)
+        val zoomMin = (fitCell / baseCell).coerceAtMost(1f)
+        val zoomMax = maxOf(MaxCellSize / baseCell, 2f)
+
+        // Dp → пиксели считаем один раз здесь: внутри LaunchedEffect и локальных
+        // функций нет receiver'а Density, а BoxWithConstraintsScope (Compose 1.12)
+        // Density больше не наследует — поэтому плотность берём явно.
+        val density = LocalDensity.current
+        val basePx = with(density) { baseCell.toPx() }
+        val viewportWPx = with(density) { viewportW.toPx() }
+        val viewportHPx = with(density) { viewportH.toPx() }
+
+        val zoom = zoomLevel
+
+        // Глифы измеряются заранее: measure — suspend-функция, а фаза
+        // отрисовки не умеет ждать. Размер шрифта зависит только от клетки.
+        var glyphLayouts by remember { mutableStateOf<Map<String, TextLayoutResult>>(emptyMap()) }
+        LaunchedEffect(baseCell, scheme) {
+            val fontSize = minOf(baseCell.value * 0.5f, 24f).sp
+            glyphLayouts = buildMap {
+                for (n in 1..8) {
+                    put(
+                        n.toString(),
+                        textMeasurer.measure(
+                            n.toString(),
+                            TextStyle(
+                                fontSize = fontSize,
+                                fontWeight = FontWeight.Bold,
+                                color = numberColor(n, scheme)
+                            )
+                        )
+                    )
+                }
+                put("✖", textMeasurer.measure("✖", TextStyle(fontSize = fontSize, color = scheme.onErrorContainer)))
+                put("⚑", textMeasurer.measure("⚑", TextStyle(fontSize = fontSize, color = scheme.error)))
+            }
+        }
+
+        LaunchedEffect(zoom, viewportWPx, viewportHPx) {
+            offset = clampOffset(
+                offset = offset,
+                zoom = zoom,
+                basePx = basePx,
+                width = width,
+                height = height,
+                viewportWPx = viewportWPx,
+                viewportHPx = viewportHPx
+            )
+        }
+
+        LaunchedEffect(board, status) {
+            val b = board ?: return@LaunchedEffect
+            val total = b.width * b.height
+            if (prevRevealed.size != total) {
+                prevRevealed = BooleanArray(total)
+                prevFlagged = BooleanArray(total)
+                revealAt = LongArray(total) { Long.MIN_VALUE }
+                flagAt = LongArray(total) { Long.MIN_VALUE }
+            }
+            val now = withFrameNanos { it }
+            val loss = status == MinesweeperStatus.LOST
+            val win = status == MinesweeperStatus.WON
+            for (i in 0 until total) {
+                val cell = b.cells[i]
+                if (cell.isRevealed && !prevRevealed[i]) {
+                    // Каскад раскрытия идёт от клетки хода; при проигрыше —
+                    // от подорванной мины, при победе флаги встают волной.
+                    val delay = when {
+                        loss && cell.isMine && boomIndex != null ->
+                            minOf(chebyshev(boomIndex, i, b.width) * 25L, 500L)
+                        win -> minOf((cell.x + cell.y) * 6L, 400L)
+                        else -> if (lastActionIndex in 0 until total) {
+                            minOf(chebyshev(lastActionIndex, i, b.width) * 12L, 300L)
+                        } else {
+                            0L
+                        }
+                    }
+                    revealAt[i] = now + delay
+                }
+                if (cell.isFlagged && !prevFlagged[i]) flagAt[i] = now
+                prevRevealed[i] = cell.isRevealed
+                prevFlagged[i] = cell.isFlagged
+            }
+            framesNeeded = true
+        }
+
+        LaunchedEffect(framesNeeded) {
+            if (!framesNeeded) return@LaunchedEffect
+            while (framesNeeded) {
+                withFrameNanos { animClock.longValue = it }
+                framesNeeded = hasActiveAnimations(animClock.longValue, revealAt, flagAt, pressedCell)
+            }
+        }
+
+        // Масштаб от центра вьюпорта: точка в центре остаётся на месте.
+        var zoomJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+        fun zoomBy(factor: Float) {
+            val current = zoomLevel
+            val target = (current * factor).coerceIn(zoomMin, zoomMax)
+            if (target == current) return
+            val ratio = target / current
+            val centerX = viewportWPx / 2f
+            val centerY = viewportHPx / 2f
+            offset = clampOffset(
+                offset = Offset(
+                    centerX - (centerX - offset.x) * ratio,
+                    centerY - (centerY - offset.y) * ratio
+                ),
+                zoom = target,
+                basePx = basePx,
+                width = width,
+                height = height,
+                viewportWPx = viewportWPx,
+                viewportHPx = viewportHPx
+            )
+            // Плавность кнопкам: щипок пишет значение напрямую, кнопки
+            // доезжают анимацией; прошлую анимацию отменяем.
+            zoomJob?.cancel()
+            zoomJob = scope.launch {
+                animate(zoomLevel, target, animationSpec = tween(220)) { v, _ -> zoomLevel = v }
+            }
+        }
+
+        Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .let { if (needsScroll) it.horizontalScroll(horizontalState) else it }
-                .let { if (needsScroll) it.verticalScroll(verticalState) else it },
-            // При прокрутке выравнивание по центру спрятало бы начало поля,
-            // до которого невозможно доскроллить.
-            contentAlignment = if (needsScroll) Alignment.TopStart else Alignment.Center
-        ) {
-            Column(modifier = contentModifier) {
-                for (y in 0 until height) {
-                    Row {
-                        for (x in 0 until width) {
-                            val index = y * width + x
-                            val cellState = board?.cells?.getOrNull(index)
-                            MinesweeperCellView(
-                                state = cellState,
-                                size = cell,
-                                modifier = Modifier.combinedClickable(
-                                    onClick = { onCellClick(index) },
-                                    onLongClick = { onCellLongClick(index) },
-                                    onDoubleClick = { onCellDoubleClick(index) }
-                                )
-                            )
+                .clip(RoundedCornerShape(8.dp))
+                .pointerInput(width, height, zoomMin, zoomMax, baseCell) {
+                    val minTapPx = MinTapCellSize.toPx()
+                    val longPressMs = viewConfiguration.longPressTimeoutMillis
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var mode = GestureMode.Tap
+                        var prevPos = down.position
+                        var prevCentroid = Offset.Zero
+                        var prevDist = 0f
+                        val downCell = cellAt(down.position, offset, zoomLevel, baseCell.toPx(), width, height)
+                        if (downCell != null) {
+                            pressedCell = downCell
+                            pressedSince = down.uptimeMillis
+                            framesNeeded = true
+                        }
+                        var upPos = down.position
+                        var upTime = down.uptimeMillis
+                        var released = false
+                        while (!released) {
+                            val event = awaitPointerEvent()
+                            val pressed = event.changes.filter { it.pressed }
+                            if (pressed.isEmpty()) {
+                                released = true
+                                upPos = event.changes.firstOrNull()?.position ?: upPos
+                                upTime = event.changes.firstOrNull()?.uptimeMillis ?: upTime
+                                break
+                            }
+                            if (pressed.size >= 2) {
+                                if (mode != GestureMode.Pinch) {
+                                    mode = GestureMode.Pinch
+                                    pressedCell = -1
+                                    prevCentroid = centroid(pressed)
+                                    prevDist = 0f
+                                }
+                                val c = centroid(pressed)
+                                val d = distance(pressed)
+                                if (prevDist > 0f && d > 0f) {
+                                    val current = zoomLevel
+                                    val newZoom = (current * d / prevDist).coerceIn(zoomMin, zoomMax)
+                                    if (newZoom != current) {
+                                        val ratio = newZoom / current
+                                        // Точка под центром пальцев остаётся на месте.
+                                        val newOffset = c - (prevCentroid - offset) * ratio
+                                        // Щипок пишет напрямую: snapTo — suspend, а
+                                        // awaitEachGesture работает в restricted scope.
+                                        zoomJob?.cancel()
+                                        zoomLevel = newZoom
+                                        offset = clampOffset(
+                                            offset = newOffset,
+                                            zoom = newZoom,
+                                            basePx = baseCell.toPx(),
+                                            width = width,
+                                            height = height,
+                                            viewportWPx = viewportW.toPx(),
+                                            viewportHPx = viewportH.toPx()
+                                        )
+                                        pressed.forEach { it.consume() }
+                                    }
+                                }
+                                prevCentroid = c
+                                prevDist = d
+                            } else {
+                                val change = pressed[0]
+                                if (mode == GestureMode.Pan && change.isConsumed) {
+                                    // Свайп «назад» у края экрана перехватил жест.
+                                    mode = GestureMode.Cancelled
+                                }
+                                val moved = (change.position - down.position).getDistance()
+                                if (mode == GestureMode.Tap && moved > viewConfiguration.touchSlop) {
+                                    mode = if (down.position.x <= EdgeSwipeZonePx) {
+                                        GestureMode.Cancelled
+                                    } else {
+                                        GestureMode.Pan
+                                    }
+                                    pressedCell = -1
+                                }
+                                if (mode == GestureMode.Pan) {
+                                    val newOffset = clampOffset(
+                                        offset = offset + (change.position - prevPos),
+                                        zoom = zoomLevel,
+                                        basePx = baseCell.toPx(),
+                                        width = width,
+                                        height = height,
+                                        viewportWPx = viewportW.toPx(),
+                                        viewportHPx = viewportH.toPx()
+                                    )
+                                    if (newOffset != offset) {
+                                        offset = newOffset
+                                        change.consume()
+                                    }
+                                }
+                                prevPos = change.position
+                            }
+                        }
+                        pressedCell = -1
+                        if (mode == GestureMode.Tap) {
+                            val cellSizePx = baseCell.toPx() * zoomLevel
+                            val upCell = cellAt(upPos, offset, zoomLevel, baseCell.toPx(), width, height)
+                            if (downCell != null && upCell == downCell && cellSizePx >= minTapPx) {
+                                if (upTime - down.uptimeMillis >= longPressMs) {
+                                    lastActionIndex = downCell
+                                    onCellLongClick(downCell)
+                                } else if (lastTapCell == downCell && upTime - lastTapTime < DoubleTapMillis) {
+                                    lastTapCell = -1
+                                    lastActionIndex = downCell
+                                    onCellDoubleClick(downCell)
+                                } else {
+                                    lastTapCell = downCell
+                                    lastTapTime = upTime
+                                    lastActionIndex = downCell
+                                    onCellClick(downCell)
+                                }
+                            } else if (downCell != null && cellSizePx < minTapPx) {
+                                // Клетки слишком мелкие: случайный тап вскроет не ту.
+                                hintVisible = true
+                            }
                         }
                     }
                 }
+        ) {
+            val now = animClock.longValue
+            val basePx = baseCell.toPx()
+            val cellPx = basePx * zoom
+            val boardW = cellPx * width
+            val boardH = cellPx * height
+
+            drawRoundRect(
+                color = scheme.surfaceContainer,
+                topLeft = offset,
+                size = Size(boardW, boardH),
+                cornerRadius = CornerRadius(8.dp.toPx())
+            )
+
+            withTransform({
+                translate(offset.x, offset.y)
+                scale(zoom, zoom, Offset.Zero)
+            }) {
+                for (y in 0 until height) {
+                    for (x in 0 until width) {
+                        val index = y * width + x
+                        drawCell(
+                            cell = board?.cells?.getOrNull(index),
+                            x = x * basePx,
+                            y = y * basePx,
+                            size = basePx,
+                            revealStart = revealAt.getOrElse(index) { Long.MIN_VALUE },
+                            flagStart = flagAt.getOrElse(index) { Long.MIN_VALUE },
+                            now = now,
+                            scheme = scheme,
+                            glyphs = glyphLayouts
+                        )
+                    }
+                }
+                if (pressedCell >= 0) {
+                    val px = pressedCell % width
+                    val py = pressedCell / width
+                    val alpha = ((now - pressedSince).coerceAtLeast(0L) / 120f).coerceIn(0f, 1f) * 0.22f
+                    drawRoundRect(
+                        color = scheme.primary.copy(alpha = alpha),
+                        topLeft = Offset(px * basePx + 1f, py * basePx + 1f),
+                        size = Size(basePx - 2f, basePx - 2f),
+                        cornerRadius = CornerRadius(4f)
+                    )
+                }
+            }
+
+            val line = scheme.outlineVariant.copy(alpha = 0.6f)
+            val lineWidth = 0.5.dp.toPx().coerceAtLeast(1f)
+            for (i in 0..width) {
+                val lx = offset.x + i * cellPx
+                drawLine(line, Offset(lx, offset.y), Offset(lx, offset.y + boardH), strokeWidth = lineWidth)
+            }
+            for (j in 0..height) {
+                val ly = offset.y + j * cellPx
+                drawLine(line, Offset(offset.x, ly), Offset(offset.x + boardW, ly), strokeWidth = lineWidth)
+            }
+
+            drawRoundRect(
+                color = scheme.outlineVariant,
+                topLeft = offset,
+                size = Size(boardW, boardH),
+                cornerRadius = CornerRadius(8.dp.toPx()),
+                style = Stroke(width = 1.dp.toPx())
+            )
+        }
+
+        Column(
+            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ZoomButton(Icons.Filled.ZoomIn, "Приблизить") { zoomBy(1.5f) }
+            ZoomButton(Icons.Filled.ZoomOut, "Отдалить") { zoomBy(1f / 1.5f) }
+            ZoomButton(Icons.Filled.CenterFocusStrong, "Сбросить масштаб") { zoomBy(1f / zoomLevel) }
+        }
+
+        AnimatedVisibility(
+            visible = hintVisible,
+            enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it / 2 },
+            exit = fadeOut(tween(200)),
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 84.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = scheme.inverseSurface,
+                tonalElevation = 4.dp
+            ) {
+                Text(
+                    text = "Клетки слишком мелкие — приближите поле",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = scheme.inverseOnSurface,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun MinesweeperCellView(
-    state: MinesweeperCell?,
-    size: Dp,
-    modifier: Modifier = Modifier
+private fun ZoomButton(icon: ImageVector, description: String, onClick: () -> Unit) {
+    FilledTonalIconButton(onClick = onClick) {
+        Icon(imageVector = icon, contentDescription = description)
+    }
+}
+
+/** Клетка под точкой экрана (null — точка вне поля). */
+private fun cellAt(
+    pos: Offset,
+    offset: Offset,
+    zoom: Float,
+    basePx: Float,
+    width: Int,
+    height: Int
+): Int? {
+    val bx = floor((pos.x - offset.x) / zoom / basePx).toInt()
+    val by = floor((pos.y - offset.y) / zoom / basePx).toInt()
+    return if (bx in 0 until width && by in 0 until height) by * width + bx else null
+}
+
+/**
+ * Сдвиг поля так, чтобы оно не уезжало за вьюпорт: если поле меньше
+ * вьюпорта — центрируем, иначе не даём отодвинуть край дальше края.
+ */
+internal fun clampOffset(
+    offset: Offset,
+    zoom: Float,
+    basePx: Float,
+    width: Int,
+    height: Int,
+    viewportWPx: Float,
+    viewportHPx: Float
+): Offset {
+    val boardW = basePx * zoom * width
+    val boardH = basePx * zoom * height
+    val ox = if (boardW <= viewportWPx) {
+        (viewportWPx - boardW) / 2f
+    } else {
+        offset.x.coerceIn(viewportWPx - boardW, 0f)
+    }
+    val oy = if (boardH <= viewportHPx) {
+        (viewportHPx - boardH) / 2f
+    } else {
+        offset.y.coerceIn(viewportHPx - boardH, 0f)
+    }
+    return Offset(ox, oy)
+}
+
+private fun hasActiveAnimations(
+    now: Long,
+    revealAt: LongArray,
+    flagAt: LongArray,
+    pressedCell: Int
+): Boolean {
+    if (pressedCell >= 0) return true
+    for (i in revealAt.indices) {
+        val s = revealAt[i]
+        if (s != Long.MIN_VALUE && now - s < RevealAnimMillis) return true
+    }
+    for (i in flagAt.indices) {
+        val s = flagAt[i]
+        if (s != Long.MIN_VALUE && now - s < FlagAnimMillis) return true
+    }
+    return false
+}
+
+/** Расстояние Чебышёва между клетками — как распространяется волна раскрытия. */
+private fun chebyshev(a: Int, b: Int, width: Int): Int {
+    val ax = a % width
+    val ay = a / width
+    val bx = b % width
+    val by = b / width
+    return maxOf(abs(ax - bx), abs(ay - by))
+}
+
+private fun centroid(changes: List<PointerInputChange>): Offset {
+    var x = 0f
+    var y = 0f
+    changes.forEach { x += it.position.x; y += it.position.y }
+    return Offset(x / changes.size, y / changes.size)
+}
+
+private fun distance(changes: List<PointerInputChange>): Float {
+    if (changes.size < 2) return 0f
+    val a = changes[0].position
+    val b = changes[1].position
+    return (a - b).getDistance()
+}
+
+private fun revealProgress(start: Long, now: Long): Float =
+    if (start == Long.MIN_VALUE) 1f
+    else ((now - start).coerceAtLeast(0L) / RevealAnimMillis).coerceIn(0f, 1f)
+
+private fun flagProgress(start: Long, now: Long): Float =
+    if (start == Long.MIN_VALUE) 1f
+    else ((now - start).coerceAtLeast(0L) / FlagAnimMillis).coerceIn(0f, 1f)
+
+private fun DrawScope.drawCell(
+    cell: MinesweeperCell?,
+    x: Float,
+    y: Float,
+    size: Float,
+    revealStart: Long,
+    flagStart: Long,
+    now: Long,
+    scheme: ColorScheme,
+    glyphs: Map<String, TextLayoutResult>
 ) {
-    val scheme = MaterialTheme.colorScheme
-    val revealed = state?.isRevealed == true
-    val isMine = state?.isMine == true
-    val flagged = state?.isFlagged == true
-    // Шрифт масштабируется от клетки: в 64×48 клетка меньше строки
-    // типографики, и фиксированный размер ломал бы вёрстку.
-    val glyphStyle = MaterialTheme.typography.titleMedium.copy(
-        fontSize = minOf(size.value * 0.5f, 24f).sp
+    val revealed = cell?.isRevealed == true
+    val isMine = cell?.isMine == true
+    val flagged = cell?.isFlagged == true
+
+    // Полупиксель с каждой стороны: соседние клетки не оставляют швов.
+    drawRect(
+        color = scheme.surfaceContainerHigh,
+        topLeft = Offset(x - 0.25f, y - 0.25f),
+        size = Size(size + 0.5f, size + 0.5f)
     )
 
-    Box(
-        modifier = modifier
-            .size(size)
-            .background(
-                when {
-                    revealed && isMine -> scheme.errorContainer
-                    revealed -> scheme.surface
-                    else -> scheme.surfaceContainerHigh
-                }
+    if (revealed) {
+        val p = revealProgress(revealStart, now)
+        val ease = FastOutSlowInEasing.transform(p)
+        val bg = if (isMine) scheme.errorContainer else scheme.surface
+        val revealScale = 0.6f + 0.4f * ease
+        withTransform({
+            translate(x + size / 2f, y + size / 2f)
+            scale(revealScale, revealScale)
+            translate(-x - size / 2f, -y - size / 2f)
+        }) {
+            drawRect(
+                color = bg.copy(alpha = ease),
+                topLeft = Offset(x - 0.25f, y - 0.25f),
+                size = Size(size + 0.5f, size + 0.5f)
             )
-            .border(0.5.dp, scheme.outlineVariant.copy(alpha = 0.6f)),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            revealed && isMine -> {
-                Text(text = "✖", color = scheme.onErrorContainer, style = glyphStyle)
-            }
-            revealed && flagged -> {
-                // Флаг стоял на чистой клетке — ошибка игрока, показываем при проигрыше.
-                Text(text = "⚑", color = scheme.error, style = glyphStyle)
-            }
-            revealed && (state?.adjacentMines ?: 0) > 0 -> {
-                Text(
-                    text = state!!.adjacentMines.toString(),
-                    color = numberColor(state.adjacentMines),
-                    style = glyphStyle,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            flagged -> {
-                Box(
-                    modifier = Modifier
-                        .size(size * 0.4f)
-                        .clip(CircleShape)
-                        .background(scheme.primary)
-                )
+            when {
+                isMine -> glyphs["✖"]?.let {
+                    drawText(
+                        it,
+                        topLeft = textTopLeft(it, x, y, size),
+                        color = scheme.onErrorContainer.copy(alpha = ease)
+                    )
+                }
+                flagged -> glyphs["⚑"]?.let {
+                    drawText(
+                        it,
+                        topLeft = textTopLeft(it, x, y, size),
+                        color = scheme.error.copy(alpha = ease)
+                    )
+                }
+                (cell?.adjacentMines ?: 0) > 0 -> glyphs[cell!!.adjacentMines.toString()]?.let {
+                    drawText(it, topLeft = textTopLeft(it, x, y, size))
+                }
             }
         }
+    } else if (flagged) {
+        val pop = EaseOutBack.transform(flagProgress(flagStart, now))
+        drawCircle(
+            color = scheme.primary,
+            radius = size * 0.2f * pop,
+            center = Offset(x + size / 2f, y + size / 2f)
+        )
     }
 }
 
+private fun textTopLeft(layout: TextLayoutResult, x: Float, y: Float, size: Float): Offset =
+    Offset(x + (size - layout.size.width) / 2f, y + (size - layout.size.height) / 2f)
+
 /** Классические цвета цифр: 1 — синий, 2 — зелёный и так далее. */
-@Composable
-private fun numberColor(value: Int): Color = when (value) {
+private fun numberColor(value: Int, scheme: ColorScheme): Color = when (value) {
     1 -> Color(0xFF1976D2)
     2 -> Color(0xFF388E3C)
     3 -> Color(0xFFD32F2F)
@@ -370,7 +858,7 @@ private fun numberColor(value: Int): Color = when (value) {
     5 -> Color(0xFF8D6E63)
     6 -> Color(0xFF0097A7)
     7 -> Color(0xFF303F9F)
-    else -> MaterialTheme.colorScheme.onSurfaceVariant
+    else -> scheme.onSurfaceVariant
 }
 
 private fun formatSeconds(total: Int): String {
