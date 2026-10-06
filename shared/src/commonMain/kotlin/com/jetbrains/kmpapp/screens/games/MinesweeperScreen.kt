@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.screens.games
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -16,8 +17,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
@@ -40,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlin.math.min
 
 /**
@@ -234,6 +238,15 @@ private fun ResultCard(
 }
 
 /** Поле: клетки одинаковые, размер подбирается под свободное место. */
+private val MinCellSize = 20.dp
+
+/**
+ * Поле рисуется сеткой клеток одинакового размера. Размер клетки — это то,
+ * сколько места останется под поле после шапки и панелей. На больших
+ * вариантах (30×16 и больше) клетка упёрлась бы в непригодный для тапа
+ * размер, поэтому снизу стоит минимум: если поле не помещается — клетки
+ * берут минимальный размер, а само поле прокручивается в обе стороны.
+ */
 @Composable
 private fun MinesweeperGrid(
     width: Int,
@@ -248,27 +261,41 @@ private fun MinesweeperGrid(
         // считаем клетку по ширине, иначе получится нулевой размер.
         val byWidth = maxWidth / width.coerceAtLeast(1)
         val byHeight = maxHeight / height.coerceAtLeast(1)
-        val cell = if (byHeight.value.isFinite()) minOf(byWidth, byHeight) else byWidth
-        Column(
+        val fitted = if (byHeight.value.isFinite()) minOf(byWidth, byHeight) else byWidth
+        val cell = maxOf(fitted, MinCellSize)
+        val needsScroll = cell * width > maxWidth || cell * height > maxHeight
+        val horizontalState = rememberScrollState()
+        val verticalState = rememberScrollState()
+        val contentModifier = Modifier
+            .size(cell * width, cell * height)
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+
+        Box(
             modifier = Modifier
-                .size(cell * width, cell * height)
-                .clip(RoundedCornerShape(8.dp))
-                .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                .fillMaxSize()
+                .let { if (needsScroll) it.horizontalScroll(horizontalState) else it }
+                .let { if (needsScroll) it.verticalScroll(verticalState) else it },
+            // При прокрутке выравнивание по центру спрятало бы начало поля,
+            // до которого невозможно доскроллить.
+            contentAlignment = if (needsScroll) Alignment.TopStart else Alignment.Center
         ) {
-            for (y in 0 until height) {
-                Row {
-                    for (x in 0 until width) {
-                        val index = y * width + x
-                        val cellState = board?.cells?.getOrNull(index)
-                        MinesweeperCellView(
-                            state = cellState,
-                            size = cell,
-                            modifier = Modifier.combinedClickable(
-                                onClick = { onCellClick(index) },
-                                onLongClick = { onCellLongClick(index) },
-                                onDoubleClick = { onCellDoubleClick(index) }
+            Column(modifier = contentModifier) {
+                for (y in 0 until height) {
+                    Row {
+                        for (x in 0 until width) {
+                            val index = y * width + x
+                            val cellState = board?.cells?.getOrNull(index)
+                            MinesweeperCellView(
+                                state = cellState,
+                                size = cell,
+                                modifier = Modifier.combinedClickable(
+                                    onClick = { onCellClick(index) },
+                                    onLongClick = { onCellLongClick(index) },
+                                    onDoubleClick = { onCellDoubleClick(index) }
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -286,6 +313,11 @@ private fun MinesweeperCellView(
     val revealed = state?.isRevealed == true
     val isMine = state?.isMine == true
     val flagged = state?.isFlagged == true
+    // Шрифт масштабируется от клетки: в 64×48 клетка меньше строки
+    // типографики, и фиксированный размер ломал бы вёрстку.
+    val glyphStyle = MaterialTheme.typography.titleMedium.copy(
+        fontSize = minOf(size.value * 0.5f, 24f).sp
+    )
 
     Box(
         modifier = modifier
@@ -302,17 +334,17 @@ private fun MinesweeperCellView(
     ) {
         when {
             revealed && isMine -> {
-                Text(text = "✖", color = scheme.onErrorContainer, style = MaterialTheme.typography.titleMedium)
+                Text(text = "✖", color = scheme.onErrorContainer, style = glyphStyle)
             }
             revealed && flagged -> {
                 // Флаг стоял на чистой клетке — ошибка игрока, показываем при проигрыше.
-                Text(text = "⚑", color = scheme.error, style = MaterialTheme.typography.titleMedium)
+                Text(text = "⚑", color = scheme.error, style = glyphStyle)
             }
             revealed && (state?.adjacentMines ?: 0) > 0 -> {
                 Text(
                     text = state!!.adjacentMines.toString(),
                     color = numberColor(state.adjacentMines),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = glyphStyle,
                     fontWeight = FontWeight.Bold
                 )
             }

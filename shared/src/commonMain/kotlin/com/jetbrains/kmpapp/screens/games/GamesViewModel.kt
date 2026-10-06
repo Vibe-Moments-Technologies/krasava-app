@@ -5,14 +5,12 @@ import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.storage.GameRecord
 import com.jetbrains.kmpapp.data.storage.GamesStorage
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -48,34 +46,35 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     private val _flagMode = MutableStateFlow(false)
     val flagMode: StateFlow<Boolean> = _flagMode.asStateFlow()
 
-    /** Рекорд выбранной сложности (время + дата постановки). */
-    val record: StateFlow<GameRecord?> =
-        combine(_difficulty, gamesStorage.records) { difficulty, records ->
-            records[recordKey(difficulty)] ?: gamesStorage.record(recordKey(difficulty))
-        }.stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = gamesStorage.record(recordKey(MinesweeperDifficulty.STANDARD))
-        )
+    /**
+     * Рекорды всех вариантов «Сапера»: ключ — [recordKey] варианта,
+     * значение — время и дата постановки. Меню показывает рекорд каждой
+     * строки сразу, поэтому все ключи прогружаются один раз при старте.
+     */
+    val records: StateFlow<Map<String, GameRecord>> = gamesStorage.records
 
     private var timerJob: Job? = null
 
+    init {
+        // Чтение с устройства не блокирует главный поток.
+        viewModelScope.launch(Dispatchers.Default) {
+            MinesweeperDifficulty.entries.forEach { gamesStorage.record(recordKey(it)) }
+        }
+    }
+
     // Навигация
 
-    fun openGame(game: Game) {
-        _activeGame.value = game
+    /** Открывает «Сапер» на выбранной сложности: поле и таймер сбрасываются. */
+    fun openGame(value: MinesweeperDifficulty) {
+        _difficulty.value = value
+        resetGame()
+        _activeGame.value = Game.MINESWEEPER
     }
 
     /** Выход из партии в меню «Игры»: поле и таймер сбрасываются. */
     fun closeGame() {
         stopTimer()
         _activeGame.value = null
-        resetGame()
-    }
-
-    fun selectDifficulty(value: MinesweeperDifficulty) {
-        if (_difficulty.value == value) return
-        _difficulty.value = value
         resetGame()
     }
 

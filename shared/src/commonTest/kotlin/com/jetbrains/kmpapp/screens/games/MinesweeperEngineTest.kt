@@ -27,6 +27,77 @@ class MinesweeperEngineTest {
     }
 
     @Test
+    fun difficultyOrderAndSizesMatchRequestedVariants() {
+        // Порядок в меню — часть договорённости с игроком, как и размеры полей.
+        assertEquals(
+            listOf(
+                Triple("KINDERGARTEN", 5, 5),
+                Triple("SCHOOL", 7, 7),
+                Triple("STANDARD", 9, 9),
+                Triple("BACHELOR", 16, 16),
+                Triple("SPECIALIST", 30, 16),
+                Triple("MASTER", 25, 25),
+                Triple("POSTGRAD", 50, 50),
+                Triple("RETIREE", 64, 48)
+            ),
+            MinesweeperDifficulty.entries.map { Triple(it.name, it.width, it.height) }
+        )
+        assertEquals(
+            listOf(3, 5, 10, 40, 99, 100, 250, 777),
+            MinesweeperDifficulty.entries.map { it.mines }
+        )
+    }
+
+    @Test
+    fun everyDifficultyGeneratesExactlyItsConfiguredField() {
+        MinesweeperDifficulty.entries.forEach { option ->
+            val safeX = option.width / 2
+            val safeY = option.height / 2
+            val board = MinesweeperEngine.generate(
+                width = option.width,
+                height = option.height,
+                mines = option.mines,
+                safeX = safeX,
+                safeY = safeY,
+                random = Random(option.ordinal + 1)
+            )
+            assertEquals(
+                option.width * option.height,
+                board.cells.size,
+                "Число клеток: ${option.name}"
+            )
+            assertEquals(option.mines, board.mineCount, "Число мин: ${option.name}")
+            assertFalse(
+                board[safeX, safeY].isMine,
+                "Первый клик попал на мину: ${option.name}"
+            )
+            // Вокруг первого клика мины стоять не могут — иначе не откроется область.
+            for (dy in -1..1) {
+                for (dx in -1..1) {
+                    val nx = safeX + dx
+                    val ny = safeY + dy
+                    if (nx in 0 until option.width && ny in 0 until option.height) {
+                        assertFalse(
+                            board[nx, ny].isMine,
+                            "Мина в защищённой зоне ${option.name}: $nx,$ny"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @Test
+    fun everyDifficultyKeepsItsOwnRecordKey() {
+        val keys = MinesweeperDifficulty.entries.map { GamesViewModel.recordKey(it) }
+        assertEquals(keys.size, keys.toSet().size, "Ключи рекордов совпадают")
+        assertEquals(
+            "minesweeperSTANDARD",
+            GamesViewModel.recordKey(MinesweeperDifficulty.STANDARD)
+        )
+    }
+
+    @Test
     fun generationIsRandom() {
         val layouts = buildSet {
             repeat(40) { seed ->

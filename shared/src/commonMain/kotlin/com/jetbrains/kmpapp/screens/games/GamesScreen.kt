@@ -1,8 +1,6 @@
 package com.jetbrains.kmpapp.screens.games
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,11 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,9 +35,9 @@ import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 
 /**
- * Раздел «Игры»: меню с выбором игры. Сейчас в меню ровно одна игра — «Сапер».
- * Сама игра открывается послойно поверх меню, назад — свайп, системная кнопка
- * или стрелка.
+ * Раздел «Игры»: меню с выбором игры. Сейчас в меню ровно одна игра — «Сапер»,
+ * у неё несколько вариантов поля, каждый со своим рекордом. Сама игра
+ * открывается послойно поверх меню, назад — свайп, системная кнопка или стрелка.
  */
 @Composable
 fun GamesScreen(
@@ -78,8 +73,7 @@ private fun GamesMenu(
     viewModel: GamesViewModel,
     modifier: Modifier = Modifier
 ) {
-    val difficulty by viewModel.difficulty.collectAsState()
-    val record by viewModel.record.collectAsState()
+    val records by viewModel.records.collectAsState()
 
     Column(
         modifier = modifier
@@ -99,62 +93,26 @@ private fun GamesMenu(
             modifier = Modifier.padding(top = 8.dp)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        GameCard(
-            title = "Сапер",
-            subtitle = "${difficulty.width}×${difficulty.height}, " +
-                "${difficulty.mines} мин · найти все мины и не взорваться",
-            icon = Icons.Filled.Bolt,
-            onClick = { viewModel.openGame(GamesViewModel.Game.MINESWEEPER) }
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Рекорд",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        RecordCard(recordText = record?.let { GamesViewModel.formatRecord(it) })
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        Text(
-            text = "Размер поля",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Пока доступен только стандартный вариант.",
+            text = "Сапер — варианты поля от детского сада до пенсионера, " +
+                "у каждого свой рекорд.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            MinesweeperDifficulty.entries.forEach { option ->
-                FilterChip(
-                    selected = option == difficulty,
-                    onClick = { viewModel.selectDifficulty(option) },
-                    label = { Text("${option.title} ${option.width}×${option.height}") },
-                    leadingIcon = {
-                        if (option == difficulty) {
-                            Icon(
-                                imageVector = Icons.Filled.GridView,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                )
-            }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        MinesweeperDifficulty.entries.forEach { option ->
+            GameCard(
+                title = option.title,
+                subtitle = "${option.width}×${option.height} · ${option.mines} мин",
+                recordText = records[GamesViewModel.recordKey(option)]
+                    ?.let { GamesViewModel.formatRecord(it) },
+                icon = Icons.Filled.Bolt,
+                onClick = { viewModel.openGame(option) }
+            )
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
@@ -163,6 +121,7 @@ private fun GamesMenu(
 private fun GameCard(
     title: String,
     subtitle: String,
+    recordText: String?,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit
 ) {
@@ -203,63 +162,20 @@ private fun GameCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            }
-        }
-    }
-}
-
-@Composable
-private fun RecordCard(recordText: String?) {
-    Card(
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.tertiaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.EmojiEvents,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.size(24.dp)
+                Text(
+                    text = recordText?.let { "Рекорд: $it" } ?: "Рекорд пока не установлен",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = if (recordText != null) {
+                        FontWeight.SemiBold
+                    } else {
+                        FontWeight.Normal
+                    },
+                    color = if (recordText != null) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
                 )
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                if (recordText != null) {
-                    Text(
-                        text = recordText,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Лучшее время и дата его постановки",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Text(
-                        text = "Рекорд пока не установлен",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Сыграйте первую партию в «Сапере».",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
     }
