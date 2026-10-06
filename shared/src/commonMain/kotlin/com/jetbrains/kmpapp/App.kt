@@ -48,6 +48,7 @@ import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import com.jetbrains.kmpapp.theme.CyberpunkDarkColors
 import com.jetbrains.kmpapp.theme.CyberpunkLightColors
 import com.jetbrains.kmpapp.theme.ErrorColors
+import com.jetbrains.kmpapp.theme.ErrorScanlines
 import com.jetbrains.kmpapp.theme.ErrorTypography
 import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
@@ -278,6 +279,11 @@ fun App() {
                     )
                 }
                 }
+
+                // Однотонные поверхности приложения во время темы Error дают
+                // те же «глюковатые полосы», что и поле «Сапёра»: скан-строка
+                // и полосы порчи проезжают по всему экрану поверх контента.
+                ErrorScanlines(enabled = errorActive)
             }
         }
         }
