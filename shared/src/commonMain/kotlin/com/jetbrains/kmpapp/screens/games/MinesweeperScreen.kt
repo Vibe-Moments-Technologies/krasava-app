@@ -21,7 +21,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,6 +75,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jetbrains.kmpapp.theme.GlitchTitle
+import com.jetbrains.kmpapp.theme.MonoTitle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -99,7 +100,7 @@ fun MinesweeperScreen(
     val flagMode by viewModel.flagMode.collectAsState()
     val difficulty by viewModel.difficulty.collectAsState()
     val boomIndex by viewModel.boomIndex.collectAsState()
-    val errorTheme by viewModel.errorTheme.collectAsState()
+    val errorTheme by viewModel.errorActive.collectAsState()
 
     // Тема Error глобальна: когда вариант «сломан» (рекорд 0 с), App.kt
     // подставляет ErrorColors и моноширинную типографику во всё приложение.
@@ -129,10 +130,10 @@ fun MinesweeperScreen(
                         style = MaterialTheme.typography.titleMedium
                     )
                 } else {
-                    Text(
+                    MonoTitle(
                         text = "Сапер",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        color = scheme.onSurface
                     )
                 }
                 Text(
@@ -225,21 +226,6 @@ fun MinesweeperScreen(
     }
 }
 
-/** Заголовок «ERROR» с глюком: красный текст с цветными «двойниками». */
-@Composable
-private fun GlitchTitle(text: String, style: androidx.compose.ui.text.TextStyle) {
-    val base = style.copy(
-        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 3.sp
-    )
-    Box {
-        Text(text, style = base, color = Color(0x4DFFB400), modifier = Modifier.offset(2.dp, 2.dp))
-        Text(text, style = base, color = Color(0x6600E5FF), modifier = Modifier.offset((-2).dp, (-1).dp))
-        Text(text, style = base, color = Color(0xFFFF3B30))
-    }
-}
-
 @Composable
 private fun StatCard(
     label: String,
@@ -262,10 +248,9 @@ private fun StatCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )
-            Text(
+            MonoTitle(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
                 color = scheme.onSurface
             )
         }
@@ -287,10 +272,9 @@ private fun ResultCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(
+            MonoTitle(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
                 color = scheme.onSurface
             )
             Text(

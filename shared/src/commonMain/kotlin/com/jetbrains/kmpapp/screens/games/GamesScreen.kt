@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -35,13 +34,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import com.jetbrains.kmpapp.theme.GlitchTitle
+import com.jetbrains.kmpapp.theme.MonoTitle
 
 /**
  * Раздел «Игры»: меню с выбором игры. Сейчас в меню ровно одна игра — «Сапер»,
@@ -94,10 +92,9 @@ private fun GamesMenu(
             // Свободное место под плавающую панель страниц.
             .padding(bottom = 120.dp)
     ) {
-        Text(
+        MonoTitle(
             text = "Игры",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(top = 8.dp)
         )
@@ -150,7 +147,7 @@ private fun GamesMenu(
                 // карточки — кнопка ERROR, включающая тему сбоя.
                 ErrorGameCard(
                     subtitle = "${option.width}×${option.height} · ${option.mines} мин",
-                    onClick = { viewModel.openGame(option, errorTheme = true) }
+                    onClick = { viewModel.openGame(option) }
                 )
             } else {
                 GameCard(
@@ -219,35 +216,6 @@ private fun ErrorGameCard(
     }
 }
 
-/** Заголовок с эффектом глюка: красная надпись с цветными «двойниками». */
-@Composable
-private fun GlitchTitle(text: String, style: TextStyle, modifier: Modifier = Modifier) {
-    val base = style.copy(
-        fontFamily = FontFamily.Monospace,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 3.sp
-    )
-    Box(modifier = modifier) {
-        Text(
-            text = text,
-            style = base,
-            color = Color(0x4DFFB400),
-            modifier = Modifier.offset(2.dp, 2.dp)
-        )
-        Text(
-            text = text,
-            style = base,
-            color = Color(0x6600E5FF),
-            modifier = Modifier.offset((-2).dp, (-1).dp)
-        )
-        Text(
-            text = text,
-            style = base,
-            color = Color(0xFFFF3B30)
-        )
-    }
-}
-
 @Composable
 private fun GameCard(
     title: String,
@@ -282,10 +250,9 @@ private fun GameCard(
             }
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
+                MonoTitle(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(

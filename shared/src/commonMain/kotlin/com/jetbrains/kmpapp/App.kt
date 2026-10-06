@@ -108,10 +108,11 @@ fun App() {
     val gamesViewModel: GamesViewModel = koinViewModel()
 
     // Тема Error включается теми же правилами, что и в «Сапере» (сломанный
-    // рекорд 0 с), но распространяется на всё приложение: пока errorTheme
-    // активен, вся схема и типографика заменяются на красный глюк — как это
-    // делают оверлеи Сакуры/Матрицы/Киберпанка.
-    val errorTheme by gamesViewModel.errorTheme.collectAsState()
+    // рекорд 0 с), но распространяется на всё приложение: пока существует
+    // сломанный рекорд, вся схема и типографика заменяются на красный глюк —
+    // как это делают оверлеи Сакуры/Матрицы/Киберпанка. Тема не сбрасывается
+    // при возврате из партии в меню, а держится до нажатия «Починить ошибку».
+    val errorActive by gamesViewModel.errorActive.collectAsState()
 
     val systemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
@@ -120,7 +121,7 @@ fun App() {
         ThemeMode.DARK -> true
     }
 
-    val colors = if (errorTheme) {
+    val colors = if (errorActive) {
         ErrorColors
     } else {
         when (themeOverlay) {
@@ -133,7 +134,7 @@ fun App() {
 
     MaterialTheme(
         colorScheme = colors,
-        typography = if (errorTheme) ErrorTypography else MaterialTheme.typography
+        typography = if (errorActive) ErrorTypography else MaterialTheme.typography
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),

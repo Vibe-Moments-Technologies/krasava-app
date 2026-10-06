@@ -1,9 +1,18 @@
 package com.jetbrains.kmpapp.theme
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /**
  * «Тема Error»: тёмно-красный сбой, включается для варианта, решённого
@@ -57,4 +66,38 @@ val ErrorTypography: Typography = Typography().run {
         labelMedium = labelMedium.copy(fontFamily = family),
         labelSmall = labelSmall.copy(fontFamily = family)
     )
+}
+
+/** Моноширинный заголовок «в духе ERROR»: рядом с темой всегда заметен. */
+@Composable
+fun MonoTitle(
+    text: String,
+    style: TextStyle,
+    color: Color = Color.Unspecified,
+    modifier: Modifier = Modifier
+) {
+    Text(
+        text = text,
+        style = style.copy(
+            fontFamily = FontFamily.Monospace,
+            fontWeight = FontWeight.Black
+        ),
+        color = color,
+        modifier = modifier
+    )
+}
+
+/** Заголовок с эффектом глюка: красная надпись с цветными «двойниками». */
+@Composable
+fun GlitchTitle(text: String, style: TextStyle, modifier: Modifier = Modifier) {
+    val base = style.copy(
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 3.sp
+    )
+    Box(modifier = modifier) {
+        Text(text, style = base, color = Color(0x4DFFB400), modifier = Modifier.offset(2.dp, 2.dp))
+        Text(text, style = base, color = Color(0x6600E5FF), modifier = Modifier.offset((-2).dp, (-1).dp))
+        Text(text, style = base, color = Color(0xFFFF3B30))
+    }
 }

@@ -9,8 +9,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.random.Random
@@ -47,12 +50,15 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     val flagMode: StateFlow<Boolean> = _flagMode.asStateFlow()
 
     /**
-     * «Тема Error». Включается для варианта, решённого с одного первого
-     * нажатия (рекорд 0 с): такой режим в меню превращается в кнопку
-     * «ERROR», а поле рисуется как красный глюк.
+     * «Тема Error». Активна, пока существует хоть один «сломанный» рекорд
+     * (0 с) в любом из вариантов. Это не состояние партии, а глобальное
+     * состояние приложения: вернувшись из игры в меню выбора сложности,
+     * тема не сбрасывается, а остаётся на всём экране. Снимается только
+     * кнопкой «Починить ошибку» (удаляет рекорды 0 с).
      */
-    private val _errorTheme = MutableStateFlow(false)
-    val errorTheme: StateFlow<Boolean> = _errorTheme.asStateFlow()
+    val errorActive: StateFlow<Boolean> = gamesStorage.records
+        .map { records -> records.values.any { it.seconds == 0 } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Клетка, на которой подорвались: для каскадной анимации вскрытия мин. */
     private val _boomIndex = MutableStateFlow<Int?>(null)
@@ -78,12 +84,11 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     /**
      * Открывает «Сапер» на выбранной сложности: поле и таймер сбрасываются.
-     * [errorTheme] ставится, когда вариант уже «сломан» (рекорд 0 с) — поле
-     * рендерится в теме Error.
+     * Тема Error активна глобально ([errorActive]) независимо от того, каким
+     * путём открыта партия, — фон красится на уровне всего приложения.
      */
-    fun openGame(value: MinesweeperDifficulty, errorTheme: Boolean = false) {
+    fun openGame(value: MinesweeperDifficulty) {
         _difficulty.value = value
-        _errorTheme.value = errorTheme
         resetGame()
         _activeGame.value = Game.MINESWEEPER
     }
@@ -92,7 +97,6 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     fun closeGame() {
         stopTimer()
         _activeGame.value = null
-        _errorTheme.value = false
         resetGame()
     }
 
