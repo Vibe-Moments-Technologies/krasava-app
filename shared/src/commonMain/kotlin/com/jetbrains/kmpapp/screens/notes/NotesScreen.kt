@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.notes
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -199,7 +200,7 @@ fun NotesScreen(viewModel: NotesViewModel) {
             ) {
                 AssistChip(
                     onClick = { viewModel.addSection(current.id) },
-                    label = { Text("Добавить поле") },
+                    label = { GlitchText("Добавить поле") },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Filled.Add,
@@ -208,7 +209,7 @@ fun NotesScreen(viewModel: NotesViewModel) {
                         )
                     }
                 )
-                Text(
+                GlitchText(
                     text = "Сохраняется на устройстве",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -261,7 +262,7 @@ private fun PageHeader(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
+        GlitchText(
             text = "Конспекты",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
@@ -309,7 +310,7 @@ private fun PageHeader(
             value = searchQuery,
             onValueChange = { searchQuery = it },
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Поиск по страницам", fontSize = 13.sp, maxLines = 1) },
+            placeholder = { GlitchText("Поиск по страницам", fontSize = 13.sp, maxLines = 1) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
@@ -352,13 +353,13 @@ private fun PageHeader(
             FilterChip(
                 selected = page.id == currentPage?.id,
                 onClick = { onSelectPage(page.id) },
-                label = { Text(page.title.ifBlank { "Без названия" }) }
+                label = { GlitchText(page.title.ifBlank { "Без названия" }) }
             )
         }
         item {
             AssistChip(
                 onClick = onAddPage,
-                label = { Text("+") }
+                label = { GlitchText("+") }
             )
         }
     }
@@ -366,13 +367,13 @@ private fun PageHeader(
     if (renameTarget != null) {
         AlertDialog(
             onDismissRequest = { renameTarget = null },
-            title = { Text("Переименовать страницу") },
+            title = { GlitchText("Переименовать страницу") },
             text = {
                 OutlinedTextField(
                     value = draftTitle,
                     onValueChange = { draftTitle = it },
                     singleLine = true,
-                    label = { Text("Название страницы") }
+                    label = { GlitchText("Название страницы") }
                 )
             },
             confirmButton = {
@@ -382,12 +383,12 @@ private fun PageHeader(
                         renameTarget = null
                     }
                 ) {
-                    Text("Переименовать")
+                    GlitchText("Переименовать")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { renameTarget = null }) {
-                    Text("Отмена")
+                    GlitchText("Отмена")
                 }
             }
         )
@@ -397,9 +398,9 @@ private fun PageHeader(
         val pageForDialog = currentPage
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Удалить страницу?") },
+            title = { GlitchText("Удалить страницу?") },
             text = {
-                Text(
+                GlitchText(
                     "Страница «${pageForDialog.title.ifBlank { "Без названия" }}» " +
                         "и все её поля будут удалены безвозвратно."
                 )
@@ -411,12 +412,12 @@ private fun PageHeader(
                         onDeletePage(pageForDialog.id)
                     }
                 ) {
-                    Text("Удалить", color = MaterialTheme.colorScheme.error)
+                    GlitchText("Удалить", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmDelete = false }) {
-                    Text("Отмена")
+                    GlitchText("Отмена")
                 }
             }
         )
@@ -439,12 +440,12 @@ private fun ColumnScope.EmptyNotesState(onCreatePage: () -> Unit) {
                 modifier = Modifier.size(48.dp)
             )
             Spacer(modifier = Modifier.size(12.dp))
-            Text(
+            GlitchText(
                 text = "Нет страниц",
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.size(4.dp))
-            Text(
+            GlitchText(
                 text = "Создайте первую страницу конспекта",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -452,7 +453,7 @@ private fun ColumnScope.EmptyNotesState(onCreatePage: () -> Unit) {
             Spacer(modifier = Modifier.size(16.dp))
             AssistChip(
                 onClick = onCreatePage,
-                label = { Text("Создать страницу") },
+                label = { GlitchText("Создать страницу") },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Filled.Add,
@@ -577,7 +578,7 @@ private fun SectionCard(
                         }
                     },
                 placeholder = {
-                    Text(
+                    GlitchText(
                         text = "Введите текст…",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -597,8 +598,8 @@ private fun SectionCard(
     if (confirmRemove) {
         AlertDialog(
             onDismissRequest = { confirmRemove = false },
-            title = { Text("Удалить поле?") },
-            text = { Text("Текст поля будет удалён безвозвратно.") },
+            title = { GlitchText("Удалить поле?") },
+            text = { GlitchText("Текст поля будет удалён безвозвратно.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -606,12 +607,12 @@ private fun SectionCard(
                         onRemove()
                     }
                 ) {
-                    Text("Удалить", color = MaterialTheme.colorScheme.error)
+                    GlitchText("Удалить", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { confirmRemove = false }) {
-                    Text("Отмена")
+                    GlitchText("Отмена")
                 }
             }
         )

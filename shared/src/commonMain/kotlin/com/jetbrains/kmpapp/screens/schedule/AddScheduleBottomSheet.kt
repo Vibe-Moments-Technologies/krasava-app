@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -121,7 +122,7 @@ fun AddScheduleBottomSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                GlitchText(
                     text = "Добавить расписание",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -147,7 +148,7 @@ fun AddScheduleBottomSheet(
                     }
                 },
                 placeholder = {
-                    Text(
+                    GlitchText(
                         text = "Группа, преподаватель, аудитория",
                         fontSize = 13.5.sp,
                         maxLines = 1
@@ -191,7 +192,7 @@ fun AddScheduleBottomSheet(
                     FilterChip(
                         selected = selectedFilter == type,
                         onClick = { selectedFilter = type },
-                        label = { Text(title, fontSize = 12.sp) },
+                        label = { GlitchText(title, fontSize = 12.sp) },
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
@@ -217,7 +218,7 @@ fun AddScheduleBottomSheet(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        GlitchText(
                             text = "Ничего не найдено",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -227,7 +228,7 @@ fun AddScheduleBottomSheet(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        GlitchText(
                             text = "Введите название группы, преподавателя или аудитории для поиска",
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 14.sp,
@@ -255,13 +256,13 @@ fun AddScheduleBottomSheet(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
+                                    GlitchText(
                                         text = item.targetTitle,
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold
                                     )
                                     if (item.fullTitle != item.targetTitle) {
-                                        Text(
+                                        GlitchText(
                                             text = item.fullTitle,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -277,7 +278,7 @@ fun AddScheduleBottomSheet(
                                         .background(MaterialTheme.colorScheme.primaryContainer)
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text(
+                                    GlitchText(
                                         text = item.type.displayName,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
@@ -307,17 +308,17 @@ private fun CyberpunkThemeDialog(onDismiss: () -> Unit) {
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Bolt, contentDescription = null) },
-        title = { Text("CP77 // NIGHT CITY", fontWeight = FontWeight.Bold) },
+        title = { GlitchText("CP77 // NIGHT CITY", fontWeight = FontWeight.Bold) },
         text = {
             Column {
-                Text("Секретный протокол найден. Включить неоновый режим интерфейса?", textAlign = TextAlign.Center)
+                GlitchText("Секретный протокол найден. Включить неоновый режим интерфейса?", textAlign = TextAlign.Center)
                 Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Cyberpunk theme", fontWeight = FontWeight.SemiBold)
+                    GlitchText("Cyberpunk theme", fontWeight = FontWeight.SemiBold)
                     androidx.compose.material3.Switch(
                         checked = enabled,
                         onCheckedChange = { viewModel.setCyberpunkTheme(it) }
@@ -326,7 +327,7 @@ private fun CyberpunkThemeDialog(onDismiss: () -> Unit) {
             }
         },
         confirmButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Подключить") }
+            androidx.compose.material3.TextButton(onClick = onDismiss) { GlitchText("Подключить") }
         }
     )
 }

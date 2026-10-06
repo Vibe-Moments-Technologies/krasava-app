@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.services
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -117,7 +118,7 @@ fun ServicesScreen(
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp)
             ) {
-                Text(
+                GlitchText(
                     text = "Сервисы",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
@@ -125,7 +126,7 @@ fun ServicesScreen(
                     modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
                 )
                 if (services.isEmpty()) {
-                    Text(
+                    GlitchText(
                         text = "Все разделы уже добавлены на панель — управляйте ими в «Настройках панели страниц».",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -204,13 +205,13 @@ private fun ServiceCard(tab: AppTab, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
+                GlitchText(
                     text = SERVICE_DISPLAY_TITLES[tab] ?: tab.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
+                GlitchText(
                     text = SERVICE_DESCRIPTIONS[tab] ?: "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant

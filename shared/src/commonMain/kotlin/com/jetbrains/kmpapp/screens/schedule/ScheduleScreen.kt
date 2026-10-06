@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -213,13 +214,13 @@ private fun ScheduleMainContent(
                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
+                        GlitchText(
                             text = "Расписание не выбрано",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
+                        GlitchText(
                             text = "Добавьте группу, преподавателя или аудиторию, чтобы просматривать расписание занятий",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -233,7 +234,7 @@ private fun ScheduleMainContent(
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null)
                             Spacer(modifier = Modifier.size(8.dp))
-                            Text("Добавить расписание", fontWeight = FontWeight.Bold)
+                            GlitchText("Добавить расписание", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -278,7 +279,7 @@ private fun ScheduleMainContent(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
+                            GlitchText(
                                 text = "Включён VPN — расписание может не обновиться",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF5D3508),
@@ -388,7 +389,7 @@ private fun ScheduleMainContent(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
+                            GlitchText(
                                 text = text,
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.SemiBold,

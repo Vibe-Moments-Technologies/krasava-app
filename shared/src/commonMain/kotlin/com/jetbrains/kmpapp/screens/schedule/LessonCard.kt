@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -181,7 +182,7 @@ fun LessonCard(
                                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
-                            Text(
+                            GlitchText(
                                 text = "${lesson.bellNumber} пара",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
@@ -191,7 +192,7 @@ fun LessonCard(
 
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        Text(
+                        GlitchText(
                             text = "${lesson.startTime} — ${lesson.endTime}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
@@ -209,7 +210,7 @@ fun LessonCard(
                                 .background(typeBg)
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
-                            Text(
+                            GlitchText(
                                 text = lesson.lessonType.displayName,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -222,7 +223,7 @@ fun LessonCard(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Subject name
-                Text(
+                GlitchText(
                     text = if (showAbbreviatedNames) abbreviateSubjectName(lesson.subject) else lesson.subject,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -247,7 +248,7 @@ fun LessonCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
+                        GlitchText(
                             text = groupsText,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -267,7 +268,7 @@ fun LessonCard(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
+                        GlitchText(
                             text = lesson.teachers.joinToString(", "),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -290,7 +291,7 @@ fun LessonCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(
+                            GlitchText(
                                 text = groupsText,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -306,7 +307,7 @@ fun LessonCard(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(
+                            GlitchText(
                                 text = lesson.classrooms.joinToString(", "),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
@@ -326,7 +327,7 @@ fun LessonCard(
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
-                            Text(
+                            GlitchText(
                                 text = groupsText,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -356,7 +357,7 @@ fun LessonCard(
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text(
+                        GlitchText(
                             text = notePreview,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -373,7 +374,7 @@ fun LessonCard(
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         modifier = Modifier.padding(top = 10.dp)
                     ) {
-                        Text(
+                        GlitchText(
                             text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
@@ -497,13 +498,13 @@ fun EmptyLessonCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                GlitchText(
                     text = "$bellNumber пара • $startTime — $endTime",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
                 )
-                Text(
+                GlitchText(
                     text = "Нет пары",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -562,7 +563,7 @@ fun LessonBreakIndicator(
         // самой надписи, а не от ширины строки (иначе первая половина перемены
         // красила бы пустое поле слева и подсветка «не появлялась»).
         Box {
-            Text(
+            GlitchText(
                 text = breakText,
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.Medium,
@@ -576,7 +577,7 @@ fun LessonBreakIndicator(
                 )
                 // Копия надписи цветом primary, обрезанная клипом по пройденной
                 // части: тот же текст/стиль, поэтому буквы совпадают пиксель в пиксель.
-                Text(
+                GlitchText(
                     text = breakText,
                     fontSize = 12.5.sp,
                     fontWeight = FontWeight.Medium,

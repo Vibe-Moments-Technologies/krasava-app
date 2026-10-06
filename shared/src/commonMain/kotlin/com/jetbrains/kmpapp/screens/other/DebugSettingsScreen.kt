@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -84,7 +85,7 @@ fun DebugSettingsScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "Отладка и эксперименты",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -133,29 +134,29 @@ fun DebugSettingsScreen(
                 onCheckedChange = viewModel::setDiagnosticsEnabled
             )
             DebugCard {
-                Text(
+                GlitchText(
                     "Сведения о приложении",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(
+                GlitchText(
                     "bundle id, профиль подписи, App Group виджета и доступность контейнеров.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
+                GlitchText(
                     AppRuntimeInfo.debugInfo(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             DebugCard {
-                Text(
+                GlitchText(
                     "Проверка связи",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(
+                GlitchText(
                     "Отправляет тестовое событие в Sentry. Через минуту оно появится в проекте — " +
                         "значит, канал диагностики живой.",
                     style = MaterialTheme.typography.bodySmall,
@@ -169,13 +170,13 @@ fun DebugSettingsScreen(
                     enabled = !testEventSent,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (testEventSent) "Отправлено ✓" else "Отправить тестовое событие")
+                    GlitchText(if (testEventSent) "Отправлено ✓" else "Отправить тестовое событие")
                 }
             }
 
             SectionTitle("Хранилище")
             DebugCard {
-                Text(
+                GlitchText(
                     "Расписаний: ${storageStats.schedulesCount} · пар: ${storageStats.lessonsCount} · размер: ${storageStats.formatBytes(storageStats.totalSizeBytes)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -184,9 +185,9 @@ fun DebugSettingsScreen(
                     onClick = { showClearCacheDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Очистить кеш расписаний")
+                    GlitchText("Очистить кеш расписаний")
                 }
-                Text(
+                GlitchText(
                     "Сохранённые группы и настройки останутся.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -196,7 +197,7 @@ fun DebugSettingsScreen(
             if (NotificationsManager.supportsNotifications) {
                 SectionTitle("Уведомления")
                 DebugCard {
-                    Text(
+                    GlitchText(
                         "Мгновенная доставка или будильник через минуту.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -205,13 +206,13 @@ fun DebugSettingsScreen(
                         onClick = { NotificationsManager.sendTest(1_500L) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Отправить сейчас")
+                        GlitchText("Отправить сейчас")
                     }
                     OutlinedButton(
                         onClick = { NotificationsManager.sendTest(60_000L) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Запланировать через 1 минуту")
+                        GlitchText("Запланировать через 1 минуту")
                     }
                 }
             }
@@ -226,13 +227,13 @@ fun DebugSettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        GlitchText(
                             text = "Экспериментальные параметры",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(Modifier.height(2.dp))
-                        Text(
+                        GlitchText(
                             text = "Скрытые возможности и секреты",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -263,15 +264,15 @@ fun DebugSettingsScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = MaterialTheme.colorScheme.error)
                         Spacer(Modifier.width(10.dp))
-                        Text("Полный сброс", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                        GlitchText("Полный сброс", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     }
-                    Text(
+                    GlitchText(
                         "Удалит расписания, задачи, кеши и все настройки. Приложение вернётся к состоянию после установки.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                     Button(onClick = { showResetDialog = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Сбросить всё")
+                        GlitchText("Сбросить всё")
                     }
                 }
             }
@@ -281,16 +282,16 @@ fun DebugSettingsScreen(
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
-            title = { Text("Очистить кеш расписаний?") },
-            text = { Text("Сохранённые расписания будут загружены заново при следующем обновлении.") },
+            title = { GlitchText("Очистить кеш расписаний?") },
+            text = { GlitchText("Сохранённые расписания будут загружены заново при следующем обновлении.") },
             confirmButton = {
                 Button(onClick = {
                     viewModel.clearCache()
                     showClearCacheDialog = false
-                }) { Text("Очистить") }
+                }) { GlitchText("Очистить") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showClearCacheDialog = false }) { Text("Отмена") }
+                OutlinedButton(onClick = { showClearCacheDialog = false }) { GlitchText("Отмена") }
             }
         )
     }
@@ -298,17 +299,17 @@ fun DebugSettingsScreen(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("Сбросить все данные?") },
-            text = { Text("Это удалит все сохранённые данные и настройки без возможности восстановления.") },
+            title = { GlitchText("Сбросить все данные?") },
+            text = { GlitchText("Это удалит все сохранённые данные и настройки без возможности восстановления.") },
             confirmButton = {
                 Button(onClick = {
                     viewModel.resetAllData()
                     showResetDialog = false
                     onBack()
-                }) { Text("Сбросить всё") }
+                }) { GlitchText("Сбросить всё") }
             },
             dismissButton = {
-                OutlinedButton(onClick = { showResetDialog = false }) { Text("Отмена") }
+                OutlinedButton(onClick = { showResetDialog = false }) { GlitchText("Отмена") }
             }
         )
     }
@@ -316,7 +317,7 @@ fun DebugSettingsScreen(
 
 @Composable
 private fun SectionTitle(text: String) {
-    Text(
+    GlitchText(
         text,
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.SemiBold,
@@ -357,8 +358,8 @@ private fun DebugSwitchCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                GlitchText(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                GlitchText(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.width(12.dp))
             Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)

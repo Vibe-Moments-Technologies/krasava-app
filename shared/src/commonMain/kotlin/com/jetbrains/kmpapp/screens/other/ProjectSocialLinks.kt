@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -122,7 +123,7 @@ private fun ComingSoonToast(
                 .clickable(onClick = onDismiss)
                 .padding(horizontal = 16.dp, vertical = 10.dp)
         ) {
-            Text(
+            GlitchText(
                 text = message ?: "",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,

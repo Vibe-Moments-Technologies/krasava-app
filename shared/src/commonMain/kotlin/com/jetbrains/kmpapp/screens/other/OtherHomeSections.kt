@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -74,7 +75,7 @@ internal fun HiddenTabsCard(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(
+                            GlitchText(
                                 text = tab.title,
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
@@ -186,14 +187,14 @@ internal fun UpdateStatusCard(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column {
-                    Text(
+                    GlitchText(
                         text = titleText,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
+                    GlitchText(
                         text = subtitleText,
                         style = MaterialTheme.typography.bodySmall,
                         color = if (hasUpdate) accentTint else MaterialTheme.colorScheme.onSurfaceVariant

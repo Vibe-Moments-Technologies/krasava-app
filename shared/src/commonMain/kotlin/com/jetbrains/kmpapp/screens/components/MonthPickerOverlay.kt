@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.components
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -133,7 +134,7 @@ fun MonthPickerOverlay(
                         )
                     }
 
-                    Text(
+                    GlitchText(
                         text = "${DateUtils.formatMonthTitle(Month.entries[displayedMonth - 1])} $displayedYear",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -163,7 +164,7 @@ fun MonthPickerOverlay(
                     horizontalArrangement = Arrangement.SpaceAround
                 ) {
                     listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс").forEachIndexed { idx, dayName ->
-                        Text(
+                        GlitchText(
                             text = dayName,
                             style = MaterialTheme.typography.bodySmall,
                             fontWeight = FontWeight.SemiBold,
@@ -219,7 +220,7 @@ fun MonthPickerOverlay(
                                 ) {
                                     if (cellDate != null) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Text(
+                                            GlitchText(
                                                 text = cellDate.dayOfMonth.toString(),
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = if (cellDate == highlighted || cellDate == today) FontWeight.Bold else FontWeight.Normal,
@@ -279,7 +280,7 @@ fun MonthPickerOverlay(
                                     .background(getLessonDotColor(type, isDark))
                             )
                             Spacer(modifier = Modifier.width(3.dp))
-                            Text(
+                            GlitchText(
                                 text = type.shortName,
                                 fontSize = 9.5.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -298,11 +299,11 @@ fun MonthPickerOverlay(
                         displayedMonth = today.month.ordinal + 1
                         highlighted = today
                     }) {
-                        Text("Сегодня", fontWeight = FontWeight.SemiBold)
+                        GlitchText("Сегодня", fontWeight = FontWeight.SemiBold)
                     }
                     Spacer(modifier = Modifier.width(4.dp))
                     TextButton(onClick = onDismiss) {
-                        Text("Отмена")
+                        GlitchText("Отмена")
                     }
                 }
             }

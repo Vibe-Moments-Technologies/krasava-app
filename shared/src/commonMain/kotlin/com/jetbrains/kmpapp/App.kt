@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +49,7 @@ import com.jetbrains.kmpapp.theme.CyberpunkDarkColors
 import com.jetbrains.kmpapp.theme.CyberpunkLightColors
 import com.jetbrains.kmpapp.theme.ErrorColors
 import com.jetbrains.kmpapp.theme.ErrorTypography
+import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
@@ -136,6 +138,11 @@ fun App() {
         colorScheme = colors,
         typography = if (errorActive) ErrorTypography else MaterialTheme.typography
     ) {
+        // Пока активна тема Error, все светлые (белые) надписи приложения —
+        // расписание, сервисы, настройки — рисуются через GlitchText: те
+        // Cyan/Red «двойники», что у заголовка ERROR. Тёмные и цветные
+        // подписи остаются обычными.
+        CompositionLocalProvider(LocalGlitchTextEnabled provides errorActive) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -272,6 +279,7 @@ fun App() {
                 }
                 }
             }
+        }
         }
     }
 }

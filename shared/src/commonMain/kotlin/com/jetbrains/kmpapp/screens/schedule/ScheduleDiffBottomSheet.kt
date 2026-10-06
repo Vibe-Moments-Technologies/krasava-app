@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -66,12 +67,12 @@ fun ScheduleDiffBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    GlitchText(
                         text = "Изменения в расписании",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
+                    GlitchText(
                         text = "${diff.targetTitle} • ${diff.items.size} изменений",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -104,7 +105,7 @@ fun ScheduleDiffBottomSheet(
                 shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
-                Text("Понятно, принять", fontWeight = FontWeight.Bold)
+                GlitchText("Понятно, принять", fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -131,7 +132,7 @@ private fun DiffItemCard(item: LessonDiffItem) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                GlitchText(
                     text = "${item.date} • ${item.bellNumber} пара",
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -144,7 +145,7 @@ private fun DiffItemCard(item: LessonDiffItem) {
                         .background(badgeBg)
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
-                    Text(
+                    GlitchText(
                         text = badgeLabel,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -155,7 +156,7 @@ private fun DiffItemCard(item: LessonDiffItem) {
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
+            GlitchText(
                 text = item.subject,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
@@ -163,7 +164,7 @@ private fun DiffItemCard(item: LessonDiffItem) {
 
             Spacer(modifier = Modifier.height(2.dp))
 
-            Text(
+            GlitchText(
                 text = item.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -270,7 +271,7 @@ private fun OtherMainContent(
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                     }
-                    Text(
+                    GlitchText(
                         text = "Другое",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
@@ -375,13 +376,13 @@ private fun OtherNavCard(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(
+                    GlitchText(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
+                    GlitchText(
                         text = subtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

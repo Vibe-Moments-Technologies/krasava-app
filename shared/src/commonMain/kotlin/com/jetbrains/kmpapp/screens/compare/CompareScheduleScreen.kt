@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.compare
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -103,13 +104,13 @@ fun CompareScheduleScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
+                    GlitchText(
                         text = "Сравнение",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
+                    GlitchText(
                         text = "Два и более расписания рядом",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -162,13 +163,13 @@ fun CompareScheduleScreen(
                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Text(
+                        GlitchText(
                             text = "Нет расписаний для сравнения",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
+                        GlitchText(
                             text = "Добавьте две или более группы, преподавателей или аудитории во вкладке «Расписание», и они появятся здесь для выбора.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -183,7 +184,7 @@ fun CompareScheduleScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Поиск среди сохранённых", maxLines = 1) },
+                placeholder = { GlitchText("Поиск среди сохранённых", maxLines = 1) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -215,7 +216,7 @@ fun CompareScheduleScreen(
                         selected = isSelected,
                         onClick = { viewModel.toggleTarget(target.id) },
                         label = {
-                            Text(
+                            GlitchText(
                                 text = target.targetTitle,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -226,7 +227,7 @@ fun CompareScheduleScreen(
             }
 
             if (filteredTargets.isEmpty()) {
-                Text(
+                GlitchText(
                     text = "Ничего не найдено",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -235,7 +236,7 @@ fun CompareScheduleScreen(
             }
 
             if (selectedTargets.size < 2) {
-                Text(
+                GlitchText(
                     text = "Выберите два или более расписания для сравнения (выбрано ${selectedTargets.size}).",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -260,7 +261,7 @@ fun CompareScheduleScreen(
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.surfaceContainerHigh
                 ) {
-                    Text(
+                    GlitchText(
                         text = if (comparison.matchesCount > 0) {
                             "Занятий: ${comparison.matchesCount} · Различий: ${comparison.differencesCount}"
                         } else {
@@ -308,7 +309,7 @@ private fun WeekNavBar(
             )
         }
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            GlitchText(
                 text = "Неделя №${weekInfo.weekNumber} · ${DateUtils.formatDayOfWeekShort(weekStart.dayOfWeek)}, " +
                     "${weekStart.dayOfMonth} ${DateUtils.formatMonthRu(weekStart.month)} — " +
                     "${DateUtils.formatDayOfWeekShort(weekEnd.dayOfWeek)}, ${weekEnd.dayOfMonth} ${DateUtils.formatMonthRu(weekEnd.month)}",
@@ -317,7 +318,7 @@ private fun WeekNavBar(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
+            GlitchText(
                 text = if (weekInfo.isEven) "чётная неделя" else "нечётная неделя",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -335,7 +336,7 @@ private fun WeekNavBar(
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Сегодня", fontSize = 12.sp)
+                GlitchText("Сегодня", fontSize = 12.sp)
             }
         }
     }
@@ -380,7 +381,7 @@ private fun CompareGrid(
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
+                        GlitchText(
                             text = "${DateUtils.formatDayOfWeekShort(day.date.dayOfWeek)}, " +
                                 "${day.date.dayOfMonth} ${DateUtils.formatMonthRu(day.date.month)}",
                             style = MaterialTheme.typography.titleSmall,
@@ -413,7 +414,7 @@ private fun TimeHeaderCell() {
             .background(MaterialTheme.colorScheme.surfaceContainer),
         contentAlignment = Alignment.Center
     ) {
-        Text(
+        GlitchText(
             text = "Пара",
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
@@ -439,7 +440,7 @@ private fun TargetHeaderCell(
             verticalArrangement = Arrangement.Center,
             modifier = Modifier.padding(horizontal = 6.dp)
         ) {
-            Text(
+            GlitchText(
                 text = target.targetTitle,
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
@@ -447,7 +448,7 @@ private fun TargetHeaderCell(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
+            GlitchText(
                 text = if (hasData) target.type.displayName else "нет данных",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
@@ -473,13 +474,13 @@ private fun CompareRowView(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
+                GlitchText(
                     text = row.startTime,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
+                GlitchText(
                     text = "– ${row.endTime}",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -510,7 +511,7 @@ private fun CompareCellView(cell: CompareCell, abbreviateNames: Boolean) {
     ) {
         Box(modifier = Modifier.padding(horizontal = 8.dp)) {
             if (cell.isEmpty) {
-                Text(
+                GlitchText(
                     text = "—",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
@@ -539,26 +540,26 @@ private fun CompareCellView(cell: CompareCell, abbreviateNames: Boolean) {
 @Composable
 private fun LessonMiniCard(lesson: Lesson, abbreviateNames: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        Text(
+        GlitchText(
             text = if (abbreviateNames) abbreviateSubjectName(lesson.subject) else lesson.subject,
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurface
         )
-        Text(
+        GlitchText(
             text = lesson.lessonType.shortName,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (lesson.classrooms.isNotEmpty()) {
-            Text(
+            GlitchText(
                 text = "Ауд. ${lesson.classrooms.joinToString(", ")}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
         }
         if (lesson.teachers.isNotEmpty()) {
-            Text(
+            GlitchText(
                 text = lesson.teachers.joinToString(", "),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)

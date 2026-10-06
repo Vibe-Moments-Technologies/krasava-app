@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -120,7 +121,7 @@ fun WeekCalendarStrip(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
+                GlitchText(
                     text = "$monthTitle $year • ${weekInfo.weekNumber} неделя",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
@@ -143,7 +144,7 @@ fun WeekCalendarStrip(
                             onDateSelected(today)
                         }
                     ) {
-                        Text(
+                        GlitchText(
                             text = "Сегодня",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -207,7 +208,7 @@ fun WeekCalendarStrip(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        Text(
+                        GlitchText(
                             text = DateUtils.formatDayOfWeekShort(date.dayOfWeek),
                             fontSize = 11.5.sp,
                             fontWeight = if (isSelected || isToday) FontWeight.SemiBold else FontWeight.Medium,
@@ -235,7 +236,7 @@ fun WeekCalendarStrip(
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
+                            GlitchText(
                                 text = date.day.toString(),
                                 fontSize = 14.5.sp,
                                 fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.SemiBold,

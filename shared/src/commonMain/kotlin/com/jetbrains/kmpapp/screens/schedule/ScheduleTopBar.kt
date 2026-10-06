@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -92,7 +93,7 @@ fun ScheduleTopBar(
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
+                    GlitchText(
                         text = selectedTarget?.targetTitle ?: "Выберите расписание",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -115,7 +116,7 @@ fun ScheduleTopBar(
                 ) {
                     if (savedTargets.isEmpty()) {
                         DropdownMenuItem(
-                            text = { Text("Нет сохранённых групп") },
+                            text = { GlitchText("Нет сохранённых групп") },
                             onClick = {
                                 dropdownExpanded = false
                                 onAddClick()
@@ -132,11 +133,11 @@ fun ScheduleTopBar(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Column {
-                                            Text(
+                                            GlitchText(
                                                 text = target.targetTitle,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                             )
-                                            Text(
+                                            GlitchText(
                                                 text = target.type.displayName,
                                                 fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -172,7 +173,7 @@ fun ScheduleTopBar(
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
+                    GlitchText(
                         text = "Diff (${activeDiff.items.size})",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
@@ -200,7 +201,7 @@ fun ScheduleTopBar(
                         },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
+                    GlitchText(
                         text = calendarBadgeDay.toString(),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,

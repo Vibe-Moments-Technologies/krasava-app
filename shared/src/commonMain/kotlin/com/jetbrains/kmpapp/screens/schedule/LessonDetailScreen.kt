@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.schedule
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -134,7 +135,7 @@ fun LessonDetailScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "О занятии",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -171,7 +172,7 @@ fun LessonDetailScreen(
                             .background(typeBg)
                             .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
-                        Text(
+                        GlitchText(
                             text = lesson.lessonType.displayName,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -181,7 +182,7 @@ fun LessonDetailScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
+                    GlitchText(
                         text = lesson.subject,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
@@ -219,7 +220,7 @@ fun LessonDetailScreen(
                 ) {
                     lesson.teachers.forEachIndexed { index, teacher ->
                         if (index > 0) Spacer(modifier = Modifier.height(8.dp))
-                        Text(
+                        GlitchText(
                             text = teacher,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
@@ -237,7 +238,7 @@ fun LessonDetailScreen(
                 ) {
                     lesson.classrooms.forEachIndexed { index, room ->
                         if (index > 0) Spacer(modifier = Modifier.height(8.dp))
-                        Text(
+                        GlitchText(
                             text = room,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
@@ -253,7 +254,7 @@ fun LessonDetailScreen(
                     title = if (lesson.groups.size > 1) "Группы" else "Группа",
                     icon = Icons.Default.Group
                 ) {
-                    Text(
+                    GlitchText(
                         text = lesson.groups.joinToString(", "),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -338,7 +339,7 @@ fun LessonDetailScreen(
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
-                        Text(
+                        GlitchText(
                             text = if (isAlreadyAdded) "Предмет уже в задачах" else "Добавить предмет в задачи",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp,
@@ -374,7 +375,7 @@ private fun DetailSectionCard(
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(
+                GlitchText(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -390,13 +391,13 @@ private fun DetailSectionCard(
 @Composable
 private fun DetailItem(label: String, value: String) {
     Column {
-        Text(
+        GlitchText(
             text = label,
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(2.dp))
-        Text(
+        GlitchText(
             text = value,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
@@ -422,7 +423,7 @@ private fun NoteField(
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
-        Text(
+        GlitchText(
             text = title,
             style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
@@ -433,7 +434,7 @@ private fun NoteField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(placeholder) },
+        placeholder = { GlitchText(placeholder) },
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         singleLine = false,

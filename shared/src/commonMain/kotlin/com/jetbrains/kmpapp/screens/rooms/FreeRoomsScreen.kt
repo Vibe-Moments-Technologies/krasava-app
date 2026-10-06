@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.rooms
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -133,7 +134,7 @@ fun FreeRoomsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text(
+                        GlitchText(
                             text = "Свободные аудитории",
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
@@ -156,7 +157,7 @@ fun FreeRoomsScreen(
                                     modifier = Modifier.size(15.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(
+                                GlitchText(
                                     text = if (selectedBell != null) {
                                         "${selectedDate.day} ${DateUtils.formatMonthRu(selectedDate.month)} • Пара $selectedBell"
                                     } else {
@@ -202,7 +203,7 @@ fun FreeRoomsScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { Text("Номер аудитории (например: 349, А-1)", fontSize = 13.sp) },
+                placeholder = { GlitchText("Номер аудитории (например: 349, А-1)", fontSize = 13.sp) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -234,20 +235,20 @@ fun FreeRoomsScreen(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        GlitchText(
                             text = "☀️",
                             fontSize = 24.sp,
                             modifier = Modifier.padding(end = 12.dp)
                         )
                         Column {
-                            Text(
+                            GlitchText(
                                 text = "Сегодня воскресенье — выходной!",
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
+                            GlitchText(
                                 text = "Учебные пары сегодня не проводятся, поэтому свободные аудитории вам вряд ли понадобятся. Отдыхайте и набирайтесь сил! ☕",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f),
@@ -351,7 +352,7 @@ fun FreeRoomsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
+                GlitchText(
                     text = if (selectedBell != null) "Свободно на $selectedBell пару: ${filteredRooms.size}" else "Всего аудиторий: ${filteredRooms.size}",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -379,14 +380,14 @@ fun FreeRoomsScreen(
                             tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
+                        GlitchText(
                             text = "Свободные аудитории не найдены",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(
+                        GlitchText(
                             text = "Попробуйте выбрать другую пару, кампус или сбросить фильтр",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -469,7 +470,7 @@ private fun FreeRoomGridCard(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
+            GlitchText(
                 text = room.name,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
@@ -482,7 +483,7 @@ private fun FreeRoomGridCard(
                 shape = RoundedCornerShape(8.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest
             ) {
-                Text(
+                GlitchText(
                     text = if (room.floor != null) "${room.floor} эт" else room.campus,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -497,7 +498,7 @@ private fun FreeRoomGridCard(
             } else {
                 room.getFreeSummaryDescription(dateIso, bellSlots.size.coerceAtLeast(7))
             }
-            Text(
+            GlitchText(
                 text = untilText,
                 fontSize = 10.5.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -529,12 +530,12 @@ private fun FilterDropdownButton(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
+                GlitchText(
                     text = title,
                     fontSize = 10.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
+                GlitchText(
                     text = value,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,

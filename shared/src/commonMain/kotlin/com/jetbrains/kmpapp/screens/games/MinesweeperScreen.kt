@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.games
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
@@ -137,7 +138,7 @@ fun MinesweeperScreen(
                         glitch = errorTheme
                     )
                 }
-                Text(
+                GlitchText(
                     text = "${difficulty.width}×${difficulty.height} · ${difficulty.mines} мин",
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant
@@ -219,9 +220,9 @@ fun MinesweeperScreen(
                 FilterChip(
                     selected = flagMode,
                     onClick = { viewModel.toggleFlagMode() },
-                    label = { Text(if (flagMode) "Режим флага" else "Обычный режим") }
+                    label = { GlitchText(if (flagMode) "Режим флага" else "Обычный режим") }
                 )
-                Text(
+                GlitchText(
                     text = "Долгое нажатие — флаг",
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant
@@ -249,7 +250,7 @@ private fun StatCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
+            GlitchText(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant
@@ -286,15 +287,15 @@ private fun ResultCard(
                 color = scheme.onSurface,
                 glitch = glitch
             )
-            Text(
+            GlitchText(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = scheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onPrimary) { Text(primaryLabel) }
-                Button(onClick = onMenu) { Text("В меню") }
+                Button(onClick = onPrimary) { GlitchText(primaryLabel) }
+                Button(onClick = onMenu) { GlitchText("В меню") }
             }
         }
     }
@@ -762,7 +763,7 @@ private fun MinesweeperField(
                 color = scheme.inverseSurface,
                 tonalElevation = 4.dp
             ) {
-                Text(
+                GlitchText(
                     text = "Клетки слишком мелкие — приближите поле",
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.inverseOnSurface,

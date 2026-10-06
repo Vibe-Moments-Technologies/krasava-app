@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.components
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -83,7 +84,7 @@ fun SyncStatusBadge(
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(
+                        GlitchText(
                             text = text,
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.SemiBold,

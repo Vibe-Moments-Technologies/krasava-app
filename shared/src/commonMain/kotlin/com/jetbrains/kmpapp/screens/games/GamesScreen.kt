@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.games
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -111,14 +112,14 @@ private fun GamesMenu(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(
+                GlitchText(
                     text = "Тема Error активна",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFFFF5252)
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
+                    GlitchText(
                         text = "Починить ошибку",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -133,7 +134,7 @@ private fun GamesMenu(
         }
 
         Spacer(modifier = Modifier.height(6.dp))
-        Text(
+        GlitchText(
             text = "Сапер — варианты поля от детского сада до пенсионера, " +
                 "у каждого свой рекорд.",
             style = MaterialTheme.typography.bodySmall,
@@ -203,12 +204,12 @@ private fun ErrorGameCard(
                     text = "ERROR",
                     style = MaterialTheme.typography.titleMedium
                 )
-                Text(
+                GlitchText(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFE57373)
                 )
-                Text(
+                GlitchText(
                     text = "Рекорд: 0 с — сбой. Нажми, чтобы активировать тему",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.SemiBold,
@@ -260,12 +261,12 @@ private fun GameCard(
                     color = MaterialTheme.colorScheme.onSurface,
                     glitch = glitch
                 )
-                Text(
+                GlitchText(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
+                GlitchText(
                     text = recordText?.let { "Рекорд: $it" } ?: "Рекорд пока не установлен",
                     style = MaterialTheme.typography.bodySmall,
                     fontWeight = if (recordText != null) {

@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -85,7 +86,7 @@ fun DockSettingsScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "Настройка панели страниц",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -109,7 +110,7 @@ fun DockSettingsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(
+                GlitchText(
                     text = "Настройте состав и порядок кнопок в нижней панели. Разделы «Расписание» и «Другое» являются базовыми и закреплены на первом и последнем местах.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -119,7 +120,7 @@ fun DockSettingsScreen(
 
             // Section 1: Active in Dock
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
+                GlitchText(
                     text = "Отображаются на панели (${dockTabs.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -169,7 +170,7 @@ fun DockSettingsScreen(
 
             // Section 2: Hidden / Available to Add
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
+                GlitchText(
                     text = "Скрытые разделы (${availableHiddenTabs.size})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
@@ -184,7 +185,7 @@ fun DockSettingsScreen(
                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(
+                        GlitchText(
                             text = "На панели может быть максимум 5 разделов. Чтобы добавить раздел, сначала уберите один из текущих.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -205,7 +206,7 @@ fun DockSettingsScreen(
                                 .padding(16.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
+                            GlitchText(
                                 text = "Все доступные разделы уже добавлены на панель",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -241,15 +242,15 @@ fun DockSettingsScreen(
     if (showServicesLockInfo) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showServicesLockInfo = false },
-            title = { Text("Раздел закреплён") },
+            title = { GlitchText("Раздел закреплён") },
             text = {
-                Text("Раздел «Сервисы» закреплён, пока на панели нет ни одного другого раздела. Добавьте любой сервис на панель — после этого «Сервисы» можно будет скрыть.")
+                GlitchText("Раздел «Сервисы» закреплён, пока на панели нет ни одного другого раздела. Добавьте любой сервис на панель — после этого «Сервисы» можно будет скрыть.")
             },
             confirmButton = {
                 androidx.compose.material3.TextButton(
                     onClick = { showServicesLockInfo = false }
                 ) {
-                    Text("Понятно")
+                    GlitchText("Понятно")
                 }
             }
         )
@@ -305,7 +306,7 @@ private fun ActiveTabItemCard(
 
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
+                        GlitchText(
                             text = tab.title,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
@@ -320,7 +321,7 @@ private fun ActiveTabItemCard(
                             )
                         }
                     }
-                    Text(
+                    GlitchText(
                         text = if (isFixed) "Обязательный раздел (позиция $position)" else "Позиция $position",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -421,12 +422,12 @@ private fun HiddenTabItemCard(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column {
-                    Text(
+                    GlitchText(
                         text = tab.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Text(
+                    GlitchText(
                         text = if (canAdd) "Нажмите +, чтобы добавить на панель" else "Лимит 5 разделов достигнут",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (canAdd) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
