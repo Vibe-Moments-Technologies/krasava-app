@@ -46,6 +46,14 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     private val _flagMode = MutableStateFlow(false)
     val flagMode: StateFlow<Boolean> = _flagMode.asStateFlow()
 
+    /**
+     * «Тема Error». Включается для варианта, решённого с одного первого
+     * нажатия (рекорд 0 с): такой режим в меню превращается в кнопку
+     * «ERROR», а поле рисуется как красный глюк.
+     */
+    private val _errorTheme = MutableStateFlow(false)
+    val errorTheme: StateFlow<Boolean> = _errorTheme.asStateFlow()
+
     /** Клетка, на которой подорвались: для каскадной анимации вскрытия мин. */
     private val _boomIndex = MutableStateFlow<Int?>(null)
     val boomIndex: StateFlow<Int?> = _boomIndex.asStateFlow()
@@ -68,9 +76,14 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     // Навигация
 
-    /** Открывает «Сапер» на выбранной сложности: поле и таймер сбрасываются. */
-    fun openGame(value: MinesweeperDifficulty) {
+    /**
+     * Открывает «Сапер» на выбранной сложности: поле и таймер сбрасываются.
+     * [errorTheme] ставится, когда вариант уже «сломан» (рекорд 0 с) — поле
+     * рендерится в теме Error.
+     */
+    fun openGame(value: MinesweeperDifficulty, errorTheme: Boolean = false) {
         _difficulty.value = value
+        _errorTheme.value = errorTheme
         resetGame()
         _activeGame.value = Game.MINESWEEPER
     }
@@ -79,6 +92,7 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     fun closeGame() {
         stopTimer()
         _activeGame.value = null
+        _errorTheme.value = false
         resetGame()
     }
 
@@ -218,7 +232,8 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     private fun saveResultIfBest() {
         val difficulty = _difficulty.value
         val seconds = _elapsedSeconds.value
-        if (seconds <= 0) return
+        // «0 с» — тоже рекорд: поле, решённое с первого же нажатия, «ломает»
+        // режим и превращает его кнопку в меню в «ERROR».
         gamesStorage.submitResult(
             key = recordKey(difficulty),
             seconds = seconds,

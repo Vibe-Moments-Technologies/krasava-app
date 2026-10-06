@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -69,6 +71,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
@@ -97,11 +100,16 @@ fun MinesweeperScreen(
     val flagMode by viewModel.flagMode.collectAsState()
     val difficulty by viewModel.difficulty.collectAsState()
     val boomIndex by viewModel.boomIndex.collectAsState()
+    val errorTheme by viewModel.errorTheme.collectAsState()
+
+    // Тема Error: вариант, решённый с одного нажатия, весь экран — в красном
+    // глюке. Палитра подставляется вместо цветовой схемы MaterialTheme.
+    val scheme = if (errorTheme) ErrorColors else MaterialTheme.colorScheme
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(scheme.background)
             .statusBarsPadding()
             .padding(horizontal = 12.dp)
             // Свободное место под плавающую панель страниц.
@@ -115,15 +123,22 @@ fun MinesweeperScreen(
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Сапер",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                if (errorTheme) {
+                    GlitchTitle(
+                        text = "ERROR",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                } else {
+                    Text(
+                        text = "Сапер",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Text(
                     text = "${difficulty.width}×${difficulty.height} · ${difficulty.mines} мин",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = scheme.onSurfaceVariant
                 )
             }
             IconButton(onClick = { viewModel.restart() }) {
@@ -143,11 +158,13 @@ fun MinesweeperScreen(
             StatCard(
                 label = "Мины",
                 value = (board?.remainingMines ?: difficulty.mines).toString(),
+                scheme = scheme,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 label = "Время",
                 value = formatSeconds(elapsed),
+                scheme = scheme,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -161,6 +178,8 @@ fun MinesweeperScreen(
                 board = board,
                 status = status,
                 boomIndex = boomIndex,
+                scheme = scheme,
+                errorTheme = errorTheme,
                 onCellClick = { viewModel.onCellClick(it) },
                 onCellLongClick = { viewModel.onCellLongClick(it) },
                 onCellDoubleClick = { viewModel.onCellDoubleClick(it) }
@@ -175,14 +194,16 @@ fun MinesweeperScreen(
                 subtitle = "Все мины найдены за ${formatSeconds(elapsed)}.",
                 primaryLabel = "Ещё партия",
                 onPrimary = { viewModel.restart() },
-                onMenu = onBack
+                onMenu = onBack,
+                scheme = scheme
             )
             MinesweeperStatus.LOST -> ResultCard(
                 title = "Мина!",
                 subtitle = "Раскрыто за ${formatSeconds(elapsed)}. Попробуй ещё раз.",
                 primaryLabel = "Ещё партия",
                 onPrimary = { viewModel.restart() },
-                onMenu = onBack
+                onMenu = onBack,
+                scheme = scheme
             )
             else -> Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -197,18 +218,38 @@ fun MinesweeperScreen(
                 Text(
                     text = "Долгое нажатие — флаг",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = scheme.onSurfaceVariant
                 )
             }
         }
     }
 }
 
+/** Заголовок «ERROR» с глюком: красный текст с цветными «двойниками». */
 @Composable
-private fun StatCard(label: String, value: String, modifier: Modifier = Modifier) {
+private fun GlitchTitle(text: String, style: androidx.compose.ui.text.TextStyle) {
+    val base = style.copy(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+        fontWeight = FontWeight.Black,
+        letterSpacing = 3.sp
+    )
+    Box {
+        Text(text, style = base, color = Color(0x4DFFB400), modifier = Modifier.offset(2.dp, 2.dp))
+        Text(text, style = base, color = Color(0x6600E5FF), modifier = Modifier.offset((-2).dp, (-1).dp))
+        Text(text, style = base, color = Color(0xFFFF3B30))
+    }
+}
+
+@Composable
+private fun StatCard(
+    label: String,
+    value: String,
+    scheme: ColorScheme,
+    modifier: Modifier = Modifier
+) {
     Card(
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
         modifier = modifier
     ) {
         Row(
@@ -219,12 +260,13 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
             Text(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = scheme.onSurfaceVariant
             )
             Text(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = scheme.onSurface
             )
         }
     }
@@ -236,23 +278,25 @@ private fun ResultCard(
     subtitle: String,
     primaryLabel: String,
     onPrimary: () -> Unit,
-    onMenu: () -> Unit
+    onMenu: () -> Unit,
+    scheme: ColorScheme
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.cardColors(containerColor = scheme.surfaceContainer),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = scheme.onSurface
             )
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = scheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -281,6 +325,35 @@ private val EdgeSwipeZonePx = 200f
 
 private val EaseOutBack = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
 
+/**
+ * Палитра «темы Error»: тёмно-красный сбой, который включается для варианта,
+ * решённого с одного нажатия (рекорд 0 с).
+ */
+private val ErrorColors: ColorScheme = darkColorScheme(
+    primary = Color(0xFFFF5252),
+    onPrimary = Color(0xFF2A0000),
+    primaryContainer = Color(0xFF7A0E0E),
+    onPrimaryContainer = Color(0xFFFFDAD4),
+    secondary = Color(0xFFB4554F),
+    onSecondary = Color(0xFF2A0B0B),
+    secondaryContainer = Color(0xFF5A1A1A),
+    onSecondaryContainer = Color(0xFFFFDAD4),
+    background = Color(0xFF150505),
+    onBackground = Color(0xFFFFE5E2),
+    surface = Color(0xFF150505),
+    onSurface = Color(0xFFFFE5E2),
+    surfaceContainer = Color(0xFF2A0B0B),
+    surfaceContainerHigh = Color(0xFF3A1010),
+    onSurfaceVariant = Color(0xFFE57373),
+    error = Color(0xFFFF3B30),
+    errorContainer = Color(0xFF8B0000),
+    onErrorContainer = Color(0xFFFFB4AB),
+    outline = Color(0xFF7A3A38),
+    outlineVariant = Color(0xFF5A2626),
+    inverseSurface = Color(0xFFFFE5E2),
+    inverseOnSurface = Color(0xFF3A0A0A)
+)
+
 private enum class GestureMode { Tap, Pan, Pinch, Cancelled }
 
 /**
@@ -296,11 +369,12 @@ private fun MinesweeperField(
     board: MinesweeperBoard?,
     status: MinesweeperStatus,
     boomIndex: Int?,
+    scheme: ColorScheme,
+    errorTheme: Boolean,
     onCellClick: (Int) -> Unit,
     onCellLongClick: (Int) -> Unit,
     onCellDoubleClick: (Int) -> Unit
 ) {
-    val scheme = MaterialTheme.colorScheme
     val textMeasurer = rememberTextMeasurer()
     val scope = rememberCoroutineScope()
 
@@ -372,6 +446,18 @@ private fun MinesweeperField(
                 }
                 put("✖", textMeasurer.measure("✖", TextStyle(fontSize = fontSize, color = scheme.onErrorContainer)))
                 put("⚑", textMeasurer.measure("⚑", TextStyle(fontSize = fontSize, color = scheme.error)))
+                put(
+                    "ERROR",
+                    textMeasurer.measure(
+                        "ERROR",
+                        TextStyle(
+                            fontSize = 44.sp,
+                            fontWeight = FontWeight.Black,
+                            fontFamily = FontFamily.Monospace,
+                            letterSpacing = 4.sp
+                        )
+                    )
+                )
             }
         }
 
@@ -601,6 +687,18 @@ private fun MinesweeperField(
                 translate(offset.x, offset.y)
                 scale(zoom, zoom, Offset.Zero)
             }) {
+                if (errorTheme) {
+                    glyphLayouts["ERROR"]?.let { g ->
+                        drawText(
+                            g,
+                            topLeft = Offset(
+                                (width * basePx - g.size.width) / 2f,
+                                (height * basePx - g.size.height) / 2f
+                            ),
+                            color = Color(0x26FF3B30)
+                        )
+                    }
+                }
                 for (y in 0 until height) {
                     for (x in 0 until width) {
                         val index = y * width + x
@@ -613,6 +711,7 @@ private fun MinesweeperField(
                             flagStart = flagAt.getOrElse(index) { Long.MIN_VALUE },
                             now = now,
                             scheme = scheme,
+                            errorTheme = errorTheme,
                             glyphs = glyphLayouts
                         )
                     }
@@ -648,6 +747,35 @@ private fun MinesweeperField(
                 cornerRadius = CornerRadius(8.dp.toPx()),
                 style = Stroke(width = 1.dp.toPx())
             )
+
+            // Тема Error: скан-строка, полосы «порчи» и пульсирующая рамка.
+            // Всё детерминировано по времени композиции, никаких состояний.
+            if (errorTheme) {
+                val ms = now / 1_000_000L
+                val scanH = (boardH + 60f).toInt().coerceAtLeast(1)
+                val sy = (ms / 8 % scanH).toFloat() - 30f
+                drawRect(
+                    color = Color(0x59FF3B30),
+                    topLeft = Offset(offset.x, offset.y + sy),
+                    size = Size(boardW, 2f)
+                )
+                for (i in 0 until 4) {
+                    val yy = (((ms / 3) * (16L * i + 11) + 41L * i) % scanH).toFloat() - 30f
+                    drawRect(
+                        color = Color(0x2EFF2D55),
+                        topLeft = Offset(offset.x, offset.y + yy),
+                        size = Size(boardW, 6f + (i % 3) * 4f)
+                    )
+                }
+                val pulse = ((ms / 45) % 90) / 90f
+                drawRoundRect(
+                    color = Color(0xFFFF3B30).copy(alpha = 0.3f + 0.3f * pulse),
+                    topLeft = offset,
+                    size = Size(boardW, boardH),
+                    cornerRadius = CornerRadius(8.dp.toPx()),
+                    style = Stroke(width = 2.dp.toPx())
+                )
+            }
         }
 
         Column(
@@ -788,6 +916,7 @@ private fun DrawScope.drawCell(
     flagStart: Long,
     now: Long,
     scheme: ColorScheme,
+    errorTheme: Boolean,
     glyphs: Map<String, TextLayoutResult>
 ) {
     val revealed = cell?.isRevealed == true
@@ -795,8 +924,16 @@ private fun DrawScope.drawCell(
     val flagged = cell?.isFlagged == true
 
     // Полупиксель с каждой стороны: соседние клетки не оставляют швов.
+    // В режиме Error нераскрытые клетки слегка «мерцают» шашечкой.
+    val cellX = (x / size).toInt()
+    val cellY = (y / size).toInt()
+    val baseFill = if (errorTheme && !revealed && (cellX + cellY) % 2 == 1) {
+        scheme.surfaceContainerHigh.copy(alpha = 0.82f)
+    } else {
+        scheme.surfaceContainerHigh
+    }
     drawRect(
-        color = scheme.surfaceContainerHigh,
+        color = baseFill,
         topLeft = Offset(x - 0.25f, y - 0.25f),
         size = Size(size + 0.5f, size + 0.5f)
     )
@@ -817,22 +954,39 @@ private fun DrawScope.drawCell(
                 size = Size(size + 0.5f, size + 0.5f)
             )
             when {
-                isMine -> glyphs["✖"]?.let {
+                isMine -> glyphs["✖"]?.let { g ->
+                    val top = textTopLeft(g, x, y, size)
+                    if (errorTheme) drawGhostLayer(g, top, ease)
                     drawText(
-                        it,
-                        topLeft = textTopLeft(it, x, y, size),
-                        color = scheme.onErrorContainer.copy(alpha = ease)
+                        g,
+                        topLeft = top,
+                        color = if (errorTheme) Color(0xFFFF8A80) else scheme.onErrorContainer,
+                        alpha = ease
                     )
                 }
-                flagged -> glyphs["⚑"]?.let {
+                flagged -> glyphs["⚑"]?.let { g ->
+                    val top = textTopLeft(g, x, y, size)
+                    if (errorTheme) drawGhostLayer(g, top, ease)
                     drawText(
-                        it,
-                        topLeft = textTopLeft(it, x, y, size),
-                        color = scheme.error.copy(alpha = ease)
+                        g,
+                        topLeft = top,
+                        color = if (errorTheme) Color(0xFFFF3B30) else scheme.error,
+                        alpha = ease
                     )
                 }
-                (cell?.adjacentMines ?: 0) > 0 -> glyphs[cell!!.adjacentMines.toString()]?.let {
-                    drawText(it, topLeft = textTopLeft(it, x, y, size))
+                (cell?.adjacentMines ?: 0) > 0 -> glyphs[cell!!.adjacentMines.toString()]?.let { g ->
+                    val top = textTopLeft(g, x, y, size)
+                    if (errorTheme) {
+                        val jitter = if ((cellX * 7 + cellY * 13) % 5 == 0) 2.4f else 1.5f
+                        drawText(g, topLeft = top + Offset(-jitter, 0f), color = Color(0x6600E5FF), alpha = ease)
+                        drawText(g, topLeft = top + Offset(jitter, 0f), color = Color(0x66FF0033), alpha = ease)
+                    }
+                    drawText(
+                        g,
+                        topLeft = top,
+                        color = if (errorTheme) Color(0xFFFFE8E6) else Color.Unspecified,
+                        alpha = ease
+                    )
                 }
             }
         }
@@ -844,6 +998,12 @@ private fun DrawScope.drawCell(
             center = Offset(x + size / 2f, y + size / 2f)
         )
     }
+}
+
+/** Хроматические «двойники» глифа: циан слева, красный справа. Только Error. */
+private fun DrawScope.drawGhostLayer(glyph: TextLayoutResult, top: Offset, ease: Float) {
+    drawText(glyph, topLeft = top + Offset(-1.8f, 0f), color = Color(0x5500E5FF), alpha = ease)
+    drawText(glyph, topLeft = top + Offset(1.8f, 0f), color = Color(0x55FF002E), alpha = ease)
 }
 
 private fun textTopLeft(layout: TextLayoutResult, x: Float, y: Float, size: Float): Offset =
