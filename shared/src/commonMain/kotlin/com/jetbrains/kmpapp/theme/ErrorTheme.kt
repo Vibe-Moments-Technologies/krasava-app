@@ -68,23 +68,32 @@ val ErrorTypography: Typography = Typography().run {
     )
 }
 
-/** Моноширинный заголовок «в духе ERROR»: рядом с темой всегда заметен. */
+/**
+ * Моноширинный заголовок «в духе ERROR»: рядом с темой всегда заметен.
+ * При [glitch] рисуется объёмным наложением цветов — белая надпись с
+ * циановым и красным «двойниками» со смещением, как заголовок ERROR.
+ */
 @Composable
 fun MonoTitle(
     text: String,
     style: TextStyle,
     color: Color = Color.Unspecified,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    glitch: Boolean = false
 ) {
-    Text(
-        text = text,
-        style = style.copy(
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Black
-        ),
-        color = color,
-        modifier = modifier
+    val base = style.copy(
+        fontFamily = FontFamily.Monospace,
+        fontWeight = FontWeight.Black
     )
+    if (glitch) {
+        Box(modifier = modifier) {
+            Text(text, style = base, color = Color(0x6600E5FF), modifier = Modifier.offset((-2).dp, 1.dp))
+            Text(text, style = base, color = Color(0x66FF3B30), modifier = Modifier.offset(2.dp, (-1).dp))
+            Text(text, style = base, color = color)
+        }
+    } else {
+        Text(text, style = base, color = color, modifier = modifier)
+    }
 }
 
 /** Заголовок с эффектом глюка: красная надпись с цветными «двойниками». */

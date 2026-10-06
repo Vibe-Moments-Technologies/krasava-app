@@ -81,6 +81,7 @@ private fun GamesMenu(
     modifier: Modifier = Modifier
 ) {
     val records by viewModel.records.collectAsState()
+    val errorActive by viewModel.errorActive.collectAsState()
 
     Column(
         modifier = modifier
@@ -96,6 +97,7 @@ private fun GamesMenu(
             text = "Игры",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onSurface,
+            glitch = errorActive,
             modifier = Modifier.padding(top = 8.dp)
         )
 
@@ -155,6 +157,7 @@ private fun GamesMenu(
                     subtitle = "${option.width}×${option.height} · ${option.mines} мин",
                     recordText = record?.let { GamesViewModel.formatRecord(it) },
                     icon = Icons.Filled.Bolt,
+                    glitch = errorActive,
                     onClick = { viewModel.openGame(option) }
                 )
             }
@@ -222,6 +225,7 @@ private fun GameCard(
     subtitle: String,
     recordText: String?,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    glitch: Boolean = false,
     onClick: () -> Unit
 ) {
     Card(
@@ -253,7 +257,8 @@ private fun GameCard(
                 MonoTitle(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    glitch = glitch
                 )
                 Text(
                     text = subtitle,

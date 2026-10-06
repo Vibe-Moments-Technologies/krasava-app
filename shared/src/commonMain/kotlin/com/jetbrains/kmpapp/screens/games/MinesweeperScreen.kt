@@ -133,7 +133,8 @@ fun MinesweeperScreen(
                     MonoTitle(
                         text = "Сапер",
                         style = MaterialTheme.typography.titleMedium,
-                        color = scheme.onSurface
+                        color = scheme.onSurface,
+                        glitch = errorTheme
                     )
                 }
                 Text(
@@ -160,12 +161,14 @@ fun MinesweeperScreen(
                 label = "Мины",
                 value = (board?.remainingMines ?: difficulty.mines).toString(),
                 scheme = scheme,
+                glitch = errorTheme,
                 modifier = Modifier.weight(1f)
             )
             StatCard(
                 label = "Время",
                 value = formatSeconds(elapsed),
                 scheme = scheme,
+                glitch = errorTheme,
                 modifier = Modifier.weight(1f)
             )
         }
@@ -196,7 +199,8 @@ fun MinesweeperScreen(
                 primaryLabel = "Ещё партия",
                 onPrimary = { viewModel.restart() },
                 onMenu = onBack,
-                scheme = scheme
+                scheme = scheme,
+                glitch = errorTheme
             )
             MinesweeperStatus.LOST -> ResultCard(
                 title = "Мина!",
@@ -204,7 +208,8 @@ fun MinesweeperScreen(
                 primaryLabel = "Ещё партия",
                 onPrimary = { viewModel.restart() },
                 onMenu = onBack,
-                scheme = scheme
+                scheme = scheme,
+                glitch = errorTheme
             )
             else -> Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -231,6 +236,7 @@ private fun StatCard(
     label: String,
     value: String,
     scheme: ColorScheme,
+    glitch: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -251,7 +257,8 @@ private fun StatCard(
             MonoTitle(
                 text = value,
                 style = MaterialTheme.typography.titleMedium,
-                color = scheme.onSurface
+                color = scheme.onSurface,
+                glitch = glitch
             )
         }
     }
@@ -264,7 +271,8 @@ private fun ResultCard(
     primaryLabel: String,
     onPrimary: () -> Unit,
     onMenu: () -> Unit,
-    scheme: ColorScheme
+    scheme: ColorScheme,
+    glitch: Boolean = false
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -275,7 +283,8 @@ private fun ResultCard(
             MonoTitle(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                color = scheme.onSurface
+                color = scheme.onSurface,
+                glitch = glitch
             )
             Text(
                 text = subtitle,
