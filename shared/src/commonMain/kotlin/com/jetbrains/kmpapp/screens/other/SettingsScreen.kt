@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -128,7 +129,7 @@ fun SettingsScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "Настройки",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -164,13 +165,13 @@ fun SettingsScreen(
                     }
                 }
             ) {
-                Text(
+                GlitchText(
                     text = "Тема приложения",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(
+                GlitchText(
                     text = "Выберите желаемый стиль интерфейса",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -186,7 +187,7 @@ fun SettingsScreen(
                             selected = themeMode == mode,
                             onClick = { viewModel.setThemeMode(mode) },
                             label = {
-                                Text(
+                                GlitchText(
                                     text = mode.displayName,
                                     fontSize = 13.sp,
                                     modifier = Modifier.fillMaxWidth(),
@@ -212,13 +213,13 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
+                            GlitchText(
                                 text = "Иконка приложения",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
+                            GlitchText(
                                 text = "Новая или старая · тема — автоматически",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -248,13 +249,13 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        GlitchText(
                             text = "Настройка нижней панели",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(
+                        GlitchText(
                             text = "Порядок и состав страниц на панели",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -277,13 +278,13 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        GlitchText(
                             text = "Скрывать панель навигации",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(
+                        GlitchText(
                             text = "«Другое» откроется шестерёнкой на странице расписания, сервисы — блоками внутри него",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -309,13 +310,13 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        GlitchText(
                             text = "Настройки задач",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(
+                        GlitchText(
                             text = "Генератор лабораторных, приоритеты, очистка базы",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -384,13 +385,13 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
+                            GlitchText(
                                 text = "Напоминать о занятиях",
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
+                            GlitchText(
                                 text = "Локальное напоминание до начала пары выбранного расписания. Работает без интернета, прямо на устройстве",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -414,13 +415,13 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
+                                GlitchText(
                                     text = "Расписание для уведомлений",
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
-                                Text(
+                                GlitchText(
                                     text = notificationTarget?.fullTitle ?: "Выберите расписание",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -437,7 +438,7 @@ fun SettingsScreen(
                         val isCustom = notifyMinutesBefore !in presets
 
                         Spacer(modifier = Modifier.height(12.dp))
-                        Text(
+                        GlitchText(
                             text = "За сколько минут до пары",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
@@ -452,7 +453,7 @@ fun SettingsScreen(
                                     selected = notifyMinutesBefore == minutes,
                                     onClick = { viewModel.setNotifyMinutesBefore(minutes) },
                                     label = {
-                                        Text(
+                                        GlitchText(
                                             text = "$minutes мин",
                                             fontSize = 13.sp,
                                             modifier = Modifier.fillMaxWidth(),
@@ -470,7 +471,7 @@ fun SettingsScreen(
                                     showCustomMinutesDialog = true
                                 },
                                 label = {
-                                    Text(
+                                    GlitchText(
                                         text = "Своё",
                                         fontSize = 13.sp,
                                         modifier = Modifier.fillMaxWidth(),
@@ -489,7 +490,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(
+                                GlitchText(
                                     text = "Своё: $notifyMinutesBefore мин",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -519,13 +520,13 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
+                        GlitchText(
                             text = "Предупреждения о VPN",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
-                        Text(
+                        GlitchText(
                             text = "Показывать предупреждение, если VPN может помешать обновлению расписания",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -546,10 +547,10 @@ fun SettingsScreen(
     if (showNotificationsTargetDialog) {
         AlertDialog(
             onDismissRequest = { showNotificationsTargetDialog = false },
-            title = { Text("Расписание для уведомлений") },
+            title = { GlitchText("Расписание для уведомлений") },
             text = {
                 if (savedTargets.isEmpty()) {
-                    Text("Сначала добавьте хотя бы одно расписание.")
+                    GlitchText("Сначала добавьте хотя бы одно расписание.")
                 } else {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         savedTargets.forEach { target ->
@@ -564,11 +565,11 @@ fun SettingsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(modifier = Modifier.weight(1f)) {
-                                    Text(
+                                    GlitchText(
                                         text = target.fullTitle,
                                         style = MaterialTheme.typography.bodyLarge
                                     )
-                                    Text(
+                                    GlitchText(
                                         text = target.type.displayName,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -588,7 +589,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showNotificationsTargetDialog = false }) {
-                    Text("Закрыть")
+                    GlitchText("Закрыть")
                 }
             }
         )
@@ -597,14 +598,14 @@ fun SettingsScreen(
     if (showCustomMinutesDialog) {
         AlertDialog(
             onDismissRequest = { showCustomMinutesDialog = false },
-            title = { Text("Своё время") },
+            title = { GlitchText("Своё время") },
             text = {
                 OutlinedTextField(
                     value = customMinutesDraft,
                     onValueChange = { text ->
                         customMinutesDraft = text.filter { it.isDigit() }.take(3)
                     },
-                    label = { Text("Минут до пары (1–120)") },
+                    label = { GlitchText("Минут до пары (1–120)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
@@ -619,12 +620,12 @@ fun SettingsScreen(
                         showCustomMinutesDialog = false
                     }
                 ) {
-                    Text("Сохранить")
+                    GlitchText("Сохранить")
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCustomMinutesDialog = false }) {
-                    Text("Отменить")
+                    GlitchText("Отменить")
                 }
             }
         )
@@ -633,10 +634,10 @@ fun SettingsScreen(
     if (showSakuraDialog) {
         AlertDialog(
             onDismissRequest = { showSakuraDialog = false },
-            title = { Text("Сакура 🌸", fontWeight = FontWeight.Bold) },
+            title = { GlitchText("Сакура 🌸", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text(
+                    GlitchText(
                         text = "Очередной тыкальщик? 😏\n\nРаз уж ты нашёл этот секрет — держи эксклюзивную тему «Сакура» в нежных пастельно-розовых тонах!",
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -646,7 +647,7 @@ fun SettingsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        GlitchText(
                             text = "Сакура",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
@@ -660,7 +661,7 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSakuraDialog = false }) {
-                    Text("Готово")
+                    GlitchText("Готово")
                 }
             }
         )
@@ -683,13 +684,13 @@ private fun SettingsNavigationRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(
+            GlitchText(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(2.dp))
-            Text(
+            GlitchText(
                 text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -735,7 +736,7 @@ private fun SettingsSectionCard(
                         )
                 )
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(
+                GlitchText(
                     text = title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,

@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -92,7 +93,7 @@ fun DataAndCacheScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "Данные и память",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -123,12 +124,12 @@ fun DataAndCacheScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(
+                            GlitchText(
                                 text = "Память приложения",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                            Text(
+                            GlitchText(
                                 text = storageStats.formatBytes(storageStats.totalSizeBytes),
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.Bold,
@@ -225,7 +226,7 @@ fun DataAndCacheScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    Text(
+                    GlitchText(
                         text = "Детализация хранилища",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
@@ -310,13 +311,13 @@ fun DataAndCacheScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(18.dp)) {
-                        Text(
+                        GlitchText(
                             text = "Заметки к прошедшим парам",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(6.dp))
-                        Text(
+                        GlitchText(
                             text = "Заметки, привязанные к занятиям старше 90 дней, можно удалить для экономии места.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -328,7 +329,7 @@ fun DataAndCacheScreen(
                                 notesStorage.cleanOldLessonNotes(cutoff)
                             }
                         ) {
-                            Text("Очистить заметки к прошедшим занятиям")
+                            GlitchText("Очистить заметки к прошедшим занятиям")
                         }
                     }
                 }
@@ -359,7 +360,7 @@ fun DataAndCacheScreen(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
-                        Text(
+                        GlitchText(
                             text = "Почему нет очистки кэша?",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
@@ -369,7 +370,7 @@ fun DataAndCacheScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
+                    GlitchText(
                         text = "Приложение спроектировано по концепции Offline-First: все расписания, карты корпусов и задачи сохраняются локально и работают мгновенно даже без подключения к сети.\n\n" +
                                "В отличие от веб-браузеров, кэш не накапливается сотнями мегабайт, а точечно и автоматически обновляется в фоне при наличии интернета. " +
                                "Благодаря этому приложение всегда занимает минимум памяти на устройстве и не требует ручной очистки.",
@@ -400,14 +401,14 @@ private fun StorageLegendItem(
                     .background(color)
             )
             Spacer(modifier = Modifier.width(6.dp))
-            Text(
+            GlitchText(
                 text = label,
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Spacer(modifier = Modifier.height(2.dp))
-        Text(
+        GlitchText(
             text = value,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
@@ -437,12 +438,12 @@ private fun StorageDetailRow(
             )
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text(
+                GlitchText(
                     text = title,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-                Text(
+                GlitchText(
                     text = subtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -451,7 +452,7 @@ private fun StorageDetailRow(
             }
         }
 
-        Text(
+        GlitchText(
             text = size,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Bold,

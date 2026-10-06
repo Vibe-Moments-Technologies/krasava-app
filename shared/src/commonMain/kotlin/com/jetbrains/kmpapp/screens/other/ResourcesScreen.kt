@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -433,7 +434,7 @@ private fun ResourcesRootContent(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "Ресурсы университета",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -449,7 +450,7 @@ private fun ResourcesRootContent(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text(
+            GlitchText(
                 text = "Официальные цифровые сервисы РТУ МИРЭА, необходимые для учебы и взаимодействия с университетом.",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -496,7 +497,7 @@ private fun FolderContentScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = folder.title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -562,13 +563,13 @@ private fun OfficialResourceCard(
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    GlitchText(
                         text = res.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
+                    GlitchText(
                         text = displayWithoutProtocol(res.url),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
@@ -579,7 +580,7 @@ private fun OfficialResourceCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
+            GlitchText(
                 text = res.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -603,7 +604,7 @@ private fun OfficialResourceCard(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
+                GlitchText(
                     text = "Перейти к сервису",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
@@ -647,7 +648,7 @@ private fun FolderCard(
                 )
             }
             Spacer(modifier = Modifier.width(14.dp))
-            Text(
+            GlitchText(
                 text = folder.title,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
@@ -690,13 +691,13 @@ private fun ResourceLinkCard(
                 LinkAvatar(link = link, resolvedAvatar = resolvedAvatar)
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    GlitchText(
                         text = link.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    Text(
+                    GlitchText(
                         text = link.url?.let(::displayWithoutProtocol) ?: "В разработке",
                         style = MaterialTheme.typography.bodySmall,
                         color = if (link.url != null) {
@@ -711,7 +712,7 @@ private fun ResourceLinkCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text(
+            GlitchText(
                 text = link.description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -736,7 +737,7 @@ private fun ResourceLinkCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text(
+                    GlitchText(
                         text = linkButtonLabel(link.url),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
@@ -758,7 +759,7 @@ private fun ResourceLinkCard(
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(5.dp))
-                    Text(
+                    GlitchText(
                         text = "В разработке",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
@@ -818,7 +819,7 @@ private fun SymbolAvatar(symbol: String, accentColor: Color, modifier: Modifier 
             .background(accentColor.copy(alpha = 0.15f)),
         contentAlignment = Alignment.Center
     ) {
-        Text(
+        GlitchText(
             text = symbol,
             fontSize = 22.sp,
             lineHeight = 26.sp,
@@ -853,7 +854,7 @@ private fun EmptyFolderPlaceholder() {
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(10.dp))
-            Text(
+            GlitchText(
                 text = "Ведутся технические работы",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

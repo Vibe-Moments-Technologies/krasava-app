@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.CompareArrows
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.MeetingRoom
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -65,6 +67,7 @@ enum class AppTab(
     MAP("Карта", Icons.Filled.Map, Icons.Filled.Map, isFixed = false),
     NOTES("Конспекты", Icons.Filled.EditNote, Icons.Outlined.EditNote, isFixed = false),
     COMPARE("Сравнение", Icons.Filled.CompareArrows, Icons.Outlined.CompareArrows, isFixed = false),
+    GAMES("Игры", Icons.Filled.SportsEsports, Icons.Outlined.SportsEsports, isFixed = false),
     // Раздел-концентратор сервисов: сам не экран приложения, а «папка» —
     // по умолчанию скрыт, добавляется в док как обычная вкладка.
     SERVICES("Сервисы", Icons.Filled.Apps, Icons.Outlined.Apps, isFixed = false),

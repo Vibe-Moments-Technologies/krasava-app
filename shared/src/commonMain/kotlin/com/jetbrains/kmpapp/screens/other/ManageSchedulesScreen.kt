@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -114,7 +115,7 @@ fun ManageSchedulesScreen(
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
+                    GlitchText(
                         text = "Мои расписания",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
@@ -146,13 +147,13 @@ fun ManageSchedulesScreen(
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text(
+                    GlitchText(
                         text = "Список расписаний пуст",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
+                    GlitchText(
                         text = "Добавьте группу, преподавателя или аудиторию",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -164,7 +165,7 @@ fun ManageSchedulesScreen(
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Добавить расписание")
+                        GlitchText("Добавить расписание")
                     }
                 }
             }
@@ -184,7 +185,7 @@ fun ManageSchedulesScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { Text("Поиск...", fontSize = 13.sp) },
+                        placeholder = { GlitchText("Поиск...", fontSize = 13.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
@@ -220,7 +221,7 @@ fun ManageSchedulesScreen(
                             TargetSortOrder.entries.forEach { order ->
                                 DropdownMenuItem(
                                     text = {
-                                        Text(
+                                        GlitchText(
                                             text = order.displayName,
                                             fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
                                             color = if (sortOrder == order) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
@@ -257,7 +258,7 @@ fun ManageSchedulesScreen(
                         FilterChip(
                             selected = filterType == type,
                             onClick = { viewModel.setFilterType(type) },
-                            label = { Text(title, fontSize = 12.sp) },
+                            label = { GlitchText(title, fontSize = 12.sp) },
                             shape = RoundedCornerShape(12.dp)
                         )
                     }
@@ -273,7 +274,7 @@ fun ManageSchedulesScreen(
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        GlitchText(
                             text = "Ничего не найдено",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -308,7 +309,7 @@ fun ManageSchedulesScreen(
                                     ) {
                                         Column {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text(
+                                                GlitchText(
                                                     text = target.targetTitle,
                                                     style = MaterialTheme.typography.titleMedium,
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
@@ -323,7 +324,7 @@ fun ManageSchedulesScreen(
                                                     )
                                                 }
                                             }
-                                            Text(
+                                            GlitchText(
                                                 text = target.type.displayName,
                                                 fontSize = 12.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant

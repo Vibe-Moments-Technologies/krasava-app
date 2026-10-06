@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -69,7 +70,7 @@ fun TeamScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "Команда проекта",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -93,7 +94,7 @@ fun TeamScreen(
             for (department in teamDepartments) {
                 val members = byDepartment[department] ?: continue
                 item(key = "dept_$department") {
-                    Text(
+                    GlitchText(
                         text = department,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
@@ -138,7 +139,7 @@ private fun TeamMemberCard(member: TeamMember) {
                             .background(MaterialTheme.colorScheme.surfaceContainerHighest),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
+                        GlitchText(
                             text = member.name.first().uppercase(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
@@ -148,13 +149,13 @@ private fun TeamMemberCard(member: TeamMember) {
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    GlitchText(
                         text = member.name,
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(
+                    GlitchText(
                         text = member.role,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.primary,
@@ -177,7 +178,7 @@ private fun TeamMemberCard(member: TeamMember) {
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
-                            Text(
+                            GlitchText(
                                 text = email,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Medium,
@@ -225,7 +226,7 @@ private fun TeamMemberCard(member: TeamMember) {
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
-                            Text(
+                            GlitchText(
                                 text = label,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.SemiBold,

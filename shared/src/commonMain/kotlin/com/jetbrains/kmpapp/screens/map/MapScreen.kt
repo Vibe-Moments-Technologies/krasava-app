@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.map
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -228,7 +229,7 @@ fun MapScreen(
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(
+                            GlitchText(
                                 text = selectedCampus.shortName,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
@@ -254,12 +255,12 @@ fun MapScreen(
                             DropdownMenuItem(
                                 text = {
                                     Column {
-                                        Text(
+                                        GlitchText(
                                             text = campus.name,
                                             fontWeight = if (campus.id == selectedCampus.id) FontWeight.Bold else FontWeight.Normal,
                                             color = if (campus.id == selectedCampus.id) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                         )
-                                        Text(
+                                        GlitchText(
                                             text = campus.address,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -366,7 +367,7 @@ fun MapScreen(
                                 },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
+                            GlitchText(
                                 text = displayText,
                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
@@ -455,7 +456,7 @@ fun MapScreen(
                                 modifier = Modifier.size(36.dp)
                             )
 
-                            Text(
+                            GlitchText(
                                 text = "Схемы корпусов",
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
@@ -463,7 +464,7 @@ fun MapScreen(
                                 color = MaterialTheme.colorScheme.onSurface
                             )
 
-                            Text(
+                            GlitchText(
                                 text = "Планы этажей и расположение аудиторий могут содержать неточности из-за текущих перепланировок и ремонтов в корпусах.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -471,7 +472,7 @@ fun MapScreen(
                                 textAlign = TextAlign.Center
                             )
 
-                            Text(
+                            GlitchText(
                                 text = "Для точной информации сверяйтесь со схемами эвакуации внутри здания или официальным сервисом «Карта РТУ МИРЭА»:",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -499,7 +500,7 @@ fun MapScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
+                                    GlitchText(
                                         text = "pulse.mirea.ru/services/maps\n(доступен через ЛКС)",
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.primary,
@@ -518,7 +519,7 @@ fun MapScreen(
                                 shape = RoundedCornerShape(14.dp),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text("Понятно", fontWeight = FontWeight.SemiBold)
+                                GlitchText("Понятно", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -536,7 +537,7 @@ private fun MapFilterRow(
 ) {
     DropdownMenuItem(
         text = {
-            Text(
+            GlitchText(
                 text = title,
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (checked) FontWeight.SemiBold else FontWeight.Normal,

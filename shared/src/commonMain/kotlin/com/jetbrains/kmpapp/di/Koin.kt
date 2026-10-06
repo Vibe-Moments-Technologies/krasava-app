@@ -4,6 +4,7 @@ import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.VkAvatarLoader
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
 import com.jetbrains.kmpapp.data.config.RemoteConfigLoader
+import com.jetbrains.kmpapp.data.storage.GamesStorage
 import com.jetbrains.kmpapp.data.storage.LessonNotesStorage
 import com.jetbrains.kmpapp.data.storage.PlatformStorage
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
@@ -26,6 +27,7 @@ import com.jetbrains.kmpapp.data.TaskRepository
 import com.jetbrains.kmpapp.data.sync.UnifiedSyncManager
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
+import com.jetbrains.kmpapp.screens.games.GamesViewModel
 import com.jetbrains.kmpapp.screens.notes.NotesViewModel
 import com.jetbrains.kmpapp.screens.services.ServicesViewModel
 
@@ -57,6 +59,7 @@ val dataModule = module {
     singleOf(::VkAvatarLoader)
     singleOf(::ScheduleStorage)
     singleOf(::LessonNotesStorage)
+    singleOf(::GamesStorage)
     singleOf(::ScheduleRepository)
     singleOf(::AppUpdateChecker)
     singleOf(::FreeRoomsRepository)
@@ -72,6 +75,7 @@ val viewModelModule = module {
     factoryOf(::CompareScheduleViewModel)
     factoryOf(::NotesViewModel)
     factoryOf(::ServicesViewModel)
+    factoryOf(::GamesViewModel)
 }
 
 fun initKoin() {

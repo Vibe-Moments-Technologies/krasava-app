@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -94,7 +95,7 @@ fun IconPickerScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(4.dp))
-                Text(
+                GlitchText(
                     text = "Иконка приложения",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
@@ -112,7 +113,7 @@ fun IconPickerScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
+            GlitchText(
                 text = "Выберите, как приложение будет выглядеть на рабочем столе. " +
                     "Изменение применяется сразу.",
                 style = MaterialTheme.typography.bodySmall,
@@ -149,14 +150,14 @@ fun IconPickerScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
+                            GlitchText(
                                 text = option.title,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Spacer(modifier = Modifier.height(2.dp))
-                            Text(
+                            GlitchText(
                                 text = option.subtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,12 +39,18 @@ import com.jetbrains.kmpapp.screens.rooms.FreeRoomsViewModel
 import com.jetbrains.kmpapp.screens.schedule.ScheduleScreen
 import com.jetbrains.kmpapp.screens.schedule.ScheduleViewModel
 import com.jetbrains.kmpapp.screens.services.ServicesScreen
+import com.jetbrains.kmpapp.screens.games.GamesScreen
+import com.jetbrains.kmpapp.screens.games.GamesViewModel
 import com.jetbrains.kmpapp.screens.services.ServicesViewModel
 import com.jetbrains.kmpapp.screens.other.isServiceScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import com.jetbrains.kmpapp.theme.CyberpunkDarkColors
 import com.jetbrains.kmpapp.theme.CyberpunkLightColors
+import com.jetbrains.kmpapp.theme.ErrorColors
+import com.jetbrains.kmpapp.theme.ErrorScanlines
+import com.jetbrains.kmpapp.theme.ErrorTypography
+import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
@@ -101,6 +108,14 @@ fun App() {
     val compareViewModel: CompareScheduleViewModel = koinViewModel()
     val notesViewModel: NotesViewModel = koinViewModel()
     val servicesViewModel: ServicesViewModel = koinViewModel()
+    val gamesViewModel: GamesViewModel = koinViewModel()
+
+    // Тема Error включается теми же правилами, что и в «Сапере» (сломанный
+    // рекорд 0 с), но распространяется на всё приложение: пока существует
+    // сломанный рекорд, вся схема и типографика заменяются на красный глюк —
+    // как это делают оверлеи Сакуры/Матрицы/Киберпанка. Тема не сбрасывается
+    // при возврате из партии в меню, а держится до нажатия «Починить ошибку».
+    val errorActive by gamesViewModel.errorActive.collectAsState()
 
     val systemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
@@ -109,14 +124,26 @@ fun App() {
         ThemeMode.DARK -> true
     }
 
-    val colors = when (themeOverlay) {
-        ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
-        ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
-        ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
-        ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
+    val colors = if (errorActive) {
+        ErrorColors
+    } else {
+        when (themeOverlay) {
+            ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
+            ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
+            ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
+            ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
+        }
     }
 
-    MaterialTheme(colorScheme = colors) {
+    MaterialTheme(
+        colorScheme = colors,
+        typography = if (errorActive) ErrorTypography else MaterialTheme.typography
+    ) {
+        // Пока активна тема Error, все светлые (белые) надписи приложения —
+        // расписание, сервисы, настройки — рисуются через GlitchText: те
+        // Cyan/Red «двойники», что у заголовка ERROR. Тёмные и цветные
+        // подписи остаются обычными.
+        CompositionLocalProvider(LocalGlitchTextEnabled provides errorActive) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
@@ -156,6 +183,7 @@ fun App() {
                         screenContent = { _, back ->
                             OtherScreen(
                                 viewModel = otherViewModel,
+                                gamesViewModel = gamesViewModel,
                                 onNavigateToTab = { currentTab = it },
                                 onBack = back
                             )
@@ -182,15 +210,20 @@ fun App() {
                         AppTab.COMPARE -> {
                             CompareScheduleScreen(viewModel = compareViewModel)
                         }
+                        AppTab.GAMES -> {
+                            GamesScreen(viewModel = gamesViewModel)
+                        }
                         AppTab.SERVICES -> {
                             ServicesScreen(
                                 viewModel = servicesViewModel,
+                                gamesViewModel = gamesViewModel,
                                 dockTabs = dockTabs
                             )
                         }
                         AppTab.OTHER -> {
                             OtherScreen(
                                 viewModel = otherViewModel,
+                                gamesViewModel = gamesViewModel,
                                 onNavigateToTab = { currentTab = it }
                             )
                         }
@@ -205,9 +238,11 @@ fun App() {
                     // иконка раздела меняется на «назад» (тап = возврат).
                     val servicesActiveService by servicesViewModel.activeService.collectAsState()
                     val otherSubScreen by otherViewModel.activeSubScreen.collectAsState()
+                    val activeGame by gamesViewModel.activeGame.collectAsState()
                     val backModeTab = when {
                         currentTab == AppTab.SERVICES && servicesActiveService != null -> AppTab.SERVICES
                         currentTab == AppTab.OTHER && otherSubScreen.isServiceScreen -> AppTab.OTHER
+                        currentTab == AppTab.GAMES && activeGame != null -> AppTab.GAMES
                         else -> null
                     }
                     FloatingDock(
@@ -227,6 +262,9 @@ fun App() {
                                 AppTab.MAP -> {}
                                 AppTab.NOTES -> {}
                                 AppTab.COMPARE -> {}
+                                AppTab.GAMES -> {
+                                    gamesViewModel.closeGame()
+                                }
                                 AppTab.SERVICES -> {
                                     servicesViewModel.closeService()
                                 }
@@ -241,7 +279,13 @@ fun App() {
                     )
                 }
                 }
+
+                // Однотонные поверхности приложения во время темы Error дают
+                // те же «глюковатые полосы», что и поле «Сапёра»: скан-строка
+                // и полосы порчи проезжают по всему экрану поверх контента.
+                ErrorScanlines(enabled = errorActive)
             }
+        }
         }
     }
 }

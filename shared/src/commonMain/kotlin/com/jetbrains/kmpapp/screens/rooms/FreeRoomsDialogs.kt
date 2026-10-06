@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.rooms
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +38,7 @@ internal fun CampusPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Выберите корпус", fontWeight = FontWeight.Bold) },
+        title = { GlitchText("Выберите корпус", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 campuses.forEach { campus ->
@@ -51,7 +52,7 @@ internal fun CampusPickerDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        GlitchText(
                             text = campus,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -64,7 +65,7 @@ internal fun CampusPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть") }
+            TextButton(onClick = onDismiss) { GlitchText("Закрыть") }
         }
     )
 }
@@ -78,7 +79,7 @@ internal fun BellPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Выберите пару", fontWeight = FontWeight.Bold) },
+        title = { GlitchText("Выберите пару", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 val isAllSelected = selectedBell == null
@@ -91,7 +92,7 @@ internal fun BellPickerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
+                    GlitchText(
                         text = "Все пары (без фильтра)",
                         fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
                         color = if (isAllSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -112,7 +113,7 @@ internal fun BellPickerDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        GlitchText(
                             text = "${slot.bell} пара (${slot.start} - ${slot.end})",
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -125,7 +126,7 @@ internal fun BellPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть") }
+            TextButton(onClick = onDismiss) { GlitchText("Закрыть") }
         }
     )
 }
@@ -139,7 +140,7 @@ internal fun FloorPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Выберите этаж", fontWeight = FontWeight.Bold) },
+        title = { GlitchText("Выберите этаж", fontWeight = FontWeight.Bold) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
                 val isAllSelected = selectedFloor == null
@@ -152,7 +153,7 @@ internal fun FloorPickerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
+                    GlitchText(
                         text = "Все этажи",
                         fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
                         color = if (isAllSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -173,7 +174,7 @@ internal fun FloorPickerDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        GlitchText(
                             text = "$floor этаж",
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
@@ -186,7 +187,7 @@ internal fun FloorPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) { Text("Закрыть") }
+            TextButton(onClick = onDismiss) { GlitchText("Закрыть") }
         }
     )
 }
@@ -202,9 +203,9 @@ internal fun RoomDetailDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text(text = "Аудитория ${room.fullTitle}", fontWeight = FontWeight.Bold)
+                GlitchText(text = "Аудитория ${room.fullTitle}", fontWeight = FontWeight.Bold)
                 if (room.floor != null) {
-                    Text(
+                    GlitchText(
                         text = "Кампус ${room.campus} • Этаж ${room.floor}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -214,7 +215,7 @@ internal fun RoomDetailDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
+                GlitchText(
                     text = "Расписание занятости на сегодня:",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
@@ -230,7 +231,7 @@ internal fun RoomDetailDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
+                        GlitchText(
                             text = "${slot.bell} пара (${slot.start} – ${slot.end})",
                             style = MaterialTheme.typography.bodySmall
                         )
@@ -239,7 +240,7 @@ internal fun RoomDetailDialog(
                             shape = RoundedCornerShape(8.dp),
                             color = if (isFree) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer
                         ) {
-                            Text(
+                            GlitchText(
                                 text = if (isFree) "Свободна" else "Занята",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -253,7 +254,7 @@ internal fun RoomDetailDialog(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("Закрыть")
+                GlitchText("Закрыть")
             }
         }
     )

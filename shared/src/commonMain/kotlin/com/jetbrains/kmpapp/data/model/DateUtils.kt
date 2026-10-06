@@ -134,6 +134,20 @@ object DateUtils {
         return null
     }
 
+/**
+     * Дата и время по метке времени Unix в формате «дд.ММ.гггг чч:мм»
+     * в местном часовом поясе устройства.
+     */
+    fun formatDateTime(epochMillis: Long): String {
+        val moment = kotlin.time.Instant.fromEpochMilliseconds(epochMillis)
+            .toLocalDateTime(TimeZone.currentSystemDefault())
+        val day = moment.dayOfMonth.toString().padStart(2, '0')
+        val month = moment.monthNumber.toString().padStart(2, '0')
+        val hour = moment.hour.toString().padStart(2, '0')
+        val minute = moment.minute.toString().padStart(2, '0')
+        return "$day.$month.${moment.year} $hour:$minute"
+    }
+
     /**
      * Returns remaining minutes for a lesson if it's currently ongoing, or null otherwise.
      */

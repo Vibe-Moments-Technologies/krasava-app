@@ -1,4 +1,5 @@
 package com.jetbrains.kmpapp.screens.services
+import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +42,8 @@ import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
 import com.jetbrains.kmpapp.screens.map.MapScreen
 import com.jetbrains.kmpapp.screens.notes.NotesScreen
 import com.jetbrains.kmpapp.screens.notes.NotesViewModel
+import com.jetbrains.kmpapp.screens.games.GamesScreen
+import com.jetbrains.kmpapp.screens.games.GamesViewModel
 import com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen
 import com.jetbrains.kmpapp.screens.rooms.FreeRoomsViewModel
 import com.jetbrains.kmpapp.screens.tasks.TasksScreen
@@ -74,7 +77,8 @@ private val SERVICE_DESCRIPTIONS = mapOf(
     AppTab.TASKS to "Дедлайны и задания по предметам",
     AppTab.MAP to "Интерактивные схемы этажей корпусов",
     AppTab.NOTES to "Заметки с цветными полями, хранятся на устройстве",
-    AppTab.COMPARE to "Сравнение расписаний нескольких групп"
+    AppTab.COMPARE to "Сравнение расписаний нескольких групп",
+    AppTab.GAMES to "Сапер и другие игры с рекордами"
 )
 
 // Развёрнутые имена только на этой странице; в доке и блоке — краткие.
@@ -90,6 +94,7 @@ fun ServicesScreen(
     freeRoomsViewModel: FreeRoomsViewModel = org.koin.compose.viewmodel.koinViewModel(),
     compareViewModel: CompareScheduleViewModel = org.koin.compose.viewmodel.koinViewModel(),
     notesViewModel: NotesViewModel = org.koin.compose.viewmodel.koinViewModel(),
+    gamesViewModel: GamesViewModel = org.koin.compose.viewmodel.koinViewModel(),
     modifier: Modifier = Modifier
 ) {
     val activeService by viewModel.activeService.collectAsState()
@@ -113,7 +118,7 @@ fun ServicesScreen(
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp)
             ) {
-                Text(
+                GlitchText(
                     text = "Сервисы",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
@@ -121,7 +126,7 @@ fun ServicesScreen(
                     modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)
                 )
                 if (services.isEmpty()) {
-                    Text(
+                    GlitchText(
                         text = "Все разделы уже добавлены на панель — управляйте ими в «Настройках панели страниц».",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -161,6 +166,10 @@ fun ServicesScreen(
                     PlatformBackHandler(onBack = back)
                     CompareScheduleScreen(viewModel = compareViewModel)
                 }
+                AppTab.GAMES -> {
+                    PlatformBackHandler(onBack = back)
+                    GamesScreen(viewModel = gamesViewModel)
+                }
                 else -> {}
             }
         },
@@ -196,13 +205,13 @@ private fun ServiceCard(tab: AppTab, onClick: () -> Unit) {
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
+                GlitchText(
                     text = SERVICE_DISPLAY_TITLES[tab] ?: tab.title,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-                Text(
+                GlitchText(
                     text = SERVICE_DESCRIPTIONS[tab] ?: "",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
