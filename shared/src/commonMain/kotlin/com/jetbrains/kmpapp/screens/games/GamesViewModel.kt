@@ -101,6 +101,16 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         resetGame()
     }
 
+    /**
+     * «Починить ошибку»: стирает «сломанные» рекорды (0 с), из-за которых
+     * включилась тема Error, и закрывает партию, если открыта. После этого
+     * тема и тумблер «Починить ошибку» исчезают — режим снова нормальный.
+     */
+    fun fixError() {
+        closeGame()
+        gamesStorage.clearBrokenRecords()
+    }
+
     private fun resetGame() {
         stopTimer()
         _board.value = null

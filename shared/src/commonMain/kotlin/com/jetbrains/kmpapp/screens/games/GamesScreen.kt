@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.screens.games
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,6 +25,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -99,6 +101,37 @@ private fun GamesMenu(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(top = 8.dp)
         )
+
+        // Тема Error включена, пока существует хоть один «сломанный» рекорд
+        // (0 с). Рядом с заголовком — тумблер «Починить ошибку»: по нажатию
+        // рекорды 0 с стираются, тема и сам тумблер пропадают. Активировать
+        // сбой заново можно той же операцией — выиграв вариант за 0 с.
+        if (records.values.any { it.seconds == 0 }) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Тема Error активна",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFFF5252)
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Починить ошибку",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Switch(
+                        checked = false,
+                        onCheckedChange = { if (it) viewModel.fixError() }
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(6.dp))
         Text(

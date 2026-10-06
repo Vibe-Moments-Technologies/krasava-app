@@ -70,6 +70,24 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         }
     }
 
+    /**
+     * Удаляет только «сломанные» рекорды (0 с). Это источник темы Error:
+     * как только записей с 0 с не остаётся, режим снова здоров, а кнопка
+     * «ERROR» в меню превращается обратно в обычную карточку.
+     */
+    fun clearBrokenRecords() {
+        val brokenKeys = _records.value.filterValues { it.seconds == 0 }.keys
+        if (brokenKeys.isEmpty()) return
+        _records.value = _records.value - brokenKeys
+        scope.launch {
+            try {
+                brokenKeys.forEach { platformStorage.remove(storageKey(it)) }
+            } catch (e: Exception) {
+                println("Failed to clear broken game records: ${e.message}")
+            }
+        }
+    }
+
     private fun storageKey(key: String) = "games_record_$key"
 
     private fun encode(record: GameRecord) = "${record.seconds}|${record.achievedAtMillis}"
