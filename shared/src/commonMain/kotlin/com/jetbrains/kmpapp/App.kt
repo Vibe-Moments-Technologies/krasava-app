@@ -46,6 +46,8 @@ import com.jetbrains.kmpapp.screens.tasks.TasksScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import com.jetbrains.kmpapp.theme.CyberpunkDarkColors
 import com.jetbrains.kmpapp.theme.CyberpunkLightColors
+import com.jetbrains.kmpapp.theme.ErrorColors
+import com.jetbrains.kmpapp.theme.ErrorTypography
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
@@ -105,6 +107,12 @@ fun App() {
     val servicesViewModel: ServicesViewModel = koinViewModel()
     val gamesViewModel: GamesViewModel = koinViewModel()
 
+    // Тема Error включается теми же правилами, что и в «Сапере» (сломанный
+    // рекорд 0 с), но распространяется на всё приложение: пока errorTheme
+    // активен, вся схема и типографика заменяются на красный глюк — как это
+    // делают оверлеи Сакуры/Матрицы/Киберпанка.
+    val errorTheme by gamesViewModel.errorTheme.collectAsState()
+
     val systemDark = isSystemInDarkTheme()
     val isDark = when (themeMode) {
         ThemeMode.SYSTEM -> systemDark
@@ -112,14 +120,21 @@ fun App() {
         ThemeMode.DARK -> true
     }
 
-    val colors = when (themeOverlay) {
-        ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
-        ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
-        ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
-        ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
+    val colors = if (errorTheme) {
+        ErrorColors
+    } else {
+        when (themeOverlay) {
+            ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
+            ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
+            ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
+            ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
+        }
     }
 
-    MaterialTheme(colorScheme = colors) {
+    MaterialTheme(
+        colorScheme = colors,
+        typography = if (errorTheme) ErrorTypography else MaterialTheme.typography
+    ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background

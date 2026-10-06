@@ -42,7 +42,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -102,9 +101,10 @@ fun MinesweeperScreen(
     val boomIndex by viewModel.boomIndex.collectAsState()
     val errorTheme by viewModel.errorTheme.collectAsState()
 
-    // Тема Error: вариант, решённый с одного нажатия, весь экран — в красном
-    // глюке. Палитра подставляется вместо цветовой схемы MaterialTheme.
-    val scheme = if (errorTheme) ErrorColors else MaterialTheme.colorScheme
+    // Тема Error глобальна: когда вариант «сломан» (рекорд 0 с), App.kt
+    // подставляет ErrorColors и моноширинную типографику во всё приложение.
+    // Здесь кастомная схема не нужна — берём текущую из MaterialTheme.
+    val scheme = MaterialTheme.colorScheme
 
     Column(
         modifier = modifier
@@ -324,35 +324,6 @@ private const val DoubleTapMillis = 320L
 private val EdgeSwipeZonePx = 200f
 
 private val EaseOutBack = CubicBezierEasing(0.34f, 1.56f, 0.64f, 1f)
-
-/**
- * Палитра «темы Error»: тёмно-красный сбой, который включается для варианта,
- * решённого с одного нажатия (рекорд 0 с).
- */
-private val ErrorColors: ColorScheme = darkColorScheme(
-    primary = Color(0xFFFF5252),
-    onPrimary = Color(0xFF2A0000),
-    primaryContainer = Color(0xFF7A0E0E),
-    onPrimaryContainer = Color(0xFFFFDAD4),
-    secondary = Color(0xFFB4554F),
-    onSecondary = Color(0xFF2A0B0B),
-    secondaryContainer = Color(0xFF5A1A1A),
-    onSecondaryContainer = Color(0xFFFFDAD4),
-    background = Color(0xFF150505),
-    onBackground = Color(0xFFFFE5E2),
-    surface = Color(0xFF150505),
-    onSurface = Color(0xFFFFE5E2),
-    surfaceContainer = Color(0xFF2A0B0B),
-    surfaceContainerHigh = Color(0xFF3A1010),
-    onSurfaceVariant = Color(0xFFE57373),
-    error = Color(0xFFFF3B30),
-    errorContainer = Color(0xFF8B0000),
-    onErrorContainer = Color(0xFFFFB4AB),
-    outline = Color(0xFF7A3A38),
-    outlineVariant = Color(0xFF5A2626),
-    inverseSurface = Color(0xFFFFE5E2),
-    inverseOnSurface = Color(0xFF3A0A0A)
-)
 
 private enum class GestureMode { Tap, Pan, Pinch, Cancelled }
 
