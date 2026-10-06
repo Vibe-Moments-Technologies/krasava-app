@@ -29,13 +29,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.ZoomIn
-import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,7 +60,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -86,8 +82,9 @@ import kotlin.math.floor
 /**
  * Игра «Сапер». Поле рисуется одним Canvas: тап открывает клетку, долгое
  * нажатие ставит флаг, двойной тап по числу открывает остаток области
- * вокруг него, если вокруг выставлены все флаги. Щипок и кнопки масштабируют
- * поле, перетаскивание двигает его по экрану.
+ * вокруг него, если вокруг выставлены все флаги. Щипок масштабирует поле,
+ * перетаскивание двигает его по экрану; кнопка в шапке возвращает исходный
+ * размер.
  */
 @Composable
 fun MinesweeperScreen(
@@ -102,6 +99,10 @@ fun MinesweeperScreen(
     val difficulty by viewModel.difficulty.collectAsState()
     val boomIndex by viewModel.boomIndex.collectAsState()
     val errorTheme by viewModel.errorActive.collectAsState()
+
+    // Отдельный тик для возврата к исходному масштабу: кнопка живёт в шапке
+    // (слева от перезапуска), а состояние масштаба — внутри поля.
+    var zoomResetTick by remember { mutableStateOf(0L) }
 
     // Тема Error глобальна: когда вариант «сломан» (рекорд 0 с), App.kt
     // подставляет ErrorColors и моноширинную типографику во всё приложение.
@@ -144,13 +145,19 @@ fun MinesweeperScreen(
                     color = scheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = { viewModel.restart() }) {
-                Icon(
-                    imageVector = Icons.Filled.Refresh,
-                    contentDescription = "Новая партия"
-                )
+            IconButton(onClick = { zoomResetTick++ }) {
+                    Icon(
+                        imageVector = Icons.Filled.CenterFocusStrong,
+                        contentDescription = "Вернуть исходный размер"
+                    )
+                }
+                IconButton(onClick = { viewModel.restart() }) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "Новая партия"
+                    )
+                }
             }
-        }
 
         Spacer(modifier = Modifier.height(4.dp))
 
@@ -185,6 +192,7 @@ fun MinesweeperScreen(
                 boomIndex = boomIndex,
                 scheme = scheme,
                 errorTheme = errorTheme,
+                zoomResetRequest = zoomResetTick,
                 onCellClick = { viewModel.onCellClick(it) },
                 onCellLongClick = { viewModel.onCellLongClick(it) },
                 onCellDoubleClick = { viewModel.onCellDoubleClick(it) }
@@ -325,7 +333,7 @@ private enum class GestureMode { Tap, Pan, Pinch, Cancelled }
  * Поле «Сапёра» одним Canvas: клетки, сетка, превью нажатия и анимации
  * рисуются здесь, поэтому большое поле не создаёт тысячи нод и не
  * тормозит. Масштаб и сдвиг — матрица трансформации в момент отрисовки,
- * поэтому щипок и кнопки масштаба не пересоздают композицию.
+ * поэтому щипок и возврат масштаба не пересоздают композицию.
  */
 @Composable
 private fun MinesweeperField(
@@ -336,6 +344,7 @@ private fun MinesweeperField(
     boomIndex: Int?,
     scheme: ColorScheme,
     errorTheme: Boolean,
+    zoomResetRequest: Long = 0,
     onCellClick: (Int) -> Unit,
     onCellLongClick: (Int) -> Unit,
     onCellDoubleClick: (Int) -> Unit
@@ -509,6 +518,12 @@ private fun MinesweeperField(
             zoomJob = scope.launch {
                 animate(zoomLevel, target, animationSpec = tween(220)) { v, _ -> zoomLevel = v }
             }
+        }
+
+        // Кнопка «Вернуть исходный размер» в шапке передаёт тик: возвращаем
+        // масштаб 1f (поле «по месту») тем же путём, что zoomBy.
+        LaunchedEffect(zoomResetRequest) {
+            if (zoomResetRequest > 0L) zoomBy(1f / zoomLevel)
         }
 
         Canvas(
@@ -743,15 +758,6 @@ private fun MinesweeperField(
             }
         }
 
-        Column(
-            modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            ZoomButton(Icons.Filled.ZoomIn, "Приблизить") { zoomBy(1.5f) }
-            ZoomButton(Icons.Filled.ZoomOut, "Отдалить") { zoomBy(1f / 1.5f) }
-            ZoomButton(Icons.Filled.CenterFocusStrong, "Сбросить масштаб") { zoomBy(1f / zoomLevel) }
-        }
-
         AnimatedVisibility(
             visible = hintVisible,
             enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it / 2 },
@@ -771,13 +777,6 @@ private fun MinesweeperField(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun ZoomButton(icon: ImageVector, description: String, onClick: () -> Unit) {
-    FilledTonalIconButton(onClick = onClick) {
-        Icon(imageVector = icon, contentDescription = description)
     }
 }
 
