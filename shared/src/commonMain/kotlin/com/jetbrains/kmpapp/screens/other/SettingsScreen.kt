@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Notifications
@@ -77,6 +78,7 @@ fun SettingsScreen(
     onOpenScheduleProgress: () -> Unit = {},
     onOpenScheduleCalendar: () -> Unit = {},
     onOpenServiceSettings: () -> Unit = {},
+    onOpenSaperSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -370,6 +372,18 @@ fun SettingsScreen(
                     title = "Конспекты",
                     subtitle = "Настройки блокнота и заметок",
                     onClick = onOpenServiceSettings
+                )
+            }
+
+            // Section: Games — настройки «Сапера»
+            SettingsSectionCard(
+                title = "Игры",
+                icon = Icons.Default.Bolt
+            ) {
+                SettingsNavigationRow(
+                    title = "Сапер",
+                    subtitle = "Ориентация доски, предупреждение о мелких клетках",
+                    onClick = onOpenSaperSettings
                 )
             }
 

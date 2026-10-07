@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.storage.GameRecord
 import com.jetbrains.kmpapp.data.storage.GamesStorage
+import com.jetbrains.kmpapp.data.storage.SavedMinesweeperCell
+import com.jetbrains.kmpapp.data.storage.SavedMinesweeperGame
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,8 +28,21 @@ import kotlin.time.Clock
  */
 class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
-    /** Открытая игра (null — открыто меню «Игры»). */
-    enum class Game { MINESWEEPER }
+    /** Открытая игра (null — корневое меню «Игры» со списком игр). */
+    enum class Game {
+        /** Меню вариантов «Сапера». */
+        SAPER_MENU,
+
+        /** Партия в «Сапере». */
+        MINESWEEPER;
+
+        /** Слой «под» текущим: поле под собой держит меню вариантов «Сапера». */
+        val parent: Game?
+            get() = when (this) {
+                MINESWEEPER -> SAPER_MENU
+                SAPER_MENU -> null
+            }
+    }
 
     private val _activeGame = MutableStateFlow<Game?>(null)
     val activeGame: StateFlow<Game?> = _activeGame.asStateFlow()
@@ -48,6 +63,13 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     /** Режим флага: тап по клетке ставит флаг, а не открывает её. */
     private val _flagMode = MutableStateFlow(false)
     val flagMode: StateFlow<Boolean> = _flagMode.asStateFlow()
+
+    /** Настройки «Сапера» из хранилища: доступны и с экрана настроек. */
+    val boardVertical: StateFlow<Boolean> = gamesStorage.boardVertical
+    val smallCellHintEnabled: StateFlow<Boolean> = gamesStorage.smallCellHintEnabled
+
+    fun setBoardVertical(enabled: Boolean) = gamesStorage.setBoardVertical(enabled)
+    fun setSmallCellHintEnabled(enabled: Boolean) = gamesStorage.setSmallCellHintEnabled(enabled)
 
     /**
      * «Тема Error». Активна, пока существует хоть один «сломанный» рекорд
@@ -82,26 +104,63 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     // Навигация
 
+    /** Эффективные размеры поля с учётом настройки «вертикальная доска». */
+    private val boardW: Int
+        get() = _board.value?.width ?: currentW
+
+    private val boardH: Int
+        get() = _board.value?.height ?: currentH
+
+    private var currentW = MinesweeperDifficulty.STANDARD.width
+    private var currentH = MinesweeperDifficulty.STANDARD.height
+
+    private fun orientedWidth(value: MinesweeperDifficulty): Int =
+        if (gamesStorage.boardVertical.value) value.height else value.width
+
+    private fun orientedHeight(value: MinesweeperDifficulty): Int =
+        if (gamesStorage.boardVertical.value) value.width else value.height
+
     /**
      * Открывает «Сапер» на выбранной сложности: поле и таймер сбрасываются.
+     * Если под этот вариант сохранена незавершённая партия — она восстанавливается.
      * Тема Error активна глобально ([errorActive]) независимо от того, каким
      * путём открыта партия, — фон красится на уровне всего приложения.
      */
     fun openGame(value: MinesweeperDifficulty) {
         _difficulty.value = value
+        currentW = orientedWidth(value)
+        currentH = orientedHeight(value)
         resetGame()
+        restoreSavedGame(value)
         _activeGame.value = Game.MINESWEEPER
     }
 
-    /** Выход из партии в меню «Игры»: поле и таймер сбрасываются. */
+    /** Открывает меню вариантов «Сапера» из корневого меню «Игры». */
+    fun openSaper() {
+        _activeGame.value = Game.SAPER_MENU
+    }
+
+    /** Выход из «Сапера» в корневое меню «Игры»: незавершённая партия сохраняется. */
     fun closeGame() {
-        stopTimer()
+        finishFieldSession()
         _activeGame.value = null
+    }
+
+    /** Назад из партии в меню вариантов «Сапера»: незавершённая партия сохраняется. */
+    fun backFromField() {
+        finishFieldSession()
+        _activeGame.value = Game.SAPER_MENU
+    }
+
+    private fun finishFieldSession() {
+        stopTimer()
+        persistGame()
         resetGame()
     }
 
-    /** Новая партия на том же размере поля. */
+    /** Новая партия на том же размере поля: сохранённая партия стирается. */
     fun restart() {
+        gamesStorage.clearSavedGame()
         resetGame()
     }
 
@@ -131,44 +190,53 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     /** Тап по клетке: раскрывает её, либо ставит флаг в режиме флага. */
     fun onCellClick(index: Int) {
-        val width = _difficulty.value.width
-        val x = index % width
-        val y = index / width
+        val x = index % boardW
+        val y = index / boardW
         if (_flagMode.value) {
             onCellLongClick(index)
             return
         }
-        onCellClick(x, y, chord = false)
+        onCellClick(x, y)
     }
 
     /**
-     * Тап по клетке с раскрытием области вокруг числа (chord): если вокруг
-     * числовой клетки помечены ровно столько флагов, сколько вокруг мин, то
-     * раскрываются все непомеченные соседи.
+     * Тап по клетке: если это флаг — просто снимает его, не открывая мину под
+     * ним. Если вокруг раскрытой цифры помечены все соседние мины — раскрываются
+     * непомеченные соседи (chord). В противном случае клетка раскрывается
+     * (или ставит флаг в режиме флага через [onCellClick]).
      */
-    fun onCellClick(x: Int, y: Int, chord: Boolean) {
+    fun onCellClick(x: Int, y: Int) {
         val current = _board.value ?: return onFirstClick(x, y)
         if (_status.value == MinesweeperStatus.WON || _status.value == MinesweeperStatus.LOST) return
-        if (chord && tryChord(current, x, y)) return
+        // Тап по флагу не открывает клетку — флаг просто убирается.
+        if (current[x, y].isFlagged) {
+            toggleFlagAt(x, y)
+            return
+        }
+        if (tryChord(current, x, y)) return
         revealAt(current, x, y)
     }
 
     /** Долгое нажатие: поставить или снять флаг. */
     fun onCellLongClick(index: Int) {
-        val x = index % _difficulty.value.width
-        val y = index / _difficulty.value.width
+        toggleFlagAt(index % boardW, index / boardW)
+    }
+
+    /** Поставить или снять флаг на клетке; незавершённая партия сохраняется. */
+    private fun toggleFlagAt(x: Int, y: Int) {
         val current = _board.value ?: return
         if (_status.value == MinesweeperStatus.WON || _status.value == MinesweeperStatus.LOST) return
         _board.value = MinesweeperEngine.toggleFlag(current, x, y)
+        if (_status.value == MinesweeperStatus.PLAYING) persistGame()
     }
 
     /** Первый ход: мины раскладываются так, чтобы клик и его соседи были чистыми. */
     private fun onFirstClick(x: Int, y: Int) {
+        if (x !in 0 until boardW || y !in 0 until boardH) return
         val difficulty = _difficulty.value
-        if (x !in 0 until difficulty.width || y !in 0 until difficulty.height) return
         val fresh = MinesweeperEngine.generate(
-            width = difficulty.width,
-            height = difficulty.height,
+            width = boardW,
+            height = boardH,
             mines = difficulty.mines,
             safeX = x,
             safeY = y,
@@ -191,21 +259,27 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
             else -> MinesweeperStatus.PLAYING
         }
         when (_status.value) {
-            MinesweeperStatus.PLAYING -> startTimer()
+            MinesweeperStatus.PLAYING -> {
+                startTimer()
+                persistGame()
+            }
             MinesweeperStatus.WON -> {
                 _board.value = MinesweeperEngine.flagRemainingMines(updated)
                 stopTimer()
                 saveResultIfBest()
+                gamesStorage.clearSavedGame()
             }
-            MinesweeperStatus.LOST -> stopTimer()
+            MinesweeperStatus.LOST -> {
+                stopTimer()
+                gamesStorage.clearSavedGame()
+            }
             MinesweeperStatus.READY -> stopTimer()
         }
     }
 
-    /** Двойной тап по числу: раскрыть остаток области, если вокруг все флаги. */
+    /** Двойной тап по числу: тот же раскрытие области, что и одинарный. */
     fun onCellDoubleClick(index: Int) {
-        val width = _difficulty.value.width
-        onCellClick(index % width, index / width, chord = true)
+        onCellClick(index % boardW, index / boardW)
     }
 
     /** Раскрытие вокруг числа: все флаги вокруг уже расставлены — открываем остальное. */
@@ -255,6 +329,72 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         )
     }
 
+    // Сохранение партии
+
+    /**
+     * Пишет текущую партию в хранилище. Вызывается после каждого хода и при
+     * выходе с экрана, пока партия не закончена (не победа и не поражение).
+     */
+    private fun persistGame() {
+        val board = _board.value ?: return
+        if (_status.value != MinesweeperStatus.PLAYING) return
+        gamesStorage.saveGame(
+            SavedMinesweeperGame(
+                difficultyName = _difficulty.value.name,
+                width = board.width,
+                height = board.height,
+                elapsedSeconds = _elapsedSeconds.value,
+                statusName = MinesweeperStatus.PLAYING.name,
+                boomIndex = _boomIndex.value,
+                cells = board.cells.map { cell ->
+                    SavedMinesweeperCell(
+                        x = cell.x,
+                        y = cell.y,
+                        isMine = cell.isMine,
+                        adjacentMines = cell.adjacentMines,
+                        isRevealed = cell.isRevealed,
+                        isFlagged = cell.isFlagged
+                    )
+                }
+            )
+        )
+    }
+
+    /**
+     * Восстанавливает сохранённую партию этого варианта. Игнорирует чужие
+     * варианты и «битые» снимки: в этом случае партия начинается заново.
+     */
+    private fun restoreSavedGame(value: MinesweeperDifficulty) {
+        val saved = gamesStorage.loadSavedGame() ?: return
+        if (saved.difficultyName != value.name) return
+        if (saved.statusName != MinesweeperStatus.PLAYING.name) return
+        val total = saved.width * saved.height
+        if (total <= 0 || total > 64 * 48) return
+        if (saved.cells.size != total) return
+        val cells = arrayOfNulls<MinesweeperCell>(total)
+        saved.cells.forEach { cell ->
+            val index = cell.y * saved.width + cell.x
+            if (index in cells.indices) {
+                cells[index] = MinesweeperCell(
+                    x = cell.x,
+                    y = cell.y,
+                    isMine = cell.isMine,
+                    adjacentMines = cell.adjacentMines,
+                    isRevealed = cell.isRevealed,
+                    isFlagged = cell.isFlagged
+                )
+            }
+        }
+        if (cells.any { it == null }) return
+        currentW = saved.width
+        currentH = saved.height
+        _board.value = MinesweeperBoard(saved.width, saved.height, cells.map { it!! })
+        _status.value = MinesweeperStatus.PLAYING
+        _elapsedSeconds.value = saved.elapsedSeconds
+        _boomIndex.value = saved.boomIndex
+        startTimer()
+    }
+
     // Таймер
 
     private fun startTimer() {
@@ -274,6 +414,7 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     override fun onCleared() {
         stopTimer()
+        persistGame()
         super.onCleared()
     }
 
