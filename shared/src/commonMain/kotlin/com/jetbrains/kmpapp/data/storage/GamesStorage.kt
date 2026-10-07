@@ -50,14 +50,14 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
 
     // Настройки «Сапера»: читаются при старте (синхронно, ключи маленькие),
     // тумблеры на экране настроек переключают их напрямую.
-    private val _boardVertical = MutableStateFlow(false)
+    private val _boardVertical = MutableStateFlow(true)
     val boardVertical: StateFlow<Boolean> = _boardVertical.asStateFlow()
 
     private val _smallCellHintEnabled = MutableStateFlow(false)
     val smallCellHintEnabled: StateFlow<Boolean> = _smallCellHintEnabled.asStateFlow()
 
     init {
-        _boardVertical.value = readBool(BOARD_VERTICAL_KEY) ?: false
+        _boardVertical.value = readBool(BOARD_VERTICAL_KEY) ?: true
         _smallCellHintEnabled.value = readBool(SMALL_CELL_HINT_KEY) ?: false
     }
 

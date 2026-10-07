@@ -28,8 +28,21 @@ import kotlin.time.Clock
  */
 class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
-    /** Открытая игра (null — открыто меню «Игры»). */
-    enum class Game { MINESWEEPER }
+    /** Открытая игра (null — корневое меню «Игры» со списком игр). */
+    enum class Game {
+        /** Меню вариантов «Сапера». */
+        SAPER_MENU,
+
+        /** Партия в «Сапере». */
+        MINESWEEPER;
+
+        /** Слой «под» текущим: поле под собой держит меню вариантов «Сапера». */
+        val parent: Game?
+            get() = when (this) {
+                MINESWEEPER -> SAPER_MENU
+                SAPER_MENU -> null
+            }
+    }
 
     private val _activeGame = MutableStateFlow<Game?>(null)
     val activeGame: StateFlow<Game?> = _activeGame.asStateFlow()
@@ -122,11 +135,26 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         _activeGame.value = Game.MINESWEEPER
     }
 
-    /** Выход из партии в меню «Игры»: незавершённая партия сохраняется. */
+    /** Открывает меню вариантов «Сапера» из корневого меню «Игры». */
+    fun openSaper() {
+        _activeGame.value = Game.SAPER_MENU
+    }
+
+    /** Выход из «Сапера» в корневое меню «Игры»: незавершённая партия сохраняется. */
     fun closeGame() {
+        finishFieldSession()
+        _activeGame.value = null
+    }
+
+    /** Назад из партии в меню вариантов «Сапера»: незавершённая партия сохраняется. */
+    fun backFromField() {
+        finishFieldSession()
+        _activeGame.value = Game.SAPER_MENU
+    }
+
+    private fun finishFieldSession() {
         stopTimer()
         persistGame()
-        _activeGame.value = null
         resetGame()
     }
 
@@ -172,21 +200,30 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     }
 
     /**
-     * Тап по клетке: если вокруг раскрытой цифры помечены все соседние мины —
-     * раскрываются непомеченные соседи (chord). В противном случае клетка
-     * раскрывается (или ставит флаг в режиме флага через [onCellClick]).
+     * Тап по клетке: если это флаг — просто снимает его, не открывая мину под
+     * ним. Если вокруг раскрытой цифры помечены все соседние мины — раскрываются
+     * непомеченные соседи (chord). В противном случае клетка раскрывается
+     * (или ставит флаг в режиме флага через [onCellClick]).
      */
     fun onCellClick(x: Int, y: Int) {
         val current = _board.value ?: return onFirstClick(x, y)
         if (_status.value == MinesweeperStatus.WON || _status.value == MinesweeperStatus.LOST) return
+        // Тап по флагу не открывает клетку — флаг просто убирается.
+        if (current[x, y].isFlagged) {
+            toggleFlagAt(x, y)
+            return
+        }
         if (tryChord(current, x, y)) return
         revealAt(current, x, y)
     }
 
     /** Долгое нажатие: поставить или снять флаг. */
     fun onCellLongClick(index: Int) {
-        val x = index % boardW
-        val y = index / boardW
+        toggleFlagAt(index % boardW, index / boardW)
+    }
+
+    /** Поставить или снять флаг на клетке; незавершённая партия сохраняется. */
+    private fun toggleFlagAt(x: Int, y: Int) {
         val current = _board.value ?: return
         if (_status.value == MinesweeperStatus.WON || _status.value == MinesweeperStatus.LOST) return
         _board.value = MinesweeperEngine.toggleFlag(current, x, y)

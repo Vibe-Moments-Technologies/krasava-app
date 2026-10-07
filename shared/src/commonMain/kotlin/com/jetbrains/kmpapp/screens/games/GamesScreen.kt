@@ -19,11 +19,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -43,9 +45,10 @@ import com.jetbrains.kmpapp.theme.GlitchTitle
 import com.jetbrains.kmpapp.theme.MonoTitle
 
 /**
- * Раздел «Игры»: меню с выбором игры. Сейчас в меню ровно одна игра — «Сапер»,
- * у неё несколько вариантов поля, каждый со своим рекордом. Сама игра
- * открывается послойно поверх меню, назад — свайп, системная кнопка или стрелка.
+ * Раздел «Игры»: корневое меню со списком игр. Сейчас в нём одна игра — «Сапер»
+ * (открывается на своё меню вариантов поля, у каждого свой рекорд). Игра
+ * открывается послойно: игры → меню вариантов → сама партия, назад — свайп,
+ * системная кнопка или стрелка.
  */
 @Composable
 fun GamesScreen(
@@ -56,15 +59,25 @@ fun GamesScreen(
 
     LayeredNavHost(
         screen = activeGame,
-        parentScreen = null,
-        onBackToParent = { viewModel.closeGame() },
+        parentScreen = activeGame?.parent,
+        onBackToParent = {
+            when (activeGame) {
+                GamesViewModel.Game.MINESWEEPER -> viewModel.backFromField()
+                GamesViewModel.Game.SAPER_MENU -> viewModel.closeGame()
+                null -> {}
+            }
+        },
         initiallyRevealed = remember { activeGame != null },
         swipeGestureEnabled = { true },
         rootContent = {
-            GamesMenu(viewModel = viewModel, modifier = modifier)
+            GamesHome(viewModel = viewModel, modifier = modifier)
         },
         screenContent = { game, back ->
             when (game) {
+                GamesViewModel.Game.SAPER_MENU -> {
+                    PlatformBackHandler(onBack = back)
+                    SaperMenu(viewModel = viewModel, onBack = back)
+                }
                 GamesViewModel.Game.MINESWEEPER -> {
                     PlatformBackHandler(onBack = back)
                     MinesweeperScreen(viewModel = viewModel, onBack = back)
@@ -76,12 +89,12 @@ fun GamesScreen(
     )
 }
 
+/** Корневое меню игр: сюда добавляются новые игры, сейчас внутри — «Сапер». */
 @Composable
-private fun GamesMenu(
+private fun GamesHome(
     viewModel: GamesViewModel,
     modifier: Modifier = Modifier
 ) {
-    val records by viewModel.records.collectAsState()
     val errorActive by viewModel.errorActive.collectAsState()
 
     Column(
@@ -102,10 +115,71 @@ private fun GamesMenu(
             modifier = Modifier.padding(top = 8.dp)
         )
 
-        // Тема Error включена, пока существует хоть один «сломанный» рекорд
-        // (0 с). Рядом с заголовком — тумблер «Починить ошибку»: по нажатию
-        // рекорды 0 с стираются, тема и сам тумблер пропадают. Активировать
-        // сбой заново можно той же операцией — выиграв вариант за 0 с.
+        Spacer(modifier = Modifier.height(6.dp))
+        GlitchText(
+            text = "Раздел игр: сейчас доступен «Сапер», новые игры появятся в будущих обновлениях.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        GameCard(
+            title = "Сапер",
+            subtitle = "Варианты поля от детского сада до пенсионера, у каждого свой рекорд",
+            recordText = null,
+            recordPlaceholder = null,
+            icon = Icons.Filled.Bolt,
+            glitch = errorActive,
+            onClick = { viewModel.openSaper() }
+        )
+    }
+}
+
+/**
+ * Меню вариантов «Сапера». Тема Error включена, пока существует хоть один
+ * «сломанный» рекорд (0 с) в любом из вариантов. Это не состояние партии,
+ * а глобальное состояние приложения: вернувшись из игры в меню выбора
+ * сложности, тема не сбрасывается, а остаётся на всём экране. Снимается только
+ * кнопкой «Починить ошибку» (удаляет рекорды 0 с).
+ */
+@Composable
+private fun SaperMenu(
+    viewModel: GamesViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val records by viewModel.records.collectAsState()
+    val errorActive by viewModel.errorActive.collectAsState()
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp)
+            // Свободное место под плавающую панель страниц.
+            .padding(bottom = 120.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(top = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "В меню игр"
+                )
+            }
+            MonoTitle(
+                text = "Сапер",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                glitch = errorActive
+            )
+        }
+
         if (records.values.any { it.seconds == 0 }) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -135,8 +209,7 @@ private fun GamesMenu(
 
         Spacer(modifier = Modifier.height(6.dp))
         GlitchText(
-            text = "Сапер — варианты поля от детского сада до пенсионера, " +
-                "у каждого свой рекорд.",
+            text = "Варианты поля от детского сада до пенсионера, у каждого свой рекорд.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -227,6 +300,7 @@ private fun GameCard(
     recordText: String?,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     glitch: Boolean = false,
+    recordPlaceholder: String? = "Рекорд пока не установлен",
     onClick: () -> Unit
 ) {
     Card(
@@ -266,20 +340,22 @@ private fun GameCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                GlitchText(
-                    text = recordText?.let { "Рекорд: $it" } ?: "Рекорд пока не установлен",
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = if (recordText != null) {
-                        FontWeight.SemiBold
-                    } else {
-                        FontWeight.Normal
-                    },
-                    color = if (recordText != null) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
+                if (recordText != null || recordPlaceholder != null) {
+                    GlitchText(
+                        text = recordText?.let { "Рекорд: $it" } ?: recordPlaceholder.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = if (recordText != null) {
+                            FontWeight.SemiBold
+                        } else {
+                            FontWeight.Normal
+                        },
+                        color = if (recordText != null) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+                    )
+                }
             }
         }
     }
