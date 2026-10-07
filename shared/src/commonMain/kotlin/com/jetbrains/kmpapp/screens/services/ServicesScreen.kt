@@ -78,12 +78,13 @@ private val SERVICE_DESCRIPTIONS = mapOf(
     AppTab.MAP to "Интерактивные схемы этажей корпусов",
     AppTab.NOTES to "Заметки с цветными полями, хранятся на устройстве",
     AppTab.COMPARE to "Сравнение расписаний нескольких групп",
-    AppTab.GAMES to "Сапер и другие игры с рекордами"
+    AppTab.GAMES to "Классический сапер: варианты поля от детского сада до пенсионера"
 )
 
 // Развёрнутые имена только на этой странице; в доке и блоке — краткие.
 private val SERVICE_DISPLAY_TITLES = mapOf(
-    AppTab.FREE_ROOMS to "Свободные аудитории"
+    AppTab.FREE_ROOMS to "Свободные аудитории",
+    AppTab.GAMES to "Сапер"
 )
 
 @Composable

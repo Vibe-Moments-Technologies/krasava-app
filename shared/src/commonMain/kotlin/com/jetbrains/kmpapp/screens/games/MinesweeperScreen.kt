@@ -63,6 +63,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
@@ -74,17 +75,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.theme.GlitchTitle
 import com.jetbrains.kmpapp.theme.MonoTitle
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.floor
 
 /**
- * Игра «Сапер». Поле рисуется одним Canvas: тап открывает клетку, долгое
- * нажатие ставит флаг, двойной тап по числу открывает остаток области
- * вокруг него, если вокруг выставлены все флаги. Щипок масштабирует поле,
- * перетаскивание двигает его по экрану; кнопка в шапке возвращает исходный
- * размер.
+ * Игра «Сапер». Поле рисуется одним Canvas: тап открывает клетку (а по
+ * раскрытой цифре, вокруг которой собраны все флаги, — открывает остаток
+ * области), долгое нажатие ставит флаг сразу при удержании. Щипок
+ * масштабирует поле, перетаскивание двигает его по экрану; кнопка в шапке
+ * возвращает исходный размер.
  */
 @Composable
 fun MinesweeperScreen(
@@ -99,6 +102,14 @@ fun MinesweeperScreen(
     val difficulty by viewModel.difficulty.collectAsState()
     val boomIndex by viewModel.boomIndex.collectAsState()
     val errorTheme by viewModel.errorActive.collectAsState()
+    val verticalBoard by viewModel.boardVertical.collectAsState()
+    val smallCellHintEnabled by viewModel.smallCellHintEnabled.collectAsState()
+
+    // Эффективные размеры поля с учётом настройки «вертикальная доска».
+    // До первого хода доски нет — берём размеры варианта; после — фактические
+    // ширину/высоту доски (у сохранённой партии свои).
+    val fieldWidth = board?.width ?: if (verticalBoard) difficulty.height else difficulty.width
+    val fieldHeight = board?.height ?: if (verticalBoard) difficulty.width else difficulty.height
 
     // Отдельный тик для возврата к исходному масштабу: кнопка живёт в шапке
     // (слева от перезапуска), а состояние масштаба — внутри поля.
@@ -140,7 +151,7 @@ fun MinesweeperScreen(
                     )
                 }
                 GlitchText(
-                    text = "${difficulty.width}×${difficulty.height} · ${difficulty.mines} мин",
+                    text = "$fieldWidth×$fieldHeight · ${difficulty.mines} мин",
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant
                 )
@@ -185,14 +196,15 @@ fun MinesweeperScreen(
 
         Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
             MinesweeperField(
-                width = difficulty.width,
-                height = difficulty.height,
+                width = fieldWidth,
+                height = fieldHeight,
                 board = board,
                 status = status,
                 boomIndex = boomIndex,
                 scheme = scheme,
                 errorTheme = errorTheme,
                 zoomResetRequest = zoomResetTick,
+                smallCellHintEnabled = smallCellHintEnabled,
                 onCellClick = { viewModel.onCellClick(it) },
                 onCellLongClick = { viewModel.onCellLongClick(it) },
                 onCellDoubleClick = { viewModel.onCellDoubleClick(it) }
@@ -261,7 +273,9 @@ private fun StatCard(
             GlitchText(
                 text = label,
                 style = MaterialTheme.typography.bodySmall,
-                color = scheme.onSurfaceVariant
+                color = scheme.onSurfaceVariant,
+                // Зазор до значения: глитч-«двойники» не наползают на подпись.
+                modifier = Modifier.padding(end = 8.dp)
             )
             MonoTitle(
                 text = value,
@@ -315,7 +329,7 @@ private val MinCellSize = 20.dp
 /** Потолок масштаба: клетку крупнее этого размера считать незачем. */
 private val MaxCellSize = 72.dp
 
-/** Клетки мельче этого размера тапом не открываются — только приблизив поле. */
+/** Клетки мельче этого размера — повод показать подсказку «приблизьте поле». */
 private val MinTapCellSize = 14.dp
 
 private const val RevealAnimMillis = 180f
@@ -345,12 +359,17 @@ private fun MinesweeperField(
     scheme: ColorScheme,
     errorTheme: Boolean,
     zoomResetRequest: Long = 0,
+    smallCellHintEnabled: Boolean = false,
     onCellClick: (Int) -> Unit,
     onCellLongClick: (Int) -> Unit,
     onCellDoubleClick: (Int) -> Unit
 ) {
     val textMeasurer = rememberTextMeasurer()
     val scope = rememberCoroutineScope()
+
+    // Порог долгого нажатия один и тот же для жеста и для «удержания»: берём
+    // из системной конфигурации, а не заводим вручную.
+    val longPressMs = LocalViewConfiguration.current.longPressTimeoutMillis
 
     // Масштаб — обычное состояние, а не Animatable: щипок обрабатывается
     // внутри awaitEachGesture, где suspend-вызовы (snapTo/animateTo) запрещены
@@ -368,7 +387,11 @@ private fun MinesweeperField(
     var lastActionIndex by remember { mutableStateOf(-1) }
 
     var pressedCell by remember { mutableStateOf(-1) }
-    var pressedSince by remember { mutableStateOf(0L) }
+    var pressedSince by remember { mutableStateOf<TimeMark?>(null) }
+
+    // Клетка, по которой уже сработало долгое нажатие «на удержании»: чтобы
+    // не ставить флаг дважды за одно нажатие. Сбрасывается при каждом касании.
+    var longFiredCell by remember { mutableStateOf(-1) }
 
     var lastTapCell by remember { mutableStateOf(-1) }
     var lastTapTime by remember { mutableStateOf(0L) }
@@ -487,6 +510,17 @@ private fun MinesweeperField(
             if (!framesNeeded) return@LaunchedEffect
             while (framesNeeded) {
                 withFrameNanos { animClock.longValue = it }
+                // Долгое нажатие срабатывает на удержании, не дожидаясь
+                // отпускания: флаг встаёт под пальцем по проходе тайм-аута.
+                val pressed = pressedCell
+                val since = pressedSince
+                if (pressed >= 0 && since != null && longFiredCell != pressed &&
+                    since.elapsedNow().inWholeMilliseconds >= longPressMs
+                ) {
+                    longFiredCell = pressed
+                    lastActionIndex = pressed
+                    onCellLongClick(pressed)
+                }
                 framesNeeded = hasActiveAnimations(animClock.longValue, revealAt, flagAt, pressedCell)
             }
         }
@@ -531,8 +565,7 @@ private fun MinesweeperField(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(8.dp))
                 .pointerInput(width, height, zoomMin, zoomMax, baseCell) {
-                    val minTapPx = MinTapCellSize.toPx()
-                    val longPressMs = viewConfiguration.longPressTimeoutMillis
+                    val hintCellPx = MinTapCellSize.toPx()
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         var mode = GestureMode.Tap
@@ -542,7 +575,8 @@ private fun MinesweeperField(
                         val downCell = cellAt(down.position, offset, zoomLevel, baseCell.toPx(), width, height)
                         if (downCell != null) {
                             pressedCell = downCell
-                            pressedSince = down.uptimeMillis
+                            pressedSince = TimeSource.Monotonic.markNow()
+                            longFiredCell = -1
                             framesNeeded = true
                         }
                         var upPos = down.position
@@ -625,14 +659,19 @@ private fun MinesweeperField(
                             }
                         }
                         pressedCell = -1
+                        pressedSince = null
                         if (mode == GestureMode.Tap) {
                             val cellSizePx = baseCell.toPx() * zoomLevel
                             val upCell = cellAt(upPos, offset, zoomLevel, baseCell.toPx(), width, height)
-                            if (downCell != null && upCell == downCell && cellSizePx >= minTapPx) {
-                                if (upTime - down.uptimeMillis >= longPressMs) {
-                                    lastActionIndex = downCell
-                                    onCellLongClick(downCell)
-                                } else if (lastTapCell == downCell && upTime - lastTapTime < DoubleTapMillis) {
+                            // Подсказка показывается только если включена в настройках:
+                            // по умолчанию клетки нажимаются при любом размере.
+                            if (downCell != null && cellSizePx < hintCellPx && smallCellHintEnabled) {
+                                hintVisible = true
+                            }
+                            // Долгое нажатие уже сработало «на удержании» — второй
+                            // ход по отпусканию не нужен.
+                            if (downCell != null && upCell == downCell && longFiredCell != downCell) {
+                                if (lastTapCell == downCell && upTime - lastTapTime < DoubleTapMillis) {
                                     lastTapCell = -1
                                     lastActionIndex = downCell
                                     onCellDoubleClick(downCell)
@@ -642,11 +681,9 @@ private fun MinesweeperField(
                                     lastActionIndex = downCell
                                     onCellClick(downCell)
                                 }
-                            } else if (downCell != null && cellSizePx < minTapPx) {
-                                // Клетки слишком мелкие: случайный тап вскроет не ту.
-                                hintVisible = true
                             }
                         }
+                        longFiredCell = -1
                     }
                 }
         ) {
@@ -699,7 +736,8 @@ private fun MinesweeperField(
                 if (pressedCell >= 0) {
                     val px = pressedCell % width
                     val py = pressedCell / width
-                    val alpha = ((now - pressedSince).coerceAtLeast(0L) / 120f).coerceIn(0f, 1f) * 0.22f
+                    val pressedElapsedMs = (pressedSince?.elapsedNow()?.inWholeMilliseconds ?: 0L).coerceAtLeast(0L)
+                    val alpha = (pressedElapsedMs / 120f).coerceIn(0f, 1f) * 0.22f
                     drawRoundRect(
                         color = scheme.primary.copy(alpha = alpha),
                         topLeft = Offset(px * basePx + 1f, py * basePx + 1f),
