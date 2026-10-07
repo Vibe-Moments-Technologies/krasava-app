@@ -25,6 +25,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import io.ktor.utils.io.errors.IOException
 import kotlin.time.Clock
 
 class ScheduleRepository(
@@ -337,6 +338,12 @@ class ScheduleRepository(
         try {
             val ical = api.getIcal(target.type, target.id)
             val parsedLessons = MireaICalParser.parse(ical)
+            // Защита от затирания кэша: пустой результат парсинга
+            // (сервер отдал мусор/пустой iCal) не должен стирать
+            // сохранённое расписание.
+            if (parsedLessons.isEmpty()) {
+                throw IOException("Пустой ответ парсера iCal, кэш не затёрт")
+            }
             val oldLessons = storage.getLessons(target.id)
             storage.saveLessons(target.id, parsedLessons)
             storage.saveWeekMarkers(target.id, MireaICalParser.parseWeekMarkers(ical))
