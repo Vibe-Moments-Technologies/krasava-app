@@ -29,6 +29,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,9 +38,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jetbrains.kmpapp.data.i18n.AppLanguage
+import com.jetbrains.kmpapp.data.i18n.TranslationManager
 import com.jetbrains.kmpapp.data.model.LessonDiffItem
 import com.jetbrains.kmpapp.data.model.LessonDiffType
 import com.jetbrains.kmpapp.data.model.ScheduleDiff
+import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,6 +120,10 @@ fun ScheduleDiffBottomSheet(
 
 @Composable
 private fun DiffItemCard(item: LessonDiffItem) {
+    val translationManager: TranslationManager = koinInject()
+    val translation by translationManager.state.collectAsState()
+    fun tr(ru: String): String =
+        if (translation.language == AppLanguage.RUSSIAN) ru else translation.labels[ru] ?: ru
     val (badgeBg, badgeText, badgeLabel) = when (item.type) {
         LessonDiffType.ADDED -> Triple(Color(0xFFDCFCE7), Color(0xFF15803D), "+ Новая")
         LessonDiffType.CANCELLED -> Triple(Color(0xFFFEE2E2), Color(0xFFB91C1C), "- Отменена")
@@ -157,7 +166,7 @@ private fun DiffItemCard(item: LessonDiffItem) {
             Spacer(modifier = Modifier.height(4.dp))
 
             GlitchText(
-                text = item.subject,
+                text = tr(item.subject),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

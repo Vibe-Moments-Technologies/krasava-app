@@ -34,8 +34,10 @@ import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Surface
+import com.jetbrains.kmpapp.data.i18n.TranslationManager
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.RefreshStatus
+import org.koin.compose.koinInject
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -128,6 +130,11 @@ private fun ScheduleMainContent(
     val isVpnActive by viewModel.isVpnActive.collectAsState()
     val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
     var isVpnBannerDismissed by remember(isVpnActive, vpnWarningEnabled) { mutableStateOf(false) }
+
+    // Ошибки перевода интерфейса/расписания (выбор языка) показываем
+    // баннером на странице расписания, чтобы ошибка была видна сразу.
+    val translationManager: TranslationManager = koinInject()
+    val translationState by translationManager.state.collectAsState()
 
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -328,7 +335,7 @@ private fun ScheduleMainContent(
                                 date = pageDate,
                                 slots = pageSlots,
                                 listState = pageListState,
-                                errorMessage = errorMessage,
+                                errorMessage = errorMessage ?: translationState.lastError,
                                 currentMinutesState = currentMinutesState,
                                 showLessonProgress = showLessonProgress,
                                 showEmptyLessonProgress = showEmptyLessonProgress,

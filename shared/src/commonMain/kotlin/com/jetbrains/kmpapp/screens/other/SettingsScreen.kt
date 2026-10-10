@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -54,9 +55,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
+import com.jetbrains.kmpapp.data.i18n.AppLanguage
+import com.jetbrains.kmpapp.data.i18n.TranslationManager
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import org.koin.compose.koinInject
 
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.AlertDialog
@@ -79,9 +83,15 @@ fun SettingsScreen(
     onOpenScheduleCalendar: () -> Unit = {},
     onOpenServiceSettings: () -> Unit = {},
     onOpenSaperSettings: () -> Unit = {},
+    onOpenLanguage: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
+
+    val translationManager: TranslationManager = koinInject()
+    val translation by translationManager.state.collectAsState()
+    fun t(ru: String): String =
+        if (translation.language == AppLanguage.RUSSIAN) ru else translation.labels[ru] ?: ru
 
     val showEmptyLessons by viewModel.showEmptyLessons.collectAsState()
     val hideAdditionalLessons by viewModel.hideAdditionalLessons.collectAsState()
@@ -132,7 +142,7 @@ fun SettingsScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 GlitchText(
-                    text = "Настройки",
+                    text = t("Настройки"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -151,7 +161,7 @@ fun SettingsScreen(
         ) {
             // Section: Appearance
             SettingsSectionCard(
-                title = "Внешний вид",
+                title = t("Внешний вид"),
                 icon = Icons.Default.Palette,
                 onIconClick = {
                     val mark = lastSakuraTapMark
@@ -168,13 +178,13 @@ fun SettingsScreen(
                 }
             ) {
                 GlitchText(
-                    text = "Тема приложения",
+                    text = t("Тема приложения"),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 GlitchText(
-                    text = "Выберите желаемый стиль интерфейса",
+                    text = t("Выберите желаемый стиль интерфейса"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -190,7 +200,7 @@ fun SettingsScreen(
                             onClick = { viewModel.setThemeMode(mode) },
                             label = {
                                 GlitchText(
-                                    text = mode.displayName,
+                                    text = t(mode.displayName),
                                     fontSize = 13.sp,
                                     modifier = Modifier.fillMaxWidth(),
                                     textAlign = TextAlign.Center
@@ -216,13 +226,13 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             GlitchText(
-                                text = "Иконка приложения",
+                                text = t("Иконка приложения"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             GlitchText(
-                                text = "Новая или старая · тема — автоматически",
+                                text = t("Новая или старая · тема — автоматически"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -238,7 +248,7 @@ fun SettingsScreen(
 
             // Section: Navigation & Dock
             SettingsSectionCard(
-                title = "Интерфейс и навигация",
+                title = t("Интерфейс и навигация"),
                 icon = Icons.Default.Tune
             ) {
                 Row(
@@ -252,13 +262,13 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         GlitchText(
-                            text = "Настройка нижней панели",
+                            text = t("Настройка нижней панели"),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         GlitchText(
-                            text = "Порядок и состав страниц на панели",
+                            text = t("Порядок и состав страниц на панели"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -281,13 +291,13 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         GlitchText(
-                            text = "Скрывать панель навигации",
+                            text = t("Скрывать панель навигации"),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         GlitchText(
-                            text = "«Другое» откроется шестерёнкой на странице расписания, сервисы — блоками внутри него",
+                            text = t("«Другое» откроется шестерёнкой на странице расписания, сервисы — блоками внутри него"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -335,12 +345,12 @@ fun SettingsScreen(
 
             // Section: Schedule — ссылки на подстраницы
             SettingsSectionCard(
-                title = "Расписание",
+                title = t("Расписание"),
                 icon = Icons.Default.CalendarMonth
             ) {
                 SettingsNavigationRow(
-                    title = "Отображение",
-                    subtitle = "Пустые пары, ДОП-занятия, сокращения, авто-скролл",
+                    title = t("Отображение"),
+                    subtitle = t("Пустые пары, ДОП-занятия, сокращения, авто-скролл"),
                     onClick = onOpenScheduleDisplay
                 )
                 HorizontalDivider(
@@ -348,8 +358,8 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
                 SettingsNavigationRow(
-                    title = "Прогресс и индикаторы",
-                    subtitle = "Полоски времени, прогресс перемены",
+                    title = t("Прогресс и индикаторы"),
+                    subtitle = t("Полоски времени, прогресс перемены"),
                     onClick = onOpenScheduleProgress
                 )
                 HorizontalDivider(
@@ -357,32 +367,32 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
                 )
                 SettingsNavigationRow(
-                    title = "Календарь",
-                    subtitle = "Сворачивание свайпом",
+                    title = t("Календарь"),
+                    subtitle = t("Сворачивание свайпом"),
                     onClick = onOpenScheduleCalendar
                 )
             }
 
             // Section: Service settings
             SettingsSectionCard(
-                title = "Параметры сервисов",
+                title = t("Параметры сервисов"),
                 icon = Icons.Default.EditNote
             ) {
                 SettingsNavigationRow(
-                    title = "Конспекты",
-                    subtitle = "Настройки блокнота и заметок",
+                    title = t("Конспекты"),
+                    subtitle = t("Настройки блокнота и заметок"),
                     onClick = onOpenServiceSettings
                 )
             }
 
             // Section: Games — настройки «Сапера»
             SettingsSectionCard(
-                title = "Игры",
+                title = t("Игры"),
                 icon = Icons.Default.Bolt
             ) {
                 SettingsNavigationRow(
-                    title = "Сапер",
-                    subtitle = "Ориентация доски, предупреждение о мелких клетках",
+                    title = t("Сапер"),
+                    subtitle = t("Ориентация доски, предупреждение о мелких клетках"),
                     onClick = onOpenSaperSettings
                 )
             }
@@ -390,7 +400,7 @@ fun SettingsScreen(
             // Section: Lesson notifications (платформенный движок)
             if (NotificationsManager.supportsNotifications) {
                 SettingsSectionCard(
-                    title = "Уведомления",
+                    title = t("Уведомления"),
                     icon = Icons.Default.Notifications
                 ) {
                     Row(
@@ -400,13 +410,13 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             GlitchText(
-                                text = "Напоминать о занятиях",
+                                text = t("Напоминать о занятиях"),
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             GlitchText(
-                                text = "Локальное напоминание до начала пары выбранного расписания. Работает без интернета, прямо на устройстве",
+                                text = t("Локальное напоминание до начала пары выбранного расписания. Работает без интернета, прямо на устройстве"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -430,13 +440,13 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 GlitchText(
-                                    text = "Расписание для уведомлений",
+                                    text = t("Расписание для уведомлений"),
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 GlitchText(
-                                    text = notificationTarget?.fullTitle ?: "Выберите расписание",
+                                    text = notificationTarget?.fullTitle ?: t("Выберите расписание"),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -453,7 +463,7 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
                         GlitchText(
-                            text = "За сколько минут до пары",
+                            text = t("За сколько минут до пары"),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -486,7 +496,7 @@ fun SettingsScreen(
                                 },
                                 label = {
                                     GlitchText(
-                                        text = "Своё",
+                                        text = t("Своё"),
                                         fontSize = 13.sp,
                                         modifier = Modifier.fillMaxWidth(),
                                         textAlign = TextAlign.Center
@@ -515,7 +525,7 @@ fun SettingsScreen(
                                         showCustomMinutesDialog = true
                                     }
                                 ) {
-                                    Icon(Icons.Default.Edit, contentDescription = "Изменить время")
+                                    Icon(Icons.Default.Edit, contentDescription = t("Изменить время"))
                                 }
                             }
                         }
@@ -523,9 +533,21 @@ fun SettingsScreen(
                 }
             }
 
+            // Section: Language — выбор языка интерфейса (под «Уведомлениями»)
+            SettingsSectionCard(
+                title = t("Язык"),
+                icon = Icons.Default.Translate
+            ) {
+                SettingsNavigationRow(
+                    title = translation.language.nativeName,
+                    subtitle = t("Выбор языка переводит надписи интерфейса и названия предметов"),
+                    onClick = onOpenLanguage
+                )
+            }
+
             // Section: Additional features (объединённый блок)
             SettingsSectionCard(
-                title = "Дополнительный функционал",
+                title = t("Дополнительный функционал"),
                 icon = Icons.Default.Tune
             ) {
                 Row(
@@ -535,13 +557,13 @@ fun SettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         GlitchText(
-                            text = "Предупреждения о VPN",
+                            text = t("Предупреждения о VPN"),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         GlitchText(
-                            text = "Показывать предупреждение, если VPN может помешать обновлению расписания",
+                            text = t("Показывать предупреждение, если VPN может помешать обновлению расписания"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

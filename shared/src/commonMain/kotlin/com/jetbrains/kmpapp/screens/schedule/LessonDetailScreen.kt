@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.TaskRepository
+import com.jetbrains.kmpapp.data.i18n.AppLanguage
+import com.jetbrains.kmpapp.data.i18n.TranslationManager
 import com.jetbrains.kmpapp.data.model.AssessmentType
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.DefaultSubjectColors
@@ -76,6 +78,12 @@ fun LessonDetailScreen(
     val notesStorage: com.jetbrains.kmpapp.data.storage.LessonNotesStorage = koinInject()
     val subjects by taskRepository.subjects.collectAsState()
     val isAlreadyAdded = subjects.any { it.name.trim().equals(lesson.subject.trim(), ignoreCase = true) }
+
+    // Перевод названия предмета на выбранный язык (источник — русский).
+    val translationManager: TranslationManager = koinInject()
+    val translation by translationManager.state.collectAsState()
+    fun tr(ru: String): String =
+        if (translation.language == AppLanguage.RUSSIAN) ru else translation.labels[ru] ?: ru
 
     // Персистентные заметки (R2): к паре и к предмету
     val dateStr = lesson.date.toString()
@@ -183,7 +191,7 @@ fun LessonDetailScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     GlitchText(
-                        text = lesson.subject,
+                        text = tr(lesson.subject),
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface

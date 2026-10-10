@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp.data
 
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
+import com.jetbrains.kmpapp.data.i18n.TranslationManager
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.LessonDiffItem
@@ -32,7 +33,8 @@ class ScheduleRepository(
     private val api: MireaScheduleApi,
     private val storage: ScheduleStorage,
     private val powerManager: com.jetbrains.kmpapp.data.power.PlatformPowerManager,
-    private val lessonNotesStorage: com.jetbrains.kmpapp.data.storage.LessonNotesStorage
+    private val lessonNotesStorage: com.jetbrains.kmpapp.data.storage.LessonNotesStorage,
+    private val translationManager: TranslationManager
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val notificationRescheduleMutex = Mutex()
@@ -346,6 +348,9 @@ class ScheduleRepository(
             }
             val oldLessons = storage.getLessons(target.id)
             storage.saveLessons(target.id, parsedLessons)
+            // Копия расписания на выбранном языке: русский оригинал не трогаем,
+            // перевод идёт в отдельной корутине, чтобы не тормозить обновление.
+            scope.launch { translationManager.translateScheduleCopy(target.id, parsedLessons) }
             storage.saveWeekMarkers(target.id, MireaICalParser.parseWeekMarkers(ical))
             val now = Clock.System.now().toEpochMilliseconds()
             storage.setLastSyncTime(target.id, now)

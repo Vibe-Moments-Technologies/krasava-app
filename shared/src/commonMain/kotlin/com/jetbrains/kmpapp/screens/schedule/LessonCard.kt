@@ -45,6 +45,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jetbrains.kmpapp.data.i18n.AppLanguage
+import com.jetbrains.kmpapp.data.i18n.TranslationManager
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleSlot
@@ -132,6 +134,11 @@ fun LessonCard(
     // чужих расписаний в карточку не попадают.
     val notesStorage: LessonNotesStorage = koinInject()
     val allNotes by notesStorage.notes.collectAsState()
+    // Перевод названий предметов и типов занятий на выбранный язык (с русского).
+    val translationManager: TranslationManager = koinInject()
+    val translation by translationManager.state.collectAsState()
+    fun tr(ru: String): String =
+        if (translation.language == AppLanguage.RUSSIAN) ru else translation.labels[ru] ?: ru
     val notePreview = if (noteTargetId >= 0) {
         val noteKey = notesStorage.lessonKey(noteTargetId, lesson.date.toString(), lesson.bellNumber)
         allNotes.firstOrNull { it.noteKey == noteKey }?.text
@@ -211,7 +218,7 @@ fun LessonCard(
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             GlitchText(
-                                text = lesson.lessonType.displayName,
+                                text = tr(lesson.lessonType.displayName),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = typeTextColor
@@ -224,7 +231,7 @@ fun LessonCard(
 
                 // Subject name
                 GlitchText(
-                    text = if (showAbbreviatedNames) abbreviateSubjectName(lesson.subject) else lesson.subject,
+                    text = if (showAbbreviatedNames) abbreviateSubjectName(tr(lesson.subject)) else tr(lesson.subject),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface

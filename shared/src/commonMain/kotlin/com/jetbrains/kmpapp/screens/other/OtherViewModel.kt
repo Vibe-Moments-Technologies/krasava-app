@@ -47,6 +47,8 @@ enum class OtherSubScreen(val depth: Int) {
     SERVICE_NOTES_SETTINGS(2),
     // Настройки игр: «Сапер»
     SAPER_SETTINGS(2),
+    // Выбор языка интерфейса
+    LANGUAGE(2),
     RESOURCES(1),
     ABOUT(1),
     TEAM(2),
@@ -75,6 +77,7 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SCHEDULE_CALENDAR to OtherSubScreen.SETTINGS,
     OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SAPER_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.LANGUAGE to OtherSubScreen.SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.TEAM to OtherSubScreen.ABOUT,

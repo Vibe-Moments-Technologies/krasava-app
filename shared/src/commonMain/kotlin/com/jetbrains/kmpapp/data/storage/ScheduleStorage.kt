@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.data.storage
 import com.jetbrains.kmpapp.data.analytics.AppDiagnostics
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
+import com.jetbrains.kmpapp.data.i18n.AppLanguage
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
@@ -585,6 +586,7 @@ class ScheduleStorage(
         platformStorage.remove(KEY_LESSONS_PREFIX + targetId)
         platformStorage.remove(KEY_LAST_SYNC_PREFIX + targetId)
         platformStorage.remove(KEY_WEEK_MARKERS_PREFIX + targetId)
+        removeTranslatedLessons(targetId)
         _selectedTarget.value?.let {
             com.jetbrains.kmpapp.data.model.SemesterWeeks.set(loadWeekMarkers(it.id))
         }
@@ -648,6 +650,41 @@ class ScheduleStorage(
         return _cachedLessons.value[targetId]
     }
 
+    /**
+     * Копия расписания на выбранном языке: тот же набор пар, но с переведёнными
+     * названиями предметов. Русский оригинал при этом не перезаписывается —
+     * источником перевода всегда остаётся он.
+     */
+    fun saveTranslatedLessons(targetId: Int, language: AppLanguage, lessons: List<Lesson>) {
+        scope.launch {
+            try {
+                platformStorage.saveString(
+                    translatedLessonsKey(targetId, language),
+                    json.encodeToString(lessons)
+                )
+            } catch (e: Exception) {
+                println("Failed to persist translated lessons for $targetId ${language.code}: ${e.message}")
+            }
+        }
+    }
+
+    fun getTranslatedLessons(targetId: Int, language: AppLanguage): List<Lesson>? = try {
+        val s = platformStorage.getString(translatedLessonsKey(targetId, language))
+        if (s.isNullOrBlank()) null
+        else try { json.decodeFromString<List<Lesson>>(s) } catch (_: Throwable) { null }
+    } catch (_: Throwable) {
+        null
+    }
+
+    private fun translatedLessonsKey(targetId: Int, language: AppLanguage): String =
+        KEY_LESSONS_PREFIX + targetId + "|" + language.code
+
+    private fun removeTranslatedLessons(targetId: Int) {
+        for (language in AppLanguage.entries) {
+            platformStorage.remove(translatedLessonsKey(targetId, language))
+        }
+    }
+
     fun getLastSyncTime(targetId: Int): Long {
         val cached = lastSyncTimes[targetId]
         if (cached != null) return cached
@@ -675,6 +712,7 @@ class ScheduleStorage(
             platformStorage.remove(KEY_LESSONS_PREFIX + target.id)
             platformStorage.remove(KEY_LAST_SYNC_PREFIX + target.id)
             platformStorage.remove(KEY_WEEK_MARKERS_PREFIX + target.id)
+            removeTranslatedLessons(target.id)
         }
         com.jetbrains.kmpapp.data.model.SemesterWeeks.set(emptyList())
     }
