@@ -6,6 +6,7 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.errors.IOException
+import kotlinx.coroutines.delay
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -32,7 +33,20 @@ class TranslationApi(private val client: HttpClient) {
         if (target == AppLanguage.RUSSIAN) return text
         val query = text.trim().take(MAX_QUERY_CHARS)
         if (query.isEmpty()) return text
+        var lastError: Exception? = null
+        // MyMemory бывает медленным/нестабильным — делаем несколько попыток.
+        repeat(MAX_ATTEMPTS) { attempt ->
+            try {
+                return translateOnce(query, target)
+            } catch (e: Exception) {
+                lastError = e
+                delay((attempt + 1) * RETRY_DELAY_MILLIS)
+            }
+        }
+        throw lastError ?: IOException("Перевод недоступен")
+    }
 
+    private suspend fun translateOnce(query: String, target: AppLanguage): String {
         val response = client.get(baseUrl) {
             parameter("q", query)
             parameter("langpair", "${AppLanguage.RUSSIAN.code}|${target.code}")
@@ -54,5 +68,7 @@ class TranslationApi(private val client: HttpClient) {
     private companion object {
         // Лимит MyMemory на один запрос — около 500 символов.
         const val MAX_QUERY_CHARS = 450
+        const val MAX_ATTEMPTS = 3
+        const val RETRY_DELAY_MILLIS = 300L
     }
 }

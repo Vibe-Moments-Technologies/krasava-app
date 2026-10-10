@@ -154,6 +154,17 @@ fun LanguageScreen(
                             )
                         }
                     }
+
+                    // Отчёт о последнем переводе надписей: сколько успешно/неудачно и время.
+                    state.lastReport?.let { report ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        GlitchText(
+                            text = "${manager.t("Готово")}: ${report.ok}/${report.total} · ${manager.t("ошибок")}: ${report.failed} · ${report.millis} мс",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (report.failed > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }

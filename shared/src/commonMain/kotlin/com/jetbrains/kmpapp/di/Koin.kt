@@ -47,9 +47,9 @@ val dataModule = module {
                 json(json, contentType = ContentType.Any)
             }
             install(HttpTimeout) {
-                requestTimeoutMillis = 15_000
+                requestTimeoutMillis = 30_000
                 connectTimeoutMillis = 10_000
-                socketTimeoutMillis = 15_000
+                socketTimeoutMillis = 30_000
             }
         }
     }
