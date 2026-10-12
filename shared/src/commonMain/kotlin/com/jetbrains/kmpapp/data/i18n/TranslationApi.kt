@@ -29,7 +29,12 @@ class TranslationApi(private val client: HttpClient) {
 
     private val baseUrl = "https://api.mymemory.translated.net/get"
 
-    suspend fun translate(text: String, target: AppLanguage): String {
+    /**
+     * Переводит один текст. Может принимать многострочный запрос (несколько строк
+     * через \n) — MyMemory отвечает построчно в том же порядке; внутренние
+     * переносы строк сохраняются.
+     */
+    suspend fun translateRaw(text: String, target: AppLanguage): String {
         if (target == AppLanguage.RUSSIAN) return text
         val query = text.trim().take(MAX_QUERY_CHARS)
         if (query.isEmpty()) return text
@@ -45,6 +50,10 @@ class TranslationApi(private val client: HttpClient) {
         }
         throw lastError ?: IOException("Перевод недоступен")
     }
+
+    /** Одна строка: результат без переносов (на случай, если API вернул их внутри). */
+    suspend fun translate(text: String, target: AppLanguage): String =
+        translateRaw(text, target).replace('\n', ' ').trim()
 
     private suspend fun translateOnce(query: String, target: AppLanguage): String {
         val response = client.get(baseUrl) {

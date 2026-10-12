@@ -153,6 +153,14 @@ fun LanguageScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                        state.progress?.let { p ->
+                            Spacer(modifier = Modifier.height(4.dp))
+                            GlitchText(
+                                text = "${manager.t("Перевожу")}: ${manager.t(p.label)} ${p.done}/${p.total}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     // Отчёт о последнем переводе надписей: сколько успешно/неудачно и время.

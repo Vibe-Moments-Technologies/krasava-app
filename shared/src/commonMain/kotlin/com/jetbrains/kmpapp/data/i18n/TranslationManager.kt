@@ -32,9 +32,13 @@ class TranslationManager(
         val language: AppLanguage = AppLanguage.RUSSIAN,
         val labels: Map<String, String> = emptyMap(),
         val isPreparing: Boolean = false,
+        /** Текущий этап перевода: label — этап (надписи/расписание), done/total — прогресс. */
+        val progress: Progress? = null,
         val lastError: String? = null,
         val lastReport: Report? = null
     )
+
+    data class Progress(val label: String, val done: Int, val total: Int)
 
     /** Отчёт о последнем переводе надписей: сколько успешно/неудачно и за какое время. */
     data class Report(
@@ -74,64 +78,124 @@ class TranslationManager(
         if (language == AppLanguage.RUSSIAN) return
 
         scope.launch {
-            _state.update { it.copy(isPreparing = true, lastError = null) }
-            val batch = translateBatch(Labels.UI, language)
-            _state.update { current ->
-                current.copy(
-                    labels = current.labels + batch.map,
-                    isPreparing = false,
+            _state.update { it.copy(isPreparing = true, lastError = null, progress = null) }
+            val batch = translateBatch(Labels.UI, language) { done, total ->
+                _state.update { it.copy(progress = Progress("Надписи", done, total)) }
+            }
+            _state.update {
+                it.copy(
+                    labels = it.labels + batch.map,
                     lastReport = Report(batch.total, batch.ok, batch.failed, batch.millis),
                     lastError = if (batch.failed > 0) "Не удалось перевести часть надписей (${batch.failed})" else null
                 )
             }
             persistLabelsCache(language, _state.value.labels)
             println("[i18n] ui-labels lang=${language.code} total=${batch.total} ok=${batch.ok} fail=${batch.failed} t=${batch.millis}ms")
-            translateAllSavedSchedules(language)
+            translateAllSavedSchedulesSync(language)
+            _state.update { it.copy(isPreparing = false, progress = null) }
         }
     }
 
     /**
-     * Переводит список строк с русского на [target] параллельно (небольшими
-     * волнами, чтобы не упереться в лимит MyMemory). Неудачные остаются русскими.
+     * Переводит список строк с русского на [target]. Строки группируются в батчи
+     * по несколько штук в одном запросе (MyMemory отдаёт построчно в том же
+     * порядке) — вместо десятков одиночных запросов выходит несколько. Группы
+     * гонятся волнами параллельно. Неудачные остаются русскими.
      */
-    suspend fun translateBatch(texts: List<String>, target: AppLanguage): BatchResult {
+    suspend fun translateBatch(
+        texts: List<String>,
+        target: AppLanguage,
+        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
+    ): BatchResult {
         val distinct = texts.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
         if (target == AppLanguage.RUSSIAN) {
+            onProgress(distinct.size, distinct.size)
             return BatchResult(distinct.associateWith { it }, failed = 0, total = distinct.size, millis = 0)
         }
         val started = TimeSource.Monotonic.markNow()
         val map = linkedMapOf<String, String>()
         var failed = 0
+        var done = 0
+        val groups = buildGroups(distinct)
 
+        onProgress(0, distinct.size)
         coroutineScope {
-            distinct.chunked(CONCURRENCY).forEach { chunk ->
-                val results = chunk.map { text ->
-                    async {
-                        text to runCatching { api.translate(text, target).trim() }
-                    }
-                }.awaitAll()
-                results.forEach { (text, result) ->
-                    result.onSuccess { map[text] = it }.onFailure {
-                        failed++
-                        map[text] = text
-                    }
+            groups.chunked(MAX_GROUPS_PER_WAVE).forEach { wave ->
+                val results = wave.map { group -> async { translateGroup(group, target) } }.awaitAll()
+                results.forEach { (groupMap, groupFailed, groupSize) ->
+                    map.putAll(groupMap)
+                    failed += groupFailed
+                    done += groupSize
                 }
-                // Пауза между волнами запросов: защита лимита бесплатного API.
+                onProgress(done, distinct.size)
+                // Пауза между волнами запросов: щадим бесплатный лимит API.
                 delay(BATCH_DELAY_MILLIS)
             }
         }
         return BatchResult(map, failed, distinct.size, started.elapsedNow().inWholeMilliseconds)
     }
 
+    /** Переводит группу строк одним запросом; при рассинхроне строк — по одной. */
+    private suspend fun translateGroup(
+        group: List<String>,
+        target: AppLanguage
+    ): Triple<Map<String, String>, Int, Int> {
+        val joined = group.joinToString("\n")
+        val raw = try { api.translateRaw(joined, target) } catch (_: Exception) { null }
+        val lines = raw?.split("\n")
+        if (raw != null && lines != null && lines.size == group.size) {
+            val out = linkedMapOf<String, String>()
+            var failed = 0
+            group.forEachIndexed { index, text ->
+                val translated = lines[index].trim()
+                if (translated.isEmpty()) failed++ else out[text] = translated
+            }
+            return Triple(out, failed, group.size)
+        }
+        val out = linkedMapOf<String, String>()
+        var failed = 0
+        group.forEach { text ->
+            try {
+                val translated = api.translate(text, target).trim()
+                if (translated.isEmpty()) failed++ else out[text] = translated
+            } catch (_: Exception) {
+                failed++
+            }
+        }
+        return Triple(out, failed, group.size)
+    }
+
+    /** Собирает строки в группы, не превышающие лимит символов/строк одного запроса. */
+    private fun buildGroups(items: List<String>): List<List<String>> {
+        val groups = mutableListOf(mutableListOf<String>())
+        var length = 0
+        for (item in items) {
+            val size = item.length + 1
+            val last = groups.last()
+            if (last.isNotEmpty() && (length + size > MAX_BATCH_CHARS || last.size >= MAX_BATCH_LINES)) {
+                groups.add(mutableListOf())
+                length = 0
+            }
+            groups.last().add(item)
+            length += size
+        }
+        return groups
+    }
+
     /**
      * Создаёт/обновляет JSON-копию расписания на текущем языке. Возвращает
      * переведённый список либо null (русский язык / сбой перевода — ошибка в стейт).
      */
-    suspend fun translateScheduleCopy(targetId: Int, russianLessons: List<Lesson>): List<Lesson>? {
+    suspend fun translateScheduleCopy(
+        targetId: Int,
+        russianLessons: List<Lesson>,
+        label: String = "Расписание",
+        onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
+    ): List<Lesson>? {
         val language = _state.value.language
         if (language == AppLanguage.RUSSIAN) return null
         return try {
-            val batch = translateBatch(russianLessons.map { it.subject }, language)
+            val batch = translateBatch(russianLessons.map { it.subject }, language, onProgress)
             val translated = russianLessons.map { lesson ->
                 batch.map[lesson.subject]?.let { lesson.copy(subject = it) } ?: lesson
             }
@@ -139,7 +203,7 @@ class TranslationManager(
             // Регистрируем переводы предметов: карточки расписания читают их через t().
             _state.update { it.copy(labels = it.labels + batch.map) }
             persistLabelsCache(language, _state.value.labels)
-            println("[i18n] schedule targetId=$targetId lang=${language.code} subjects=${batch.total} ok=${batch.ok} fail=${batch.failed} t=${batch.millis}ms")
+            println("[i18n] schedule targetId=$targetId label=\"$label\" lang=${language.code} subjects=${batch.total} ok=${batch.ok} fail=${batch.failed} t=${batch.millis}ms")
             if (batch.failed > 0) {
                 _state.update { it.copy(lastError = "Не удалось перевести названия предметов (${batch.failed})") }
             }
@@ -151,13 +215,17 @@ class TranslationManager(
     }
 
     fun translateAllSavedSchedules(language: AppLanguage) {
+        scope.launch { translateAllSavedSchedulesSync(language) }
+    }
+
+    private suspend fun translateAllSavedSchedulesSync(language: AppLanguage) {
         if (language == AppLanguage.RUSSIAN) return
-        scope.launch {
-            for (target in scheduleStorage.savedTargets.value) {
-                val lessons = scheduleStorage.getLessons(target.id)
-                if (!lessons.isNullOrEmpty()) {
-                    translateScheduleCopy(target.id, lessons)
-                }
+        for (target in scheduleStorage.savedTargets.value) {
+            val lessons = scheduleStorage.getLessons(target.id)
+            if (lessons.isNullOrEmpty()) continue
+            val label = "Расписание: ${target.targetTitle}"
+            translateScheduleCopy(target.id, lessons, label) { done, total ->
+                _state.update { it.copy(progress = Progress(label, done, total)) }
             }
         }
     }
@@ -188,8 +256,10 @@ class TranslationManager(
     private companion object {
         const val KEY_LANGUAGE = "krasava_app_language"
         const val KEY_LABELS_PREFIX = "krasava_labels_"
-        // Одна «волна» параллельных запросов к MyMemory.
-        const val CONCURRENCY = 4
-        const val BATCH_DELAY_MILLIS = 250L
+        // Одна «волна» батч-запросов к MyMemory; в каждом — несколько строк.
+        const val MAX_BATCH_LINES = 10
+        const val MAX_BATCH_CHARS = 350
+        const val MAX_GROUPS_PER_WAVE = 4
+        const val BATCH_DELAY_MILLIS = 100L
     }
 }
