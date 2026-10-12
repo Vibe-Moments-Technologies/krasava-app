@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -97,7 +98,57 @@ fun LanguageScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             state.lastError?.let { error ->
-                Card(
+Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { manager.setTranslateAll(!state.translateAll) }
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        GlitchText(
+                            text = manager.t(if (state.translateAll) "Перевести всё" else "Перевести только меню"),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        GlitchText(
+                            text = manager.t(
+                                if (state.translateAll)
+                                    "Пары, предметы и ФИО преподавателей переводятся онлайн через интернет"
+                                else
+                                    "Надписи меню переводятся из встроенного офлайн-словаря"
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = state.translateAll,
+                        onCheckedChange = { manager.setTranslateAll(it) }
+                    )
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.tertiaryContainer),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                GlitchText(
+                    text = manager.t("Для перевода всего нужно хорошее интернет-соединение"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+
+            Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
                     modifier = Modifier
@@ -125,7 +176,7 @@ fun LanguageScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     GlitchText(
-                        text = manager.t("Русский работает офлайн. Остальные языки переводятся через интернет"),
+                        text = manager.t("Меню переводится офлайн по встроенному словарю. Русский — без интернета"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

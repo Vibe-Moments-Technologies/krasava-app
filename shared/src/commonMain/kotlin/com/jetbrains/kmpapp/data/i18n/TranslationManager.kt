@@ -19,9 +19,12 @@ import kotlinx.serialization.json.Json
 import kotlin.time.TimeSource
 
 /**
- * Язык приложения: выбор языка, перевод надписей интерфейса, названий предметов
- * и ФИО преподавателей расписания. Перевод всегда идёт с русского источника —
- * каскад «прошлый язык → новый» запрещён. Русский работает локально и без интернета.
+ * Язык приложения. Меню (кнопки и локальные надписи) переводится из встроенных
+ * офлайн-словарей [OfflineDictionary] — мгновенно и без интернета. В режиме
+ * «перевести всё» пары и ФИО преподавателей дополнительно переводятся онлайн
+ * (MyMemory), результат кэшируется на устройство и восстанавливается офлайн.
+ * Перевод всегда идёт с русского источника — каскад «прошлый язык → новый» запрещён.
+ * Русский работает локально, без интернета и без словаря.
  */
 class TranslationManager(
     private val api: TranslationApi,
@@ -31,8 +34,10 @@ class TranslationManager(
     data class State(
         val language: AppLanguage = AppLanguage.RUSSIAN,
         val labels: Map<String, String> = emptyMap(),
+        /** true — меню + пары + ФИО (онлайн); false — только меню (офлайн-словарь). */
+        val translateAll: Boolean = true,
         val isPreparing: Boolean = false,
-        /** Текущий этап перевода: label — этап (надписи/расписание), done/total — прогресс. */
+        /** Текущий этап перевода: label — расписание, done/total — прогресс. */
         val progress: Progress? = null,
         val lastError: String? = null,
         val lastReport: Report? = null
@@ -40,7 +45,7 @@ class TranslationManager(
 
     data class Progress(val label: String, val done: Int, val total: Int)
 
-    /** Отчёт о последнем переводе надписей: сколько успешно/неудачно и за какое время. */
+    /** Отчёт о последнем переводе: сколько успешно/неудачно и за какое время. */
     data class Report(
         val total: Int,
         val ok: Int,
@@ -54,10 +59,27 @@ class TranslationManager(
 
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val json = Json { ignoreUnknownKeys = true }
+
+    private val initialLanguage = AppLanguage.fromCode(platformStorage.getString(KEY_LANGUAGE))
+    private val initialTranslateAll = platformStorage.getString(KEY_TRANSLATE_ALL) != "0"
+
     private val _state = MutableStateFlow(
-        State(language = AppLanguage.fromCode(platformStorage.getString(KEY_LANGUAGE)))
+        State(
+            language = initialLanguage,
+            translateAll = initialTranslateAll,
+            labels = buildLabels(initialLanguage, initialTranslateAll)
+        )
     )
     val state: StateFlow<State> = _state.asStateFlow()
+
+    init {
+        // Прогреваем словари меню в фоне: после загрузки пересобираем надписи,
+        // чтобы на холодном старте в нерусском языке меню было переведено офлайн.
+        scope.launch {
+            OfflineDictionary.preloadAll()
+            _state.update { st -> st.copy(labels = buildLabels(st.language, st.translateAll)) }
+        }
+    }
 
     /**
      * Перевод русского источника в текущий язык. Русский и ещё не переведённые
@@ -71,27 +93,51 @@ class TranslationManager(
     fun selectLanguage(language: AppLanguage) {
         if (language == _state.value.language) return
         scope.launch { runCatching { platformStorage.saveString(KEY_LANGUAGE, language.code) } }
-        // Сразу подставляем сохранённый кэш переводов (если есть), дальше —
-        // свежий перевод в фоне. Язык переключаем мгновенно, UI отзывчив.
-        val cached = if (language == AppLanguage.RUSSIAN) emptyMap() else loadLabelsCache(language)
-        _state.value = State(language = language, labels = cached)
+        val translateAll = _state.value.translateAll
+        // Меню подставляем мгновенно из офлайн-словаря (если уже загружен),
+        // онлайн-кэш пар восстанавливаем.
+        _state.value = State(
+            language = language,
+            translateAll = translateAll,
+            labels = buildLabels(language, translateAll)
+        )
         if (language == AppLanguage.RUSSIAN) return
-
         scope.launch {
-            _state.update { it.copy(isPreparing = true, lastError = null, progress = null) }
-            val batch = translateBatch(Labels.UI, language) { done, total ->
-                _state.update { it.copy(progress = Progress("Надписи", done, total)) }
+            OfflineDictionary.menuLabels(language)
+            _state.update { st ->
+                if (st.language == language) st.copy(labels = buildLabels(language, st.translateAll)) else st
             }
-            _state.update {
-                it.copy(
-                    labels = it.labels + batch.map,
-                    lastReport = Report(batch.total, batch.ok, batch.failed, batch.millis),
-                    lastError = if (batch.failed > 0) "Не удалось перевести часть надписей (${batch.failed})" else null
-                )
-            }
-            persistLabelsCache(language, _state.value.labels)
-            println("[i18n] ui-labels lang=${language.code} total=${batch.total} ok=${batch.ok} fail=${batch.failed} t=${batch.millis}ms")
+        }
+        if (translateAll) scope.launch { refreshOnline(language) }
+    }
+
+    /** Включает/выключает «перевести всё». Выключено — только меню из офлайн-словаря. */
+    fun setTranslateAll(enabled: Boolean) {
+        if (enabled == _state.value.translateAll) return
+        scope.launch { runCatching { platformStorage.saveString(KEY_TRANSLATE_ALL, if (enabled) "1" else "0") } }
+        val language = _state.value.language
+        _state.update { it.copy(translateAll = enabled, labels = buildLabels(language, enabled)) }
+        if (language == AppLanguage.RUSSIAN) return
+        if (enabled) scope.launch { refreshOnline(language) }
+    }
+
+    /**
+     * Меню всегда из офлайн-словаря; онлайн-переведённые пары и ФИО (кэш)
+     * подключаются только когда включён режим «перевести всё».
+     */
+    private fun buildLabels(language: AppLanguage, translateAll: Boolean): Map<String, String> {
+        if (language == AppLanguage.RUSSIAN) return emptyMap()
+        val menu = OfflineDictionary.cached(language)
+        return if (translateAll) menu + loadLabelsCache(language) else menu
+    }
+
+    /** Онлайн-перевод пар и ФИО для всех сохранённых расписаний. */
+    private suspend fun refreshOnline(language: AppLanguage) {
+        if (language == AppLanguage.RUSSIAN || !_state.value.translateAll) return
+        _state.update { it.copy(isPreparing = true, lastError = null, progress = null) }
+        try {
             translateAllSavedSchedulesSync(language)
+        } finally {
             _state.update { it.copy(isPreparing = false, progress = null) }
         }
     }
@@ -184,8 +230,8 @@ class TranslationManager(
 
     /**
      * Создаёт/обновляет JSON-копию расписания на текущем языке. Возвращает
-     * переведённый список либо null (русский язык / сбой перевода — ошибка в стейт).
-     * В батч помимо названий предметов входят ФИО преподавателей.
+     * переведённый список либо null (русский язык / режим «только меню» /
+     * сбой перевода — ошибка в стейт). В батч помимо названий предметов входят ФИО.
      */
     suspend fun translateScheduleCopy(
         targetId: Int,
@@ -193,8 +239,9 @@ class TranslationManager(
         label: String = "Расписание",
         onProgress: (done: Int, total: Int) -> Unit = { _, _ -> }
     ): List<Lesson>? {
-        val language = _state.value.language
-        if (language == AppLanguage.RUSSIAN) return null
+        val current = _state.value
+        val language = current.language
+        if (language == AppLanguage.RUSSIAN || !current.translateAll) return null
         return try {
             val teachers = russianLessons
                 .flatMap { it.teachers }
@@ -213,9 +260,11 @@ class TranslationManager(
                 )
             }
             scheduleStorage.saveTranslatedLessons(targetId, language, translated)
-            // Регистрируем переводы предметов и ФИО: карточки расписания читают их через t().
-            _state.update { it.copy(labels = it.labels + batch.map) }
-            persistLabelsCache(language, _state.value.labels)
+            // Регистрируем переводы предметов и ФИО в онлайн-кэш (карточки читают их
+            // через t()); офлайн-словарь меню при этом не затирается.
+            val updatedOnline = loadLabelsCache(language) + batch.map
+            persistLabelsCache(language, updatedOnline)
+            _state.update { it.copy(labels = buildLabels(language, it.translateAll)) }
             println("[i18n] schedule targetId=$targetId label=\"$label\" lang=${language.code} lines=${batch.total} ok=${batch.ok} fail=${batch.failed} t=${batch.millis}ms")
             if (batch.failed > 0) {
                 _state.update { it.copy(lastError = "Не удалось перевести часть предметов и преподавателей (${batch.failed})") }
@@ -232,7 +281,7 @@ class TranslationManager(
     }
 
     private suspend fun translateAllSavedSchedulesSync(language: AppLanguage) {
-        if (language == AppLanguage.RUSSIAN) return
+        if (language == AppLanguage.RUSSIAN || !_state.value.translateAll) return
         for (target in scheduleStorage.savedTargets.value) {
             val lessons = scheduleStorage.getLessons(target.id)
             if (lessons.isNullOrEmpty()) continue
@@ -268,6 +317,7 @@ class TranslationManager(
 
     private companion object {
         const val KEY_LANGUAGE = "krasava_app_language"
+        const val KEY_TRANSLATE_ALL = "krasava_translate_all"
         const val KEY_LABELS_PREFIX = "krasava_labels_"
         // Одна «волна» батч-запросов к MyMemory; в каждом — несколько строк.
         const val MAX_BATCH_LINES = 10
