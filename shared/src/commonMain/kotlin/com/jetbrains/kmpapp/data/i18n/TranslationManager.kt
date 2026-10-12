@@ -19,9 +19,9 @@ import kotlinx.serialization.json.Json
 import kotlin.time.TimeSource
 
 /**
- * Язык приложения: выбор языка, перевод надписей интерфейса и названий предметов
- * расписания. Перевод всегда идёт с русского источника — каскад «прошлый язык →
- * новый» запрещён. Русский работает локально и без интернета.
+ * Язык приложения: выбор языка, перевод надписей интерфейса, названий предметов
+ * и ФИО преподавателей расписания. Перевод всегда идёт с русского источника —
+ * каскад «прошлый язык → новый» запрещён. Русский работает локально и без интернета.
  */
 class TranslationManager(
     private val api: TranslationApi,
@@ -185,6 +185,7 @@ class TranslationManager(
     /**
      * Создаёт/обновляет JSON-копию расписания на текущем языке. Возвращает
      * переведённый список либо null (русский язык / сбой перевода — ошибка в стейт).
+     * В батч помимо названий предметов входят ФИО преподавателей.
      */
     suspend fun translateScheduleCopy(
         targetId: Int,
@@ -195,17 +196,29 @@ class TranslationManager(
         val language = _state.value.language
         if (language == AppLanguage.RUSSIAN) return null
         return try {
-            val batch = translateBatch(russianLessons.map { it.subject }, language, onProgress)
+            val teachers = russianLessons
+                .flatMap { it.teachers }
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+            val batch = translateBatch(
+                russianLessons.map { it.subject } + teachers,
+                language,
+                onProgress
+            )
             val translated = russianLessons.map { lesson ->
-                batch.map[lesson.subject]?.let { lesson.copy(subject = it) } ?: lesson
+                lesson.copy(
+                    subject = batch.map[lesson.subject] ?: lesson.subject,
+                    teachers = lesson.teachers.map { batch.map[it] ?: it }
+                )
             }
             scheduleStorage.saveTranslatedLessons(targetId, language, translated)
-            // Регистрируем переводы предметов: карточки расписания читают их через t().
+            // Регистрируем переводы предметов и ФИО: карточки расписания читают их через t().
             _state.update { it.copy(labels = it.labels + batch.map) }
             persistLabelsCache(language, _state.value.labels)
-            println("[i18n] schedule targetId=$targetId label=\"$label\" lang=${language.code} subjects=${batch.total} ok=${batch.ok} fail=${batch.failed} t=${batch.millis}ms")
+            println("[i18n] schedule targetId=$targetId label=\"$label\" lang=${language.code} lines=${batch.total} ok=${batch.ok} fail=${batch.failed} t=${batch.millis}ms")
             if (batch.failed > 0) {
-                _state.update { it.copy(lastError = "Не удалось перевести названия предметов (${batch.failed})") }
+                _state.update { it.copy(lastError = "Не удалось перевести часть предметов и преподавателей (${batch.failed})") }
             }
             translated
         } catch (e: Exception) {

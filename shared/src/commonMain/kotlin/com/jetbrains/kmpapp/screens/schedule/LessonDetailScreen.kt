@@ -229,7 +229,7 @@ fun LessonDetailScreen(
                     lesson.teachers.forEachIndexed { index, teacher ->
                         if (index > 0) Spacer(modifier = Modifier.height(8.dp))
                         GlitchText(
-                            text = teacher,
+                            text = tr(teacher),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurface

@@ -276,7 +276,7 @@ fun LessonCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         GlitchText(
-                            text = lesson.teachers.joinToString(", "),
+                            text = lesson.teachers.joinToString(", ") { tr(it) },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
