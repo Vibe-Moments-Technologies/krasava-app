@@ -65,21 +65,63 @@ def parse_proxy_url(raw_proxy: str) -> Optional[str]:
         return f"http://{ip}:{port}"
     return f"http://{s}"
 
+def is_endpoint_alive(url: str, timeout: int = 10, force_direct: bool = False) -> bool:
+    """
+    Проверяет доступность URL одним запросом. force_direct игнорирует
+    переменные окружения с прокси — иначе urllib подставит мёртвый прокси
+    и проверка «прямого» доступа соврёт.
+    """
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+        })
+        if force_direct:
+            opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        else:
+            opener = urllib.request.build_opener()
+        with opener.open(req, timeout=timeout) as resp:
+            return 200 <= resp.status < 300
+    except Exception:
+        return False
+
 def setup_global_opener():
-    """Настраивает urllib opener с поддержкой RU_PROXY при наличии."""
+    """
+    Настраивает urllib opener. Прокси (RU_PROXY) нужен только когда раннер
+    не имеет российского IP: без него МИРЭА отдаёт гео-блок. Прокси может
+    быть недоступен — тогда проверяем прямой доступ и, если он есть,
+    работаем напрямую вместо падения с Connection refused.
+    """
     raw_proxy = os.environ.get("RU_PROXY") or os.environ.get("HTTPS_PROXY") or os.environ.get("HTTP_PROXY")
     proxy_url = parse_proxy_url(raw_proxy)
+    probe = f"{BASE_API_URL}/search?limit=1"
+
     if proxy_url:
         masked = re.sub(r':([^:@]+)@', ':****@', proxy_url)
-        print(f"[Proxy] Использование прокси: {masked}")
-        proxy_handler = urllib.request.ProxyHandler({
-            "http": proxy_url,
-            "https": proxy_url,
-        })
-        opener = urllib.request.build_opener(proxy_handler)
-        urllib.request.install_opener(opener)
-    else:
-        print("[Proxy] Прокси не задан, прямые сетевые запросы.")
+        proxy_opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({"http": proxy_url, "https": proxy_url})
+        )
+        try:
+            with proxy_opener.open(
+                urllib.request.Request(probe, headers={"User-Agent": USER_AGENT}), timeout=15
+            ) as resp:
+                if 200 <= resp.status < 300:
+                    print(f"[Proxy] Использование прокси: {masked}")
+                    urllib.request.install_opener(proxy_opener)
+                    return
+        except Exception as e:
+            print(f"[Proxy] Прокси недоступен ({masked}): {e}")
+        print(f"[Proxy] Переходим на прямые запросы.")
+
+    # Проверяем именно прямой доступ, не давая urllib подставить RU_PROXY.
+    if is_endpoint_alive(probe, timeout=15, force_direct=True):
+        print("[Net] Прямые сетевые запросы.")
+        urllib.request.install_opener(urllib.request.build_opener(urllib.request.ProxyHandler({})))
+        return
+
+    print("[Ошибка] Нет доступа к API МИРЭА ни через прокси, ни напрямую "
+          "(гео-блокировка или недоступность сети).")
+    sys.exit(1)
 
 def get_bell_number(hhmm: str) -> int:
     """Определение номера пары по времени начала занятия."""
@@ -367,6 +409,16 @@ def main():
 
     elapsed = time.time() - start_time
     print(f"Все аудитории обработаны за {elapsed:.2f} сек. Итоговых аудиторий: {len(processed_rooms)}")
+
+    # Защита от публикации «полупустой» базы: если не удалось собрать
+    # расписание почти ни для кого, деплой затрёт рабочие данные и
+    # пользователи не найдут ни одной свободной аудитории. Лучше упасть
+    # с явной ошибкой, оставив прежний файл на месте.
+    min_expected = int(len(rooms_meta) * 0.7)
+    if len(processed_rooms) < min_expected:
+        print(f"[Ошибка] Собрано только {len(processed_rooms)} из {len(rooms_meta)} аудиторий "
+              f"(меньше порога {min_expected}). Публикация отменена, старые данные сохранены.")
+        sys.exit(1)
 
     # Сортировка: сначала известные кампусы, затем этаж, затем имя
     def sort_key(r):
