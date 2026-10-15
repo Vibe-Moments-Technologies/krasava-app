@@ -49,10 +49,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.collectAsState
 import com.jetbrains.kmpapp.data.power.PlatformPowerManager
+import com.jetbrains.kmpapp.theme.LocalHalloweenEnabled
 import org.koin.compose.koinInject
 
 enum class AppTab(
@@ -91,6 +93,7 @@ fun FloatingDock(
 ) {
     val powerManager: PlatformPowerManager = koinInject()
     val isLowPowerMode by powerManager.isLowPowerMode.collectAsState()
+    val halloween = LocalHalloweenEnabled.current
     val displayedTabs = remember(tabs) { tabs.take(5) }
     val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     // Elevated comfortably above bottom: iOS home indicator (34dp) sits at ~20dp offset; Android button bar sits safely above buttons
@@ -166,20 +169,28 @@ fun FloatingDock(
                             .padding(horizontal = itemHorizontalPadding, vertical = itemVerticalPadding),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = if (tab == backModeTab) {
-                                Icons.AutoMirrored.Filled.ArrowBack
-                            } else if (isSelected) {
-                                tab.selectedIcon
-                            } else {
-                                tab.unselectedIcon
-                            },
-                            contentDescription = if (tab == backModeTab) "Назад" else tab.title,
-                            tint = contentColor,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .scale(scale)
-                        )
+                        if (halloween && tab != backModeTab) {
+                            androidx.compose.material3.Text(
+                                text = tab.halloweenEmoji,
+                                modifier = Modifier.scale(scale),
+                                fontSize = 22.sp
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (tab == backModeTab) {
+                                    Icons.AutoMirrored.Filled.ArrowBack
+                                } else if (isSelected) {
+                                    tab.selectedIcon
+                                } else {
+                                    tab.unselectedIcon
+                                },
+                                contentDescription = if (tab == backModeTab) "Назад" else tab.title,
+                                tint = contentColor,
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .scale(scale)
+                            )
+                        }
                     }
                 }
             }
