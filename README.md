@@ -14,7 +14,7 @@
 
 **Скачать:** [APK (Android, стабильная версия)](https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.apk) · [IPA (iOS, без подписи)](https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.ipa) · [Все релизы](https://github.com/Vibe-Moments-Technologies/krasava-app/releases)
 
-**Сообщество:** [Telegram](https://t.me/MIREA_Schedule) · [GitHub](https://github.com/Vibe-Moments-Technologies/krasava-app)
+**Сообщество:** [Telegram](https://t.me/krasava_app) · [GitHub](https://github.com/Vibe-Moments-Technologies/krasava-app)
 
 ---
 
