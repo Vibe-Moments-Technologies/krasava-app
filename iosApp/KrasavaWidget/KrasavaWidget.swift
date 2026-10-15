@@ -54,6 +54,18 @@ private let dayFmt: DateFormatter = {
     return f
 }()
 
+private let weekdayFmt: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "EEEE"
+    return f
+}()
+
+private let dayNumFmt: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "d"
+    return f
+}()
+
 extension WLesson {
     var startDate: Date? { dayFmt.date(from: "\(date) \(start)") }
     var endDate: Date? { dayFmt.date(from: "\(date) \(end)") }
@@ -135,47 +147,63 @@ struct Provider: TimelineProvider {
 
 // MARK: - Вьюхи
 
+/// Бейдж типа пары: ЛК/ПР/ЛАБ в цвете типа.
+private func typeBadge(_ lesson: WLesson) -> some View {
+    Text(lesson.type)
+        .font(.caption2).bold()
+        .foregroundColor(lesson.typeColor)
+        .padding(.horizontal, 5).padding(.vertical, 1)
+        .background(lesson.typeColor.opacity(0.15))
+        .clipShape(Capsule())
+}
+
+/// Время пары одной строкой; зелёное, если пара идёт сейчас.
+private func timeRange(_ lesson: WLesson, at now: Date) -> some View {
+    Text("\(lesson.start)–\(lesson.end)")
+        .font(.caption2).bold()
+        .foregroundColor(lesson.isCurrent(at: now) ? .green : .primary)
+}
+
 struct LessonRow: View {
     let lesson: WLesson
-    let showDate: Bool
+    /// compact (medium): всё в одну строку — время, бейдж, предмет, аудитория.
+    /// full (large): предмет в две строки, дата и аудитория второй строкой.
+    let compact: Bool
+    let now: Date
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(lesson.start)
-                    .font(.caption).bold()
-                Text(lesson.end)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            .frame(width: 38, alignment: .leading)
-
-            Text(lesson.type)
-                .font(.caption2).bold()
-                .foregroundColor(lesson.typeColor)
-                .padding(.horizontal, 5).padding(.vertical, 2)
-                .background(lesson.typeColor.opacity(0.15))
-                .clipShape(Capsule())
-
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 6) {
+            timeRange(lesson, at: now)
+                .frame(width: 72, alignment: .leading)
+            typeBadge(lesson)
+            if compact {
                 Text(lesson.subject)
                     .font(.caption).bold()
-                    .lineLimit(2)
-                HStack(spacing: 4) {
-                    if showDate {
-                        Text(lesson.isTomorrow ? "завтра" : "сегодня")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    if !lesson.room.isEmpty {
-                        Text(lesson.room)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                if !lesson.room.isEmpty {
+                    Text(lesson.room)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
+            } else {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(lesson.subject)
+                        .font(.caption).bold()
+                        .lineLimit(2)
+                    HStack(spacing: 4) {
+                        Text(lesson.isTomorrow ? "завтра" : "сегодня")
+                        if !lesson.room.isEmpty {
+                            Text(lesson.room)
+                        }
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
     }
 }
@@ -249,9 +277,9 @@ struct KrasavaWidgetView: View {
         case .systemSmall:
             smallView(snap: snap, current: current, upcoming: upcoming)
         case .systemMedium:
-            listView(snap: snap, lessons: Array(all.prefix(3)), title: nil, compact: true)
+            listView(snap: snap, lessons: Array(all.prefix(3)), compact: true)
         case .systemLarge:
-            listView(snap: snap, lessons: Array(all.prefix(10)), title: nil, compact: false)
+            listView(snap: snap, lessons: Array(all.prefix(10)), compact: false)
         default:
             smallView(snap: snap, current: current, upcoming: upcoming)
         }
@@ -260,35 +288,23 @@ struct KrasavaWidgetView: View {
     @ViewBuilder
     private func smallView(snap: WSnapshot, current: WLesson?, upcoming: [WLesson]) -> some View {
         if let lesson = current ?? upcoming.first {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
-                    Text(lesson.isCurrent(at: entry.date) ? "Идёт сейчас" : "Следующая пара")
-                        .font(.caption2).bold()
-                        .foregroundColor(lesson.isCurrent(at: entry.date) ? .green : .secondary)
-                    Spacer()
-                    Text(lesson.type)
-                        .font(.caption2).bold()
-                        .foregroundColor(lesson.typeColor)
-                        .padding(.horizontal, 5).padding(.vertical, 2)
-                        .background(lesson.typeColor.opacity(0.15))
-                        .clipShape(Capsule())
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    timeRange(lesson, at: entry.date)
+                    Spacer(minLength: 0)
+                    typeBadge(lesson)
                 }
                 Text(lesson.subject)
-                    .font(.subheadline).bold()
-                    .lineLimit(3)
-                Spacer(minLength: 0)
-                Text("\(lesson.start)–\(lesson.end)")
                     .font(.caption).bold()
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
                 if !lesson.room.isEmpty {
                     Text(lesson.room)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-                Text(snap.targetTitle)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
             }
             .padding(12)
         } else {
@@ -308,33 +324,70 @@ struct KrasavaWidgetView: View {
     }
 
     @ViewBuilder
-    private func listView(snap: WSnapshot, lessons: [WLesson], title: String?, compact: Bool) -> some View {
-        VStack(alignment: .leading, spacing: compact ? 8 : 10) {
-            HStack {
-                Text(snap.targetTitle)
-                    .font(.caption).bold()
-                    .lineLimit(1)
-                Spacer()
-                if let current = lessons.first, current.isCurrent(at: entry.date) {
-                    Text("идёт пара")
+    private func listView(snap: WSnapshot, lessons: [WLesson], compact: Bool) -> some View {
+        if compact {
+            // Medium: колонка даты слева (как в «Календаре»), плотные строки справа.
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(weekdayFmt.string(from: entry.date))
                         .font(.caption2).bold()
-                        .foregroundColor(.green)
+                        .textCase(.uppercase)
+                        .foregroundColor(.red)
+                    Text(dayNumFmt.string(from: entry.date))
+                        .font(.system(size: 30, weight: .heavy))
+                    Spacer(minLength: 4)
+                    Text(snap.targetTitle)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+                .frame(width: 74, alignment: .leading)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if lessons.isEmpty {
+                        Spacer()
+                        Text("Пар больше нет — отдыхаем 🎉")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    } else {
+                        ForEach(Array(lessons.enumerated()), id: \.offset) { _, lesson in
+                            LessonRow(lesson: lesson, compact: true, now: entry.date)
+                        }
+                        Spacer(minLength: 0)
+                    }
                 }
             }
-            if lessons.isEmpty {
-                Spacer()
-                Text("Пар больше нет — отдыхаем 🎉")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                Spacer()
-            } else {
-                ForEach(Array(lessons.enumerated()), id: \.offset) { _, lesson in
-                    LessonRow(lesson: lesson, showDate: !compact)
+            .padding(12)
+        } else {
+            // Large: шапка с группой и список полных строк.
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(snap.targetTitle)
+                        .font(.caption).bold()
+                        .lineLimit(1)
+                    Spacer()
+                    if let current = lessons.first, current.isCurrent(at: entry.date) {
+                        Text("идёт пара")
+                            .font(.caption2).bold()
+                            .foregroundColor(.green)
+                    }
                 }
-                Spacer(minLength: 0)
+                if lessons.isEmpty {
+                    Spacer()
+                    Text("Пар больше нет — отдыхаем 🎉")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                } else {
+                    ForEach(Array(lessons.enumerated()), id: \.offset) { _, lesson in
+                        LessonRow(lesson: lesson, compact: false, now: entry.date)
+                    }
+                    Spacer(minLength: 0)
+                }
             }
+            .padding(12)
         }
-        .padding(12)
     }
 }
 
