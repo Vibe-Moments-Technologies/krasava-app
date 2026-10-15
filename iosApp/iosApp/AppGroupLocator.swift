@@ -5,9 +5,12 @@ import Foundation
 /// embedded.mobileprovision — читаем его и берём группу оттуда. Так работает
 /// большинство приложений, не жёстко зафиксированных на одном профиле.
 enum AppGroupLocator {
-    /// Группа по умолчанию — для подписи командой проекта (App Store),
-    /// где embedded.mobileprovision в бандле отсутствует.
-    static let fallback = "group.ru.vibemoments.krasava"
+    /// Группа по умолчанию — должна совпадать с группой, разрешённой
+    /// профилем переподписи (GBox): система даёт контейнер только для
+    /// групп из профиля. Взята из сиделоад-профиля (group.c2fefdd0db2e255e.1);
+    /// для подписи командой проекта приоритетнее группы из самой подписи
+    /// и embedded.mobileprovision (см. availableSuiteName).
+    static let fallback = "group.c2fefdd0db2e255e.1"
 
     /// Группа из профиля, которым подписали этот бинарник. nil — профиля нет.
     static func fromProfile() -> String? {

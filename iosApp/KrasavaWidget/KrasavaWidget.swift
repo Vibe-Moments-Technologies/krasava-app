@@ -205,7 +205,7 @@ struct KrasavaWidgetView: View {
                     .foregroundColor(.orange)
                 Text("Нет App Group в подписи")
                     .font(.caption).bold()
-                Text("Переподпишите приложение и виджет с группой group.ru.vibemoments.krasava")
+                Text("Переподпишите приложение профилем, который разрешает App Group из entitlements обоих бандлов")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
