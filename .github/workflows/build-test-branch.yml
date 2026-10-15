@@ -187,6 +187,15 @@ jobs:
             build/Build/Products/Release-iphoneos \
             ../shared/build/xcode-frameworks
 
+      - name: 🔏 Ad-hoc подпись с entitlements (App Group для виджета)
+        # Ad-hoc (identity "-") вшивает entitlements в бинарник без сертификата;
+        # инструмент переподписи сохранит App Group на .appex. Вложенные первыми.
+        run: |
+          cd iosApp
+          APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+          codesign --force --sign - --entitlements KrasavaWidget/KrasavaWidget.entitlements "$APP_PATH/PlugIns/KrasavaWidget.appex"
+          codesign --force --sign - --entitlements iosApp/iosApp.entitlements "$APP_PATH"
+
       - name: 📦 Package Unsigned IPA
         run: |
           cd iosApp

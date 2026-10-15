@@ -177,6 +177,22 @@ jobs:
             build/Build/Products/Release-iphoneos \
             ../shared/build/xcode-frameworks
 
+      - name: 🔏 Ad-hoc подпись с entitlements (App Group для виджета)
+        # Схема из docs/widgets-with-custom-certificates: ad-hoc (identity "-")
+        # не требует сертификата, но вшивает entitlements в бинарник. Инструмент
+        # переподписи (GBox/Feather/ESign) увидит заявленную App Group и
+        # сохранит её на .appex — иначе виджет после переподписи остаётся
+        # без общего контейнера. Вложенные бандлы подписываются ПЕРВЫМИ.
+        run: |
+          cd iosApp
+          APP_PATH=$(find build -name "*.app" -type d | head -n 1)
+          codesign --force --sign - --entitlements KrasavaWidget/KrasavaWidget.entitlements "$APP_PATH/PlugIns/KrasavaWidget.appex"
+          codesign --force --sign - --entitlements iosApp/iosApp.entitlements "$APP_PATH"
+          echo "--- entitlements .appex ---"
+          codesign -d --entitlements :- "$APP_PATH/PlugIns/KrasavaWidget.appex"
+          echo "--- entitlements .app ---"
+          codesign -d --entitlements :- "$APP_PATH"
+
       - name: 📦 Package Unsigned IPA
         run: |
           cd iosApp
