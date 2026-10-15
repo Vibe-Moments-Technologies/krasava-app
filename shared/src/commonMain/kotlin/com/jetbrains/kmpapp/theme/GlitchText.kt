@@ -32,6 +32,11 @@ val LocalGlitchTextEnabled = compositionLocalOf { false }
 private val GhostCyan = Color(0x6600E5FF)
 private val GhostRed = Color(0x66FF3B30)
 
+// Кровавый вариант глитча на Хэллоуин: тёмно-багровый и кроваво-красный
+// «двойники», смещённые вниз — как потёки крови под надписью.
+private val BloodDark = Color(0xAA7A0000)
+private val BloodRed = Color(0xBBFF1744)
+
 /**
  * Замена [Text] для темы Error: пока [LocalGlitchTextEnabled] включён и текст
  * достаточно светлый (белые надписи), по нему рисуются циановый и красный
@@ -104,6 +109,7 @@ fun GlitchText(
     style: TextStyle = LocalTextStyle.current
 ) {
     val enabled = LocalGlitchTextEnabled.current
+    val halloween = LocalHalloweenEnabled.current
     val resolvedColor = if (color.isSpecified) color else LocalContentColor.current
     val glitch = enabled && resolvedColor.luminance() > 0.6f
     if (!glitch) {
@@ -143,8 +149,8 @@ fun GlitchText(
     Box(modifier = modifier) {
         Text(
             text = text,
-            modifier = Modifier.offset((-2).dp, 1.dp),
-            color = GhostCyan,
+            modifier = Modifier.offset((-2).dp, if (halloween) 2.dp else 1.dp),
+            color = if (halloween) BloodDark else GhostCyan,
             textAlign = textAlign,
             overflow = overflow,
             softWrap = softWrap,
@@ -155,8 +161,8 @@ fun GlitchText(
         )
         Text(
             text = text,
-            modifier = Modifier.offset(2.dp, (-1).dp),
-            color = GhostRed,
+            modifier = Modifier.offset(2.dp, if (halloween) 3.dp else (-1).dp),
+            color = if (halloween) BloodRed else GhostRed,
             textAlign = textAlign,
             overflow = overflow,
             softWrap = softWrap,

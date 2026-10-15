@@ -4,5 +4,6 @@ enum class ThemeOverlay {
     NONE,
     SAKURA,
     CYBERPUNK,
-    MATRIX
+    MATRIX,
+    HALLOWEEN
 }

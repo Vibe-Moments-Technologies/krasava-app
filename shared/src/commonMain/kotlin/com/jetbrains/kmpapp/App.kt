@@ -23,7 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.jetbrains.kmpapp.data.ScheduleRepository
+import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.ThemeMode
+import kotlinx.datetime.Month
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
@@ -50,6 +52,7 @@ import com.jetbrains.kmpapp.theme.CyberpunkLightColors
 import com.jetbrains.kmpapp.theme.ErrorColors
 import com.jetbrains.kmpapp.theme.ErrorScanlines
 import com.jetbrains.kmpapp.theme.ErrorTypography
+import com.jetbrains.kmpapp.theme.HalloweenDarkColors
 import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
@@ -124,13 +127,21 @@ fun App() {
         ThemeMode.DARK -> true
     }
 
-    val colors = if (errorActive) {
+    // Хэллоуин: автоматическая, только тёмная, перекрывает любую другую тему
+    // (включая Error) ровно 31 октября по локальной дате устройства.
+    val today = DateUtils.today()
+    val halloweenActive = today.month == Month.OCTOBER && today.day == 31
+
+    val colors = if (halloweenActive) {
+        HalloweenDarkColors
+    } else if (errorActive) {
         ErrorColors
     } else {
         when (themeOverlay) {
             ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
             ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
             ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
+            ThemeOverlay.HALLOWEEN -> HalloweenDarkColors
             ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
         }
     }
@@ -142,8 +153,12 @@ fun App() {
         // Пока активна тема Error, все светлые (белые) надписи приложения —
         // расписание, сервисы, настройки — рисуются через GlitchText: те
         // Cyan/Red «двойники», что у заголовка ERROR. Тёмные и цветные
-        // подписи остаются обычными.
-        CompositionLocalProvider(LocalGlitchTextEnabled provides errorActive) {
+        // подписи остаются обычными. На Хэллоуин глитч включается тоже —
+        // как «страшный» эффект надписей.
+        CompositionLocalProvider(
+            LocalGlitchTextEnabled provides (errorActive || halloweenActive),
+            com.jetbrains.kmpapp.theme.LocalHalloweenEnabled provides halloweenActive
+        ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
             color = MaterialTheme.colorScheme.background
