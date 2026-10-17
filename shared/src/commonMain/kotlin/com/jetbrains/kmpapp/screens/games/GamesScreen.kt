@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -45,9 +46,8 @@ import com.jetbrains.kmpapp.theme.GlitchTitle
 import com.jetbrains.kmpapp.theme.MonoTitle
 
 /**
- * Раздел «Игры»: корневое меню со списком игр. Сейчас в нём одна игра — «Сапер»
- * (открывается на своё меню вариантов поля, у каждого свой рекорд). Игра
- * открывается послойно: игры → меню вариантов → сама партия, назад — свайп,
+ * Раздел «Игры»: корневое меню со списком игр («Сапер», «Тетрис»).
+ * Игра открывается послойно: игры → меню/партия, назад — свайп,
  * системная кнопка или стрелка.
  */
 @Composable
@@ -64,6 +64,7 @@ fun GamesScreen(
             when (activeGame) {
                 GamesViewModel.Game.MINESWEEPER -> viewModel.backFromField()
                 GamesViewModel.Game.SAPER_MENU -> viewModel.closeGame()
+                GamesViewModel.Game.TETRIS -> viewModel.closeTetris()
                 null -> {}
             }
         },
@@ -81,6 +82,16 @@ fun GamesScreen(
                 GamesViewModel.Game.MINESWEEPER -> {
                     PlatformBackHandler(onBack = back)
                     MinesweeperScreen(viewModel = viewModel, onBack = back)
+                }
+                GamesViewModel.Game.TETRIS -> {
+                    PlatformBackHandler(onBack = {
+                        viewModel.closeTetris()
+                        back()
+                    })
+                    TetrisScreen(viewModel = viewModel, onBack = {
+                        viewModel.closeTetris()
+                        back()
+                    })
                 }
                 null -> {}
             }
@@ -117,7 +128,7 @@ private fun GamesHome(
 
         Spacer(modifier = Modifier.height(6.dp))
         GlitchText(
-            text = "Раздел игр: сейчас доступен «Сапер», новые игры появятся в будущих обновлениях.",
+            text = "Раздел игр: «Сапер» и «Тетрис». Играйте и ставьте новые рекорды!",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -132,6 +143,22 @@ private fun GamesHome(
             icon = Icons.Filled.Bolt,
             glitch = errorActive,
             onClick = { viewModel.openSaper() }
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        val tetrisRecord by viewModel.tetrisRecord.collectAsState()
+        val tetrisRecordText = tetrisRecord?.let {
+            "${it.score} очков · Ур. ${it.level} (${it.lines} лин.)"
+        }
+        GameCard(
+            title = "Тетрис",
+            subtitle = "Классический тетрис: 7 фигур, уровни, призрачная фигура и удержание",
+            recordText = tetrisRecordText,
+            recordPlaceholder = "Рекорд пока не установлен",
+            icon = Icons.Filled.SportsEsports,
+            glitch = errorActive,
+            onClick = { viewModel.openTetris() }
         )
     }
 }

@@ -7,6 +7,7 @@ import com.jetbrains.kmpapp.data.storage.GameRecord
 import com.jetbrains.kmpapp.data.storage.GamesStorage
 import com.jetbrains.kmpapp.data.storage.SavedMinesweeperCell
 import com.jetbrains.kmpapp.data.storage.SavedMinesweeperGame
+import com.jetbrains.kmpapp.data.storage.TetrisRecord
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -34,13 +35,17 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         SAPER_MENU,
 
         /** Партия в «Сапере». */
-        MINESWEEPER;
+        MINESWEEPER,
+
+        /** Партия в «Тетрис». */
+        TETRIS;
 
         /** Слой «под» текущим: поле под собой держит меню вариантов «Сапера». */
         val parent: Game?
             get() = when (this) {
                 MINESWEEPER -> SAPER_MENU
                 SAPER_MENU -> null
+                TETRIS -> null
             }
     }
 
@@ -63,6 +68,15 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     /** Режим флага: тап по клетке ставит флаг, а не открывает её. */
     private val _flagMode = MutableStateFlow(false)
     val flagMode: StateFlow<Boolean> = _flagMode.asStateFlow()
+
+    // Состояние Тетриса
+    private val _tetrisState = MutableStateFlow(TetrisState())
+    val tetrisState: StateFlow<TetrisState> = _tetrisState.asStateFlow()
+
+    val tetrisRecord: StateFlow<TetrisRecord?> = gamesStorage.tetrisRecord
+
+    private var tetrisQueue: MutableList<TetrominoType> = mutableListOf()
+    private var tetrisJob: Job? = null
 
     /** Настройки «Сапера» из хранилища: доступны и с экрана настроек. */
     val boardVertical: StateFlow<Boolean> = gamesStorage.boardVertical
@@ -407,6 +421,118 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         }
     }
 
+    //
+    // Тетрис
+    //
+
+    /** Открывает Тетрис из меню «Игры». Если игра не начата — запускает новую партию. */
+    fun openTetris() {
+        if (_tetrisState.value.status != TetrisStatus.PLAYING && _tetrisState.value.status != TetrisStatus.PAUSED) {
+            startNewTetris()
+        }
+        _activeGame.value = Game.TETRIS
+    }
+
+    /** Новая партия в Тетрис: очищает поле, начинает генерацию из 7-bag. */
+    fun startNewTetris() {
+        tetrisJob?.cancel()
+        val (state, queue) = TetrisEngine.startNewGame()
+        tetrisQueue = queue.toMutableList()
+        _tetrisState.value = state
+        startTetrisLoop()
+    }
+
+    /** Ставит Тетрис на паузу. */
+    fun pauseTetris() {
+        if (_tetrisState.value.status == TetrisStatus.PLAYING) {
+            tetrisJob?.cancel()
+            _tetrisState.value = _tetrisState.value.copy(status = TetrisStatus.PAUSED)
+        }
+    }
+
+    /** Снимает Тетрис с паузы. */
+    fun resumeTetris() {
+        if (_tetrisState.value.status == TetrisStatus.PAUSED) {
+            _tetrisState.value = _tetrisState.value.copy(status = TetrisStatus.PLAYING)
+            startTetrisLoop()
+        }
+    }
+
+    /** Выход из Тетриса в меню «Игры». */
+    fun closeTetris() {
+        pauseTetris()
+        _activeGame.value = null
+    }
+
+    /** Сдвиг падающей фигуры влево. */
+    fun moveTetrisLeft() {
+        _tetrisState.value = TetrisEngine.moveLeft(_tetrisState.value)
+    }
+
+    /** Сдвиг падающей фигуры вправо. */
+    fun moveTetrisRight() {
+        _tetrisState.value = TetrisEngine.moveRight(_tetrisState.value)
+    }
+
+    /** Поворот по часовой стрелке с настенными отскоками (wall kicks). */
+    fun rotateTetris() {
+        _tetrisState.value = TetrisEngine.rotateClockwise(_tetrisState.value)
+    }
+
+    /** Мягкое опускание (Soft Drop): ускорение падения вниз (+1 очко за клетку). */
+    fun softDropTetris() {
+        val (newState, locked) = TetrisEngine.softDrop(_tetrisState.value, tetrisQueue)
+        _tetrisState.value = newState
+        if (locked && newState.status == TetrisStatus.GAME_OVER) {
+            onTetrisGameOver(newState)
+        }
+    }
+
+    /** Жёсткое падение (Hard Drop): мгновенный сброс вниз и фиксация (+2 очка за клетку). */
+    fun hardDropTetris() {
+        val newState = TetrisEngine.hardDrop(_tetrisState.value, tetrisQueue)
+        _tetrisState.value = newState
+        if (newState.status == TetrisStatus.GAME_OVER) {
+            onTetrisGameOver(newState)
+        }
+    }
+
+    /** Удержание (Hold): откладывает текущую фигуру или меняет её с уже отложенной. */
+    fun holdTetris() {
+        val newState = TetrisEngine.hold(_tetrisState.value, tetrisQueue)
+        _tetrisState.value = newState
+        if (newState.status == TetrisStatus.GAME_OVER) {
+            onTetrisGameOver(newState)
+        }
+    }
+
+    private fun startTetrisLoop() {
+        tetrisJob?.cancel()
+        tetrisJob = viewModelScope.launch(Dispatchers.Default) {
+            while (isActive && _tetrisState.value.status == TetrisStatus.PLAYING) {
+                val delayMs = TetrisEngine.gravityIntervalMs(_tetrisState.value.level)
+                delay(delayMs)
+                if (!isActive || _tetrisState.value.status != TetrisStatus.PLAYING) break
+                val updated = TetrisEngine.gravityTick(_tetrisState.value, tetrisQueue)
+                _tetrisState.value = updated
+                if (updated.status == TetrisStatus.GAME_OVER) {
+                    onTetrisGameOver(updated)
+                    break
+                }
+            }
+        }
+    }
+
+    private fun onTetrisGameOver(finalState: TetrisState) {
+        tetrisJob?.cancel()
+        gamesStorage.submitTetrisResult(
+            score = finalState.score,
+            lines = finalState.lines,
+            level = finalState.level,
+            achievedAtMillis = Clock.System.now().toEpochMilliseconds()
+        )
+    }
+
     private fun stopTimer() {
         timerJob?.cancel()
         timerJob = null
@@ -414,6 +540,7 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     override fun onCleared() {
         stopTimer()
+        tetrisJob?.cancel()
         persistGame()
         super.onCleared()
     }
