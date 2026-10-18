@@ -48,6 +48,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -172,7 +174,11 @@ fun FloatingDock(
                         if (halloween && tab != backModeTab) {
                             androidx.compose.material3.Text(
                                 text = tab.halloweenEmoji,
-                                modifier = Modifier.scale(scale),
+                                modifier = Modifier
+                                    .scale(scale)
+                                    // Эмодзи не даёт текста для скринридера — возвращаем
+                                    // название вкладки для TalkBack/VoiceOver.
+                                    .semantics { contentDescription = tab.title },
                                 fontSize = 22.sp
                             )
                         } else {

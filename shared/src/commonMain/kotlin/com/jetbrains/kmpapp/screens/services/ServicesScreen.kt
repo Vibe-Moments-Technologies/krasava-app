@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -200,7 +201,13 @@ private fun ServiceCard(tab: AppTab, onClick: () -> Unit) {
                 contentAlignment = Alignment.Center
             ) {
                 if (halloween) {
-                    Text(text = tab.halloweenEmoji, fontSize = 18.sp)
+                    // Декоративно, как и Icon ниже: название карточки читается
+                    // отдельным текстом, эмодзи не должно попадать в скринридер.
+                    Text(
+                        text = tab.halloweenEmoji,
+                        fontSize = 18.sp,
+                        modifier = Modifier.clearAndSetSemantics {}
+                    )
                 } else {
                     Icon(
                         imageVector = tab.selectedIcon,

@@ -129,8 +129,11 @@ fun App() {
 
     // Хэллоуин: автоматическая, только тёмная, перекрывает любую другую тему
     // (включая Error) ровно 31 октября по локальной дате устройства.
+    // Тумблер в разделе «Отладка → Эксперименты → Темы» включает её вручную —
+    // чтобы проверить оформление заранее.
     val today = DateUtils.today()
-    val halloweenActive = today.month == Month.OCTOBER && today.day == 31
+    val halloweenActive =
+        (today.month == Month.OCTOBER && today.day == 31) || themeOverlay == ThemeOverlay.HALLOWEEN
 
     val colors = if (halloweenActive) {
         HalloweenDarkColors
@@ -141,6 +144,8 @@ fun App() {
             ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
             ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
             ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
+            // Перекрыт проверкой halloweenActive выше; ветка нужна для
+            // исчерпывающего when.
             ThemeOverlay.HALLOWEEN -> HalloweenDarkColors
             ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
         }
