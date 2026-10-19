@@ -1,212 +1,154 @@
-import WidgetKit
 import SwiftUI
+import WidgetKit
+import AppIntents
 
-// MARK: - Модель (зеркало WidgetSnapshot из shared)
-
-struct WLesson: Decodable {
-    let date: String      // yyyy-MM-dd
-    let bell: Int
-    let start: String     // HH:mm
-    let end: String
-    let subject: String
-    let type: String      // ЛК/ПР/ЛАБ/ДР/ДОП
-    let room: String
-    let teacher: String
-}
-
-struct WSnapshot: Decodable {
-    let generatedAt: Int64
-    let targetTitle: String
-    let lessons: [WLesson]
-}
-
-enum WidgetData {
-    static let key = "widget_snapshot"
-
-    enum State {
-        /// У процесса нет entitlements на App Group — переподпись не добавила группу.
-        case noGroup
-        /// Группа есть, но приложение ещё ничего не написало (или у приложения нет группы).
-        case noData
-        /// Группа есть, данные есть, но не читаются.
-        case badData
-        case ok(WSnapshot)
-    }
-
-    static func load() -> State {
-        // Группа определяется из профиля подписи (см. AppGroupLocator):
-        // приложение может быть переподписано любым инструментом.
-        guard let suite = AppGroupLocator.availableSuiteName() else { return .noGroup }
-        guard let defaults = UserDefaults(suiteName: suite),
-              let json = defaults.string(forKey: key) else { return .noData }
-        guard let snap = try? JSONDecoder().decode(WSnapshot.self, from: Data(json.utf8)) else {
-            return .badData
-        }
-        return .ok(snap)
-    }
-}
-
-// MARK: - Время
-
-private let dayFmt: DateFormatter = {
-    let f = DateFormatter()
-    f.dateFormat = "yyyy-MM-dd HH:mm"
-    return f
-}()
-
-private let weekdayFmt: DateFormatter = {
-    let f = DateFormatter()
-    f.dateFormat = "EEEE"
-    return f
-}()
-
-private let dayNumFmt: DateFormatter = {
-    let f = DateFormatter()
-    f.dateFormat = "d"
-    return f
-}()
-
-extension WLesson {
-    var startDate: Date? { dayFmt.date(from: "\(date) \(start)") }
-    var endDate: Date? { dayFmt.date(from: "\(date) \(end)") }
-
-    func isCurrent(at now: Date) -> Bool {
-        guard let s = startDate, let e = endDate else { return false }
-        return now >= s && now <= e
-    }
-
-    func isUpcoming(at now: Date) -> Bool {
-        guard let s = startDate else { return false }
-        return s > now
-    }
-
-    var isTomorrow: Bool {
-        date == dayFmt.string(from: Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()).prefix(10).description
-    }
-
-    var typeColor: Color {
-        switch type {
-        case "ЛК": return .blue
-        case "ПР": return .green
-        case "ЛАБ": return .orange
-        case "ДОП": return .pink
-        default: return .gray
-        }
-    }
-}
-
-// MARK: - Timeline
+// MARK: - Таймлайн
 
 struct Entry: TimelineEntry {
     let date: Date
-    let snapshot: WSnapshot?
+    let payload: WPayload?
+    /// Выбранное в настройках виджета расписание (nil — не выбрано / iOS 15–16).
+    let targetId: Int?
     let state: WidgetData.State
 
-    /// Для снапшота галереи виджетов и превью — «идеальный» вариант.
-    static func preview(_ snapshot: WSnapshot? = nil, date: Date = Date()) -> Entry {
-        Entry(date: date, snapshot: snapshot, state: snapshot.map { .ok($0) } ?? .noData)
+    static func preview(_ payload: WPayload? = nil, targetId: Int? = nil, date: Date = Date()) -> Entry {
+        Entry(date: date, payload: payload, targetId: targetId,
+              state: payload.map { .ok($0) } ?? .noData)
     }
 }
 
 struct Provider: TimelineProvider {
     func placeholder(in context: Context) -> Entry {
-        Entry.preview()
+        Entry.preview(SampleData.payload, targetId: SampleData.targetId)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
         let state = WidgetData.load()
-        let snap: WSnapshot?
-        if case .ok(let s) = state { snap = s } else { snap = nil }
-        completion(Entry(date: Date(), snapshot: snap, state: state))
+        let payload = payload(from: state)
+        completion(Entry(
+            date: Date(),
+            payload: payload,
+            targetId: payload.flatMap(WidgetData.legacyTargetId(in:)),
+            state: state
+        ))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         let state = WidgetData.load()
-        let snap: WSnapshot?
-        if case .ok(let s) = state { snap = s } else { snap = nil }
+        let payload = payload(from: state)
+        // iOS 15–16: выбор группы недоступен, поэтому берём расписание
+        // уведомлений (обратная совместимость) — подсказки не показываем.
+        let targetId = payload.flatMap(WidgetData.legacyTargetId(in:))
         let now = Date()
         var dates: [Date] = []
-        // Границы пар: начало/конец каждой предстоящей — виджет обновится
-        // ровно в момент смены пары.
-        for l in snap?.lessons ?? [] {
-            if let s = l.startDate, s > now { dates.append(s) }
-            if let e = l.endDate, e > now { dates.append(e) }
+        // Границы пар: виджет перерисуется ровно в момент смены пары.
+        let lessons = payload.flatMap { WidgetData.target(in: $0, id: targetId)?.lessons } ?? []
+        for lesson in lessons {
+            if let start = lesson.startDate, start > now { dates.append(start) }
+            if let end = lesson.endDate, end > now { dates.append(end) }
         }
-        // Полночь + почасовая страховка (на случай рассинхрона данных).
-        let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: now))
-        if let midnight = midnight {
+        if let midnight = Calendar.current.date(
+            byAdding: .day, value: 1,
+            to: Calendar.current.startOfDay(for: now)
+        ) {
             dates.append(midnight)
         }
         dates.append(now.addingTimeInterval(3600))
 
-        var entries = [Entry(date: now, snapshot: snap, state: state)]
-        entries += dates.sorted().prefix(10).map { Entry(date: $0, snapshot: snap, state: state) }
+        var entries = [Entry(date: now, payload: payload, targetId: targetId, state: state)]
+        entries += dates.sorted().prefix(10).map {
+            Entry(date: $0, payload: payload, targetId: targetId, state: state)
+        }
         completion(Timeline(entries: entries, policy: .atEnd))
+    }
+
+    private func payload(from state: WidgetData.State) -> WPayload? {
+        if case .ok(let payload) = state { return payload }
+        return nil
     }
 }
 
-// MARK: - Вьюхи
+// MARK: - Общие элементы
 
-/// Бейдж типа пары: ЛК/ПР/ЛАБ в цвете типа.
-private func typeBadge(_ lesson: WLesson) -> some View {
+/// Служебная строка пары: время · тип · аудитория (+ метка дня справа).
+private func metaLine(_ lesson: WLesson, at now: Date, showDay: Bool) -> some View {
+    HStack(spacing: 5) {
+        Text("\(lesson.start)–\(lesson.end)")
+            .font(.system(size: 11, weight: .semibold))
+            .monospacedDigit()
+            .foregroundColor(lesson.isCurrent(at: now) ? .green : .secondary)
+
+        Text(lesson.type)
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(lesson.typeColor)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 0.5)
+            .background(lesson.typeColor.opacity(0.15))
+            .clipShape(Capsule())
+
+        if !lesson.roomLabel.isEmpty {
+            // Аудитория — обязательна и заметнее прочего в строке.
+            Text(lesson.roomLabel)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundColor(.primary)
+                .lineLimit(1)
+        }
+
+        Spacer(minLength: 2)
+
+        if showDay, let marker = lesson.dayMarker {
+            Text(marker)
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+/// Пара целиком: служебная строка + предмет во всю ширину.
+private func lessonBlock(_ lesson: WLesson, at now: Date, showDay: Bool) -> some View {
+    VStack(alignment: .leading, spacing: 1) {
+        metaLine(lesson, at: now, showDay: showDay)
+        Text(lesson.subject)
+            .font(.system(size: 13, weight: .semibold))
+            .lineLimit(2)
+            .minimumScaleFactor(0.85)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+private func typeBadge(_ lesson: WLesson, size: CGFloat = 11) -> some View {
     Text(lesson.type)
-        .font(.caption2).bold()
+        .font(.system(size: size, weight: .bold))
         .foregroundColor(lesson.typeColor)
-        .padding(.horizontal, 5).padding(.vertical, 1)
+        .padding(.horizontal, 5)
+        .padding(.vertical, 1)
         .background(lesson.typeColor.opacity(0.15))
         .clipShape(Capsule())
 }
 
-/// Время пары одной строкой; зелёное, если пара идёт сейчас.
-private func timeRange(_ lesson: WLesson, at now: Date) -> some View {
-    Text("\(lesson.start)–\(lesson.end)")
-        .font(.caption2).bold()
-        .foregroundColor(lesson.isCurrent(at: now) ? .green : .primary)
-}
-
-struct LessonRow: View {
-    let lesson: WLesson
-    /// compact (medium): всё в одну строку — время, бейдж, предмет, аудитория.
-    /// full (large): предмет в две строки, дата и аудитория второй строкой.
-    let compact: Bool
-    let now: Date
-
-    var body: some View {
-        HStack(spacing: 6) {
-            timeRange(lesson, at: now)
-                .frame(width: 72, alignment: .leading)
-            typeBadge(lesson)
-            if compact {
-                Text(lesson.subject)
-                    .font(.caption).bold()
-                    .lineLimit(1)
-                Spacer(minLength: 4)
-                if !lesson.room.isEmpty {
-                    Text(lesson.room)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(lesson.subject)
-                        .font(.caption).bold()
-                        .lineLimit(2)
-                    HStack(spacing: 4) {
-                        Text(lesson.isTomorrow ? "завтра" : "сегодня")
-                        if !lesson.room.isEmpty {
-                            Text(lesson.room)
-                        }
-                    }
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-        }
+/// Подсказка вместо пустого виджета: заголовок, объяснение, иконка.
+private func hintView(
+    icon: String,
+    title: String,
+    text: String,
+    tint: Color = .secondary
+) -> some View {
+    VStack(spacing: 6) {
+        Image(systemName: icon)
+            .font(.title2)
+            .foregroundColor(tint)
+        Text(title)
+            .font(.system(size: 13, weight: .bold))
+            .multilineTextAlignment(.center)
+        Text(text)
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.center)
     }
+    .padding(4)
 }
+
+// MARK: - Виджет
 
 struct KrasavaWidgetView: View {
     @Environment(\.widgetFamily) var family
@@ -214,8 +156,33 @@ struct KrasavaWidgetView: View {
 
     var body: some View {
         Group {
-            if let snap = entry.snapshot {
-                content(snap)
+            if let payload = entry.payload {
+                let target = WidgetData.target(in: payload, id: entry.targetId)
+                if let target, !target.lessons.isEmpty {
+                    content(target)
+                } else if entry.targetId == nil {
+                    // iOS 17+ без выбора группы: осознанно пустой виджет
+                    // с инструкцией, куда нажать. Legacy-провайдер сюда не
+                    // попадает — он всегда подставляет группу уведомлений.
+                    hintView(
+                        icon: "slider.horizontal.3",
+                        title: "Выберите группу",
+                        text: "Долгое нажатие → «Изменить виджет» → Группа"
+                    )
+                } else {
+                    VStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle")
+                            .font(.title2)
+                            .foregroundColor(.green)
+                        Text("Пар впереди нет")
+                            .font(.system(size: 13, weight: .bold))
+                        Text(target?.title ?? "")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    .padding(4)
+                }
             } else {
                 emptyState
             }
@@ -227,172 +194,168 @@ struct KrasavaWidgetView: View {
     private var emptyState: some View {
         switch entry.state {
         case .noGroup:
-            VStack(spacing: 6) {
-                Image(systemName: "exclamationmark.shield")
-                    .font(.title2)
-                    .foregroundColor(.orange)
-                Text("Нет App Group в подписи")
-                    .font(.caption).bold()
-                Text("Переподпишите приложение профилем, который разрешает App Group из entitlements обоих бандлов")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding()
+            hintView(
+                icon: "exclamationmark.shield",
+                title: "Нет App Group в подписи",
+                text: "Переподпишите приложение профилем, который разрешает App Group из entitlements обоих бандлов",
+                tint: .orange
+            )
         case .badData:
-            VStack(spacing: 6) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.title2)
-                    .foregroundColor(.orange)
-                Text("Данные виджета не читаются")
-                    .font(.caption).bold()
-                Text("Обновите снапшот: откройте приложение и сверните его")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding()
+            hintView(
+                icon: "exclamationmark.triangle",
+                title: "Данные не читаются",
+                text: "Откройте приложение и сверните его",
+                tint: .orange
+            )
         case .noData, .ok:
-            VStack(spacing: 6) {
-                Image(systemName: "calendar.badge.plus")
-                    .font(.title2)
-                    .foregroundColor(.secondary)
-                Text("Добавьте расписание в приложении")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding()
+            hintView(
+                icon: "calendar.badge.plus",
+                title: "Нет данных",
+                text: "Добавьте расписание в приложении"
+            )
         }
     }
 
     @ViewBuilder
-    private func content(_ snap: WSnapshot) -> some View {
-        let now = entry.date
-        let current = snap.lessons.first { $0.isCurrent(at: now) }
-        let upcoming = snap.lessons.filter { $0.isUpcoming(at: now) }
-        let all = (current.map { [$0] } ?? []) + upcoming
-
+    private func content(_ target: WTarget) -> some View {
+        let upcoming = ordered(target.lessons, at: entry.date)
         switch family {
         case .systemSmall:
-            smallView(snap: snap, current: current, upcoming: upcoming)
+            smallView(target: target, lessons: upcoming)
         case .systemMedium:
-            listView(snap: snap, lessons: Array(all.prefix(3)), compact: true)
+            listView(target: target, lessons: Array(upcoming.prefix(3)))
         case .systemLarge:
-            listView(snap: snap, lessons: Array(all.prefix(10)), compact: false)
+            largeView(target: target, lessons: Array(upcoming.prefix(10)))
         default:
-            smallView(snap: snap, current: current, upcoming: upcoming)
+            smallView(target: target, lessons: upcoming)
         }
     }
 
+    /// Порядок показа: идущая сейчас пара, затем ближайшие. Если сегодня пар
+    /// больше нет — идём в следующие дни (поэтому фильтра по дате нет).
+    private func ordered(_ lessons: [WLesson], at now: Date) -> [WLesson] {
+        let current = lessons.filter { $0.isCurrent(at: now) }
+        let future = lessons.filter { $0.isUpcoming(at: now) }
+        return current + future
+    }
+
+    /// Small: одна пара — текущая или ближайшая. Крупно, предмет не обрезается.
     @ViewBuilder
-    private func smallView(snap: WSnapshot, current: WLesson?, upcoming: [WLesson]) -> some View {
-        if let lesson = current ?? upcoming.first {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 4) {
-                    timeRange(lesson, at: entry.date)
+    private func smallView(target: WTarget, lessons: [WLesson]) -> some View {
+        if let lesson = lessons.first {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 5) {
+                    Text(lesson.isCurrent(at: entry.date) ? "СЕЙЧАС" : "ДАЛЕЕ")
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundColor(lesson.isCurrent(at: entry.date) ? .green : .secondary)
                     Spacer(minLength: 0)
-                    typeBadge(lesson)
+                    typeBadge(lesson, size: 10)
                 }
+
                 Text(lesson.subject)
-                    .font(.caption).bold()
+                    .font(.system(size: 14, weight: .bold))
                     .lineLimit(3)
                     .minimumScaleFactor(0.8)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Spacer(minLength: 0)
-                if !lesson.room.isEmpty {
-                    Text(lesson.room)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+
+                Text("\(lesson.start)–\(lesson.end)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .monospacedDigit()
+                    .foregroundColor(lesson.isCurrent(at: entry.date) ? .green : .primary)
+
+                if !lesson.roomLabel.isEmpty {
+                    Text(lesson.roomLabel)
+                        .font(.system(size: 12, weight: .bold))
                         .lineLimit(1)
                 }
-            }
-            .padding(12)
-        } else {
-            VStack(spacing: 6) {
-                Image(systemName: "checkmark.circle")
-                    .font(.title2)
-                    .foregroundColor(.green)
-                Text("Пар больше нет")
-                    .font(.caption).bold()
-                Text(snap.targetTitle)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+
+                HStack(spacing: 4) {
+                    Text(target.title)
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    if let marker = lesson.dayMarker {
+                        Text("· \(marker)")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
             .padding(12)
         }
     }
 
+    /// Medium: до трёх пар двумя строками — служебная + предмет во всю ширину.
     @ViewBuilder
-    private func listView(snap: WSnapshot, lessons: [WLesson], compact: Bool) -> some View {
-        if compact {
-            // Medium: колонка даты слева (как в «Календаре»), плотные строки справа.
-            HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(weekdayFmt.string(from: entry.date))
-                        .font(.caption2).bold()
-                        .textCase(.uppercase)
-                        .foregroundColor(.red)
-                    Text(dayNumFmt.string(from: entry.date))
-                        .font(.system(size: 30, weight: .heavy))
-                    Spacer(minLength: 4)
-                    Text(snap.targetTitle)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                }
-                .frame(width: 74, alignment: .leading)
+    private func listView(target: WTarget, lessons: [WLesson]) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            header(target, lessons: lessons)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    if lessons.isEmpty {
-                        Spacer()
-                        Text("Пар больше нет — отдыхаем 🎉")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                    } else {
-                        ForEach(Array(lessons.enumerated()), id: \.offset) { _, lesson in
-                            LessonRow(lesson: lesson, compact: true, now: entry.date)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                }
+            ForEach(Array(lessons.enumerated()), id: \.offset) { _, lesson in
+                lessonBlock(lesson, at: entry.date, showDay: true)
             }
-            .padding(12)
-        } else {
-            // Large: шапка с группой и список полных строк.
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(snap.targetTitle)
-                        .font(.caption).bold()
-                        .lineLimit(1)
-                    Spacer()
-                    if let current = lessons.first, current.isCurrent(at: entry.date) {
-                        Text("идёт пара")
-                            .font(.caption2).bold()
-                            .foregroundColor(.green)
-                    }
-                }
-                if lessons.isEmpty {
-                    Spacer()
-                    Text("Пар больше нет — отдыхаем 🎉")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                } else {
-                    ForEach(Array(lessons.enumerated()), id: \.offset) { _, lesson in
-                        LessonRow(lesson: lesson, compact: false, now: entry.date)
-                    }
-                    Spacer(minLength: 0)
-                }
-            }
-            .padding(12)
+            Spacer(minLength: 0)
         }
+        .padding(12)
+    }
+
+    /// Large: до десяти пар с разделителями дней — «Сегодня» / «Завтра» / дата.
+    @ViewBuilder
+    private func largeView(target: WTarget, lessons: [WLesson]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            header(target, lessons: lessons)
+
+            ForEach(Array(lessons.enumerated()), id: \.offset) { index, lesson in
+                if showsDayHeader(at: index, in: lessons) {
+                    Text(dayHeader(for: lesson))
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundColor(.secondary)
+                        .padding(.top, index == 0 ? 0 : 3)
+                }
+                lessonBlock(lesson, at: entry.date, showDay: false)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+    }
+
+    @ViewBuilder
+    private func header(_ target: WTarget, lessons: [WLesson]) -> some View {
+        HStack(spacing: 4) {
+            Text(target.title)
+                .font(.system(size: 12, weight: .bold))
+                .lineLimit(1)
+            Text(target.typeName)
+                .font(.system(size: 10))
+                .foregroundColor(.secondary)
+            Spacer(minLength: 0)
+            if lessons.contains(where: { $0.isCurrent(at: entry.date) }) {
+                Text("идёт пара")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.green)
+            }
+        }
+    }
+
+    private func showsDayHeader(at index: Int, in lessons: [WLesson]) -> Bool {
+        guard index < lessons.count else { return false }
+        if index == 0 { return true }
+        return lessons[index - 1].date != lessons[index].date
+    }
+
+    private func dayHeader(for lesson: WLesson) -> String {
+        if lesson.isToday { return "СЕГОДНЯ" }
+        if lesson.isTomorrow { return "ЗАВТРА" }
+        return lesson.dayMarker?.uppercased() ?? lesson.date
     }
 }
 
-// containerBackground обязателен с iOS 17; на 15–16 просто фон по умолчанию.
+// MARK: - Совместимость
+
 extension View {
+    /// containerBackground обязателен с iOS 17; на 15–16 просто фон по умолчанию.
     @ViewBuilder
     func containerBackgroundCompat() -> some View {
         if #available(iOSApplicationExtension 17.0, *) {
@@ -405,16 +368,133 @@ extension View {
 
 // MARK: - Конфигурация
 
-@main
+/// iOS 17+: расписание выбирается в «Изменить виджет».
+@available(iOS 17.0, *)
 struct KrasavaWidget: Widget {
     let kind = "KrasavaWidget"
+
+    var body: some WidgetConfiguration {
+        AppIntentConfiguration(
+            kind: kind,
+            intent: KrasavaWidgetIntent.self,
+            provider: IntentProvider()
+        ) { entry in
+            KrasavaWidgetView(entry: entry)
+        }
+        .configurationDisplayName("Красава!")
+        .description("Пары выбранной группы, преподавателя или аудитории")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    }
+}
+
+/// iOS 15–16: конфигурации нет, поэтому показываем расписание уведомлений
+/// (обратная совместимость) — App Group в подписи решает, будет ли контейнер.
+@available(iOS 15.0, *)
+struct KrasavaWidgetLegacy: Widget {
+    let kind = "KrasavaWidgetLegacy"
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
             KrasavaWidgetView(entry: entry)
         }
-        .configurationDisplayName("Красава!")
-        .description("Текущая и ближайшие пары")
+        .configurationDisplayName("Красава! (без выбора группы)")
+        .description("Пары расписания, выбранного для уведомлений")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+    }
+}
+
+@main
+struct KrasavaWidgetBundle: WidgetBundle {
+    var body: some Widget {
+        if #available(iOS 17.0, *) {
+            KrasavaWidget()
+        }
+        KrasavaWidgetLegacy()
+    }
+}
+
+// MARK: - Провайдер интерактивного виджета
+
+@available(iOS 17.0, *)
+struct IntentProvider: AppIntentTimelineProvider {
+    func placeholder(in context: Context) -> Entry {
+        Entry.preview(SampleData.payload, targetId: SampleData.targetId)
+    }
+
+    func snapshot(for configuration: KrasavaWidgetIntent, in context: Context) async -> Entry {
+        let state = WidgetData.load()
+        return Entry(
+            date: Date(),
+            payload: payload(from: state),
+            targetId: configuration.target?.id,
+            state: state
+        )
+    }
+
+    func timeline(for configuration: KrasavaWidgetIntent, in context: Context) async -> Timeline<Entry> {
+        let state = WidgetData.load()
+        let payload = payload(from: state)
+        let targetId = configuration.target?.id
+        let now = Date()
+
+        var dates: [Date] = []
+        let lessons = payload.flatMap { WidgetData.target(in: $0, id: targetId)?.lessons } ?? []
+        for lesson in lessons {
+            if let start = lesson.startDate, start > now { dates.append(start) }
+            if let end = lesson.endDate, end > now { dates.append(end) }
+        }
+        if let midnight = Calendar.current.date(
+            byAdding: .day, value: 1,
+            to: Calendar.current.startOfDay(for: now)
+        ) {
+            dates.append(midnight)
+        }
+        dates.append(now.addingTimeInterval(3600))
+
+        var entries = [Entry(date: now, payload: payload, targetId: targetId, state: state)]
+        entries += dates.sorted().prefix(10).map {
+            Entry(date: $0, payload: payload, targetId: targetId, state: state)
+        }
+        return Timeline(entries: entries, policy: .atEnd)
+    }
+
+    private func payload(from state: WidgetData.State) -> WPayload? {
+        if case .ok(let payload) = state { return payload }
+        return nil
+    }
+}
+
+// MARK: - Данные для галереи виджетов
+
+enum SampleData {
+    static let targetId = 1
+
+    static let payload = WPayload(
+        generatedAt: 0,
+        defaultTargetId: targetId,
+        targets: [
+            WTarget(
+                id: targetId,
+                title: "БИСО-02-23",
+                typeName: "Группа",
+                lessons: [
+                    WLesson(date: todayString(), bell: 2, start: "10:40", end: "12:10",
+                            subject: "Формализованные модели и методы проектирования",
+                            type: "ЛК", room: "А-4 (В-78)", teacher: "Иванов И.И."),
+                    WLesson(date: todayString(), bell: 3, start: "12:40", end: "14:10",
+                            subject: "Базы данных", type: "ПР", room: "375 (С-20)",
+                            teacher: "Петров П.П."),
+                    WLesson(date: todayString(), bell: 4, start: "14:20", end: "15:50",
+                            subject: "Теория вероятностей", type: "ЛАБ", room: "412 (В-78)",
+                            teacher: ""),
+                ]
+            )
+        ]
+    )
+
+    private static func todayString() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: Date())
     }
 }

@@ -12,9 +12,13 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /**
- * Контракт данных для виджетов (B1): компактный JSON-снапшот «сегодня +
- * завтра» активного расписания. Приложение пишет его в общий контейнер
+ * Контракт данных для виджетов (B1): компактный JSON со ВСЕМИ сохранёнными
+ * расписаниями на неделю вперёд. Приложение пишет его в общий контейнер
  * (iOS — App Group), виджет только читает и никогда не ходит в сеть.
+ *
+ * Почему все расписания, а не одно активное: виджет настраивается пользователем
+ * («Изменить виджет» → группа), а список выбора должен быть доступен виджету
+ * без обращения к приложению. Параметры хранит система, данные — этот снапшот.
  */
 
 @Serializable
@@ -29,49 +33,80 @@ data class WidgetLesson(
     val teacher: String
 )
 
+/** Одно расписание: цель (группа/преподаватель/аудитория) и её пары. */
 @Serializable
-data class WidgetSnapshot(
-    val generatedAt: Long, // epoch millis UTC
-    val targetTitle: String,
-    val lessons: List<WidgetLesson>
+data class WidgetTarget(
+    val id: Int,
+    val title: String,
+    /** Человекочитаемый тип для списка выбора: «Группа», «Преподаватель», «Аудитория». */
+    val typeName: String,
+    val lessons: List<WidgetLesson> = emptyList()
+)
+
+@Serializable
+data class WidgetPayload(
+    val generatedAt: Long,
+    /**
+     * Расписание для виджетов iOS 15–16, где выбрать группу нельзя
+     * (AppIntent-конфигурация требует iOS 17). Обратная совместимость:
+     * берём цель уведомлений, а если её нет — первое сохранённое.
+     */
+    val defaultTargetId: Int? = null,
+    val targets: List<WidgetTarget> = emptyList()
 )
 
 object WidgetSnapshotBuilder {
-    /** null — расписание не выбрано, писать/показывать нечего. */
-    fun build(target: ScheduleTarget?, lessonsByTarget: Map<Int, List<Lesson>>): String? {
-        if (target == null) return null
+    /** На сколько дней вперёд пишем пары. Неделя — с запасом на «Только сегодня». */
+    const val DAYS_AHEAD = 7
+
+    /** null — расписаний нет, писать нечего. */
+    fun build(
+        targets: List<ScheduleTarget>,
+        lessonsByTarget: Map<Int, List<Lesson>>,
+        notificationsTargetId: Int?
+    ): String? {
+        if (targets.isEmpty()) return null
         val today = kotlin.time.Clock.System.now()
             .toLocalDateTime(TimeZone.currentSystemDefault()).date
-        val tomorrow = today + DatePeriod(days = 1)
-        val lessons = lessonsByTarget[target.id]
-            ?.filter { it.date == today || it.date == tomorrow }
-            ?.sortedWith(compareBy({ it.date }, { it.bellNumber }, { it.startTime }))
-            .orEmpty()
-            .map {
-                WidgetLesson(
-                    date = it.date.toString(),
-                    bell = it.bellNumber,
-                    start = it.startTime,
-                    end = it.endTime,
-                    subject = it.subject,
-                    type = it.lessonType.shortName,
-                    room = it.classrooms.joinToString(", "),
-                    teacher = it.teachers.joinToString(", ")
+        val lastDay = today + DatePeriod(days = DAYS_AHEAD - 1)
+
+        val payload = WidgetPayload(
+            generatedAt = kotlin.time.Clock.System.now().toEpochMilliseconds(),
+            defaultTargetId = notificationsTargetId
+                ?.takeIf { id -> targets.any { it.id == id } }
+                ?: targets.first().id,
+            targets = targets.map { target ->
+                WidgetTarget(
+                    id = target.id,
+                    title = target.targetTitle,
+                    typeName = target.type.displayName,
+                    lessons = lessonsByTarget[target.id]
+                        ?.filter { it.date >= today && it.date <= lastDay }
+                        ?.sortedWith(compareBy({ it.date }, { it.bellNumber }, { it.startTime }))
+                        .orEmpty()
+                        .map { it.toWidgetLesson() }
                 )
             }
-        val snapshot = WidgetSnapshot(
-            generatedAt = kotlin.time.Clock.System.now().toEpochMilliseconds(),
-            targetTitle = target.targetTitle,
-            lessons = lessons
         )
-        return Json.encodeToString(snapshot)
+        return Json.encodeToString(payload)
     }
+
+    private fun Lesson.toWidgetLesson() = WidgetLesson(
+        date = date.toString(),
+        bell = bellNumber,
+        start = startTime,
+        end = endTime,
+        subject = subject,
+        type = lessonType.shortName,
+        room = classrooms.joinToString(", "),
+        teacher = teachers.joinToString(", ")
+    )
 }
 
 /**
- * Точка входа для Swift-стороны: `WidgetBridge.shared.snapshotJson()`.
- * Репозиторий прикрепляется один раз из общего `App()` — без обращения
- * к внутренностям Koin из платформенного кода.
+ * Точка входа для Swift-стороны: `WidgetBridge.shared.payloadJson()`.
+ * Ссылка на репозиторий ставится один раз из общего `App()` — платформенный
+ * код не лезет внутрь Koin.
  */
 object WidgetBridge {
     private var repository: ScheduleRepository? = null
@@ -80,10 +115,14 @@ object WidgetBridge {
         this.repository = repository
     }
 
-    fun snapshotJson(): String? {
+    fun payloadJson(): String? {
         val repo = repository ?: return null
         return try {
-            WidgetSnapshotBuilder.build(repo.selectedTarget.value, repo.cachedLessons.value)
+            WidgetSnapshotBuilder.build(
+                targets = repo.savedTargets.value,
+                lessonsByTarget = repo.cachedLessons.value,
+                notificationsTargetId = repo.notificationsTargetId.value
+            )
         } catch (_: Throwable) {
             null
         }

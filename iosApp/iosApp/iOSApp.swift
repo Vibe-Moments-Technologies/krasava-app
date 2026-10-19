@@ -17,11 +17,12 @@ final class AppGroupInfoEngine: AppRuntimeInfoEngine {
 /// пропускаем: UserDefaults(suiteName:) без entitlements не падает, а пишет
 /// в изолированную песочницу — проверяем контейнер явно.
 enum WidgetSync {
-    static let key = "widget_snapshot"
+    /// Ключ снапшота; должен совпадать с WidgetData.key в таргете виджета.
+    static let key = "widget_payload"
 
     static func push() {
         guard let suite = AppGroupLocator.availableSuiteName(),
-              let json = WidgetBridge.shared.snapshotJson(),
+              let json = WidgetBridge.shared.payloadJson(),
               let defaults = UserDefaults(suiteName: suite) else { return }
         defaults.set(json, forKey: key)
         WidgetCenter.shared.reloadAllTimelines()

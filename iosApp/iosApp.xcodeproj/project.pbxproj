@@ -19,6 +19,8 @@
 		BB0000000000000000000013 /* AppGroupLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* AppGroupLocator.swift */; };
 		BB0000000000000000000014 /* AppGroupLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000006 /* AppGroupLocator.swift */; };
 		BB0000000000000000000015 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000007 /* Security.framework */; };
+		BB0000000000000000000016 /* WidgetData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000008 /* WidgetData.swift */; };
+		BB0000000000000000000017 /* WidgetConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000009 /* WidgetConfig.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,6 +64,8 @@
 		BB0000000000000000000005 /* KrasavaWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = KrasavaWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB0000000000000000000006 /* AppGroupLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppGroupLocator.swift; sourceTree = "<group>"; };
 		BB0000000000000000000007 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		BB0000000000000000000008 /* WidgetData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetData.swift; sourceTree = "<group>"; };
+		BB0000000000000000000009 /* WidgetConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetConfig.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -116,6 +120,8 @@
 			isa = PBXGroup;
 			children = (
 				BB0000000000000000000001 /* KrasavaWidget.swift */,
+				BB0000000000000000000008 /* WidgetData.swift */,
+				BB0000000000000000000009 /* WidgetConfig.swift */,
 				BB0000000000000000000002 /* Info.plist */,
 				BB0000000000000000000003 /* KrasavaWidget.entitlements */,
 			);
@@ -297,6 +303,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				BB0000000000000000000011 /* KrasavaWidget.swift in Sources */,
+				BB0000000000000000000016 /* WidgetData.swift in Sources */,
+				BB0000000000000000000017 /* WidgetConfig.swift in Sources */,
 				BB0000000000000000000014 /* AppGroupLocator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
