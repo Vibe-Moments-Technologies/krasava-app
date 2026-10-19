@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -107,12 +108,15 @@ fun TetrisScreen(
             .padding(bottom = 110.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. Шапка с кнопками управления
-        Row(
+        // 1. Шапка с кнопками управления (центрированный верхний бар)
+        Box(
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+            contentAlignment = Alignment.Center
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart)
+            ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "В меню игр"
@@ -123,44 +127,48 @@ fun TetrisScreen(
                 text = "Тетрис",
                 style = MaterialTheme.typography.titleMedium,
                 color = colorScheme.onSurface,
-                glitch = errorTheme,
-                modifier = Modifier.weight(1f)
+                glitch = errorTheme
             )
 
-            IconButton(onClick = { showRulesDialog = true }) {
-                Icon(
-                    imageVector = Icons.Filled.Info,
-                    contentDescription = "Правила игры",
-                    tint = colorScheme.onSurfaceVariant
-                )
-            }
-
-            IconButton(
-                onClick = {
-                    if (state.status == TetrisStatus.PLAYING) {
-                        viewModel.pauseTetris()
-                    } else if (state.status == TetrisStatus.PAUSED) {
-                        viewModel.resumeTetris()
-                    }
-                }
+            Row(
+                modifier = Modifier.align(Alignment.CenterEnd),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = if (state.status == TetrisStatus.PLAYING) {
-                        Icons.Filled.Pause
-                    } else {
-                        Icons.Filled.PlayArrow
-                    },
-                    contentDescription = if (state.status == TetrisStatus.PLAYING) "Пауза" else "Продолжить",
-                    tint = colorScheme.primary
-                )
-            }
+                IconButton(onClick = { showRulesDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Filled.Info,
+                        contentDescription = "Правила игры",
+                        tint = colorScheme.onSurfaceVariant
+                    )
+                }
 
-            IconButton(onClick = { viewModel.startNewTetris() }) {
-                Icon(
-                    imageVector = Icons.Filled.Refresh,
-                    contentDescription = "Заново",
-                    tint = colorScheme.onSurfaceVariant
-                )
+                IconButton(
+                    onClick = {
+                        if (state.status == TetrisStatus.PLAYING) {
+                            viewModel.pauseTetris()
+                        } else if (state.status == TetrisStatus.PAUSED) {
+                            viewModel.resumeTetris()
+                        }
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (state.status == TetrisStatus.PLAYING) {
+                            Icons.Filled.Pause
+                        } else {
+                            Icons.Filled.PlayArrow
+                        },
+                        contentDescription = if (state.status == TetrisStatus.PLAYING) "Пауза" else "Продолжить",
+                        tint = colorScheme.primary
+                    )
+                }
+
+                IconButton(onClick = { viewModel.startNewTetris() }) {
+                    Icon(
+                        imageVector = Icons.Filled.Refresh,
+                        contentDescription = "Заново",
+                        tint = colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -602,17 +610,18 @@ private fun TetrisControls(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Верхний ряд кнопок: Влево, Мягкое опускание, Вправо, Поворот
+        // 1 ряд: лево, вправо, Hold, перевернуть
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             FilledTonalButton(
                 onClick = onMoveLeft,
                 enabled = isPlaying,
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.size(width = 66.dp, height = 48.dp)
+                modifier = Modifier.weight(1f).height(48.dp),
+                contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -621,22 +630,11 @@ private fun TetrisControls(
             }
 
             FilledTonalButton(
-                onClick = onSoftDrop,
-                enabled = isPlaying,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.size(width = 66.dp, height = 48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.ArrowDownward,
-                    contentDescription = "Вниз"
-                )
-            }
-
-            FilledTonalButton(
                 onClick = onMoveRight,
                 enabled = isPlaying,
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.size(width = 66.dp, height = 48.dp)
+                modifier = Modifier.weight(1f).height(48.dp),
+                contentPadding = PaddingValues(0.dp)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
@@ -644,30 +642,12 @@ private fun TetrisControls(
                 )
             }
 
-            Button(
-                onClick = onRotate,
-                enabled = isPlaying,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.size(width = 74.dp, height = 48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.RotateRight,
-                    contentDescription = "Поворот"
-                )
-            }
-        }
-
-        // Нижний ряд: HOLD и мгновенный HARD DROP
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
             FilledTonalButton(
                 onClick = onHold,
                 enabled = canHold && isPlaying,
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.size(width = 138.dp, height = 44.dp)
+                modifier = Modifier.weight(1f).height(48.dp),
+                contentPadding = PaddingValues(0.dp)
             ) {
                 Text(
                     text = "HOLD",
@@ -677,13 +657,57 @@ private fun TetrisControls(
             }
 
             Button(
+                onClick = onRotate,
+                enabled = isPlaying,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f).height(48.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.RotateRight,
+                    contentDescription = "Перевернуть"
+                )
+            }
+        }
+
+        // 2 ряд: вниз, сброс
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FilledTonalButton(
+                onClick = onSoftDrop,
+                enabled = isPlaying,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.weight(1f).height(48.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDownward,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "ВНИЗ",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+
+            Button(
                 onClick = onHardDrop,
                 enabled = isPlaying,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary
                 ),
                 shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.size(width = 138.dp, height = 44.dp)
+                modifier = Modifier.weight(1f).height(48.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -694,7 +718,7 @@ private fun TetrisControls(
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "СБРОС",
                         fontWeight = FontWeight.Bold,
