@@ -265,7 +265,7 @@ fun TetrisScreen(
     }
 }
 
-/** Верхняя информационная панель HUD: Hold, текущий счёт, рекорд и Next. */
+/** Верхняя информационная панель HUD: Hold (слева), счёт/уровень/линии (по центру) и Next (справа). */
 @Composable
 private fun HudPanel(
     state: TetrisState,
@@ -277,23 +277,25 @@ private fun HudPanel(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
         ) {
-            // Левый блок: Hold
+            // Левый блок: Hold (левее к краю)
             MiniPieceCard(
                 title = "HOLD",
                 piece = state.holdPiece,
                 enabled = state.canHold && state.status == TetrisStatus.PLAYING,
-                onClick = onHoldClick
+                onClick = onHoldClick,
+                modifier = Modifier.align(Alignment.CenterStart)
             )
 
-            // Центральный блок: Счёт, уровень и рекорд
+            // Центральный блок: Счёт, уровень и линии (строго по центру)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                modifier = Modifier.align(Alignment.Center)
             ) {
                 Text(
                     text = "${state.score}",
@@ -334,12 +336,13 @@ private fun HudPanel(
                 }
             }
 
-            // Правый блок: Next
+            // Правый блок: Next (правее к краю)
             MiniPieceCard(
                 title = "NEXT",
                 piece = state.nextPieces.firstOrNull(),
                 enabled = false,
-                onClick = null
+                onClick = null,
+                modifier = Modifier.align(Alignment.CenterEnd)
             )
         }
     }
@@ -351,11 +354,12 @@ private fun MiniPieceCard(
     title: String,
     piece: TetrominoType?,
     enabled: Boolean,
-    onClick: (() -> Unit)?
+    onClick: (() -> Unit)?,
+    modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
+        modifier = modifier
             .clip(RoundedCornerShape(10.dp))
             .then(if (onClick != null && enabled) Modifier.clickable(onClick = onClick) else Modifier)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = if (enabled || onClick == null) 1f else 0.4f))
