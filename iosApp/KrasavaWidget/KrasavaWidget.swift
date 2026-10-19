@@ -225,7 +225,9 @@ struct KrasavaWidgetView: View {
         case .systemMedium:
             listView(target: target, lessons: Array(upcoming.prefix(3)))
         case .systemLarge:
-            largeView(target: target, lessons: Array(upcoming.prefix(10)))
+            // 6 пар: замер по вертикали (345pt минус padding и шапка) —
+            // больше не влезет и обрежется снизу.
+            largeView(target: target, lessons: Array(upcoming.prefix(6)))
         default:
             smallView(target: target, lessons: upcoming)
         }
@@ -406,10 +408,14 @@ struct KrasavaWidgetLegacy: Widget {
 @main
 struct KrasavaWidgetBundle: WidgetBundle {
     var body: some Widget {
+        // Строго один виджет в галерее: на iOS 17+ — интерактивный с выбором
+        // группы, на 15–16 — legacy с расписанием уведомлений. Оба сразу
+        // показывать нельзя: в галерее появились бы два «Красава!».
         if #available(iOS 17.0, *) {
             KrasavaWidget()
+        } else {
+            KrasavaWidgetLegacy()
         }
-        KrasavaWidgetLegacy()
     }
 }
 
