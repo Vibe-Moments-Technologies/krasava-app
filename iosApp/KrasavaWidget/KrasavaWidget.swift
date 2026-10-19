@@ -370,52 +370,50 @@ extension View {
 
 // MARK: - Конфигурация
 
-/// iOS 17+: расписание выбирается в «Изменить виджет».
-@available(iOS 17.0, *)
+/// Единственный виджет в галерее. Выбор конфигурации — внутри `body`, потому
+/// что `@WidgetBundleBuilder` не поддерживает ветвление: показывать оба
+/// виджета сразу нельзя (в галерее были бы две «Красава!»).
+///
+/// iOS 17+ — AppIntentConfiguration: пользователь выбирает расписание в
+/// «Изменить виджет». iOS 15–16 — статическая конфигурация с расписанием
+/// уведомлений: интерактивная настройка там недоступна в принципе.
 struct KrasavaWidget: Widget {
     let kind = "KrasavaWidget"
 
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(
-            kind: kind,
-            intent: KrasavaWidgetIntent.self,
-            provider: IntentProvider()
-        ) { entry in
-            KrasavaWidgetView(entry: entry)
-        }
-        .configurationDisplayName("Красава!")
-        .description("Пары выбранной группы, преподавателя или аудитории")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        // Тип возвращает одна функция, а не result builder: он не принимает
+        // `if #available` напрямую, а оборачивать конфигурацию в @ViewBuilder
+        // нельзя.
+        configuration()
     }
-}
 
-/// iOS 15–16: конфигурации нет, поэтому показываем расписание уведомлений
-/// (обратная совместимость) — App Group в подписи решает, будет ли контейнер.
-@available(iOS 15.0, *)
-struct KrasavaWidgetLegacy: Widget {
-    let kind = "KrasavaWidgetLegacy"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            KrasavaWidgetView(entry: entry)
+    private func configuration() -> some WidgetConfiguration {
+        if #available(iOS 17.0, *) {
+            return AppIntentConfiguration(
+                kind: kind,
+                intent: KrasavaWidgetIntent.self,
+                provider: IntentProvider()
+            ) { entry in
+                KrasavaWidgetView(entry: entry)
+            }
+            .configurationDisplayName("Красава!")
+            .description("Пары выбранной группы, преподавателя или аудитории")
+            .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        } else {
+            return StaticConfiguration(kind: kind, provider: Provider()) { entry in
+                KrasavaWidgetView(entry: entry)
+            }
+            .configurationDisplayName("Красава!")
+            .description("Пары расписания, выбранного для уведомлений")
+            .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         }
-        .configurationDisplayName("Красава! (без выбора группы)")
-        .description("Пары расписания, выбранного для уведомлений")
-        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 
 @main
 struct KrasavaWidgetBundle: WidgetBundle {
     var body: some Widget {
-        // Строго один виджет в галерее: на iOS 17+ — интерактивный с выбором
-        // группы, на 15–16 — legacy с расписанием уведомлений. Оба сразу
-        // показывать нельзя: в галерее появились бы два «Красава!».
-        if #available(iOS 17.0, *) {
-            KrasavaWidget()
-        } else {
-            KrasavaWidgetLegacy()
-        }
+        KrasavaWidget()
     }
 }
 
