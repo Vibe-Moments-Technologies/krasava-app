@@ -31,10 +31,10 @@
       "name": "Красава! (Dev)",
       "bundleIdentifier": "ru.vibemoments.krasava",
       "developerName": "Vibe Moments Technologies",
-      "localizedDescription": "Расписание пар, поиск свободных аудиторий, интерактивные карты корпусов, задачи и офлайн-кеш.\n\nКанал: preview\nСборка: 26.4.0-dev.39\nОбновлено: 2026-10-19 20:25 UTC",
+      "localizedDescription": "Расписание пар, поиск свободных аудиторий, интерактивные карты корпусов, задачи и офлайн-кеш.\n\nКанал: preview\nСборка: 26.4.0-dev.40\nОбновлено: 2026-10-19 22:30 UTC",
       "iconURL": "https://raw.githubusercontent.com/Vibe-Moments-Technologies/krasava-app/main/shared/src/commonMain/composeResources/drawable/appicon_new_light.png",
-      "version": "26.4.0-dev.39",
-      "versionDate": "2026-10-19T20:25:27.560287+00:00",
+      "version": "26.4.0-dev.40",
+      "versionDate": "2026-10-19T22:30:41.948445+00:00",
       "downloadURL": "https://github.com/Vibe-Moments-Technologies/krasava-app/releases/download/preview/Krasava-preview.ipa",
       "tintColor": "4F46E5",
       "channel": "preview"
