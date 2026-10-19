@@ -86,6 +86,8 @@ class ScheduleStorage(
         .stateIn(scope, SharingStarted.Eagerly, false)
     val isMatrixTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.MATRIX }
         .stateIn(scope, SharingStarted.Eagerly, false)
+    val isHalloweenTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.HALLOWEEN }
+        .stateIn(scope, SharingStarted.Eagerly, false)
     private val _cheatsAgreed = MutableStateFlow<Boolean?>(null)
     val cheatsAgreed: StateFlow<Boolean?> = _cheatsAgreed.asStateFlow()
     private val _cheatsBlocked = MutableStateFlow(false)
@@ -408,6 +410,7 @@ class ScheduleStorage(
                 platformStorage.saveString(KEY_SAKURA_THEME, (overlay == ThemeOverlay.SAKURA).toString())
                 platformStorage.saveString(KEY_CYBERPUNK_THEME, (overlay == ThemeOverlay.CYBERPUNK).toString())
                 platformStorage.saveString(KEY_MATRIX_THEME, (overlay == ThemeOverlay.MATRIX).toString())
+                platformStorage.saveString(KEY_HALLOWEEN_THEME, (overlay == ThemeOverlay.HALLOWEEN).toString())
             } catch (e: Exception) {
                 println("Failed to persist theme overlay: ${e.message}")
             }
@@ -420,6 +423,11 @@ class ScheduleStorage(
 
     fun setMatrixTheme(enabled: Boolean) {
         setThemeOverlay(if (enabled) ThemeOverlay.MATRIX else ThemeOverlay.NONE)
+    }
+
+    /** Хэллоуинская тема: 31 октября включается сама, тумблер — для проверки. */
+    fun setHalloweenTheme(enabled: Boolean) {
+        setThemeOverlay(if (enabled) ThemeOverlay.HALLOWEEN else ThemeOverlay.NONE)
     }
 
     fun setCheatsAgreed(agreed: Boolean?) {
@@ -504,6 +512,7 @@ class ScheduleStorage(
         if (stored != null) return stored
         return when {
             platformStorage.getString(KEY_MATRIX_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.MATRIX
+            platformStorage.getString(KEY_HALLOWEEN_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.HALLOWEEN
             platformStorage.getString(KEY_CYBERPUNK_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.CYBERPUNK
             platformStorage.getString(KEY_SAKURA_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.SAKURA
             else -> ThemeOverlay.NONE
@@ -808,6 +817,7 @@ class ScheduleStorage(
         private const val KEY_SAKURA_THEME = "krasava_sakura_theme_secret"
         private const val KEY_CYBERPUNK_THEME = "krasava_cyberpunk_theme_secret"
         private const val KEY_MATRIX_THEME = "krasava_matrix_theme_secret"
+        private const val KEY_HALLOWEEN_THEME = "krasava_halloween_theme_secret"
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
         private const val KEY_CHEATS_AGREED = "krasava_cheats_agreed"
         private const val KEY_CHEATS_BLOCKED = "krasava_cheats_blocked"

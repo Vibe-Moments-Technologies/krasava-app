@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.DebugConfig
@@ -65,6 +66,8 @@ fun DebugSettingsScreen(
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showResetDialog by remember { mutableStateOf(false) }
     var testEventSent by remember { mutableStateOf(false) }
+    var themesExpanded by remember { mutableStateOf(false) }
+    val isHalloweenTheme by viewModel.isHalloweenTheme.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshStorageStats()
@@ -251,6 +254,56 @@ fun DebugSettingsScreen(
                         contentDescription = "Открыть",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                // Раскрываемый раздел «Темы»: пока одна тема — хэллоуинская.
+                // Тумблер нужен, чтобы проверить праздничное оформление до
+                // 31 октября (сама тема включается по дате автоматически).
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { themesExpanded = !themesExpanded },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    GlitchText(
+                        text = "Темы",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = if (themesExpanded) "Свернуть" else "Развернуть",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.rotate(if (themesExpanded) 90f else 0f)
+                    )
+                }
+                if (themesExpanded) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            GlitchText(
+                                text = "Хэллоуинская тема",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            GlitchText(
+                                text = "Тыквы, паутина и кровавый глитч. 31 октября включается сама.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Switch(
+                            checked = isHalloweenTheme,
+                            onCheckedChange = viewModel::setHalloweenTheme
+                        )
+                    }
                 }
             }
 

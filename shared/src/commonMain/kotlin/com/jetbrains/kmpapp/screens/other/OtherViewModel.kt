@@ -136,6 +136,7 @@ class OtherViewModel(
     val isSakuraTheme: StateFlow<Boolean> = repository.isSakuraTheme
     val isCyberpunkTheme: StateFlow<Boolean> = repository.isCyberpunkTheme
     val isMatrixTheme: StateFlow<Boolean> = repository.isMatrixTheme
+    val isHalloweenTheme: StateFlow<Boolean> = repository.isHalloweenTheme
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = repository.diagnosticsEnabled
@@ -192,6 +193,7 @@ class OtherViewModel(
     }
 
     fun setMatrixTheme(enabled: Boolean) = repository.setMatrixTheme(enabled)
+    fun setHalloweenTheme(enabled: Boolean) = repository.setHalloweenTheme(enabled)
     fun setCheatsAgreed(agreed: Boolean?) = repository.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = repository.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = repository.setDiagnosticsEnabled(enabled)

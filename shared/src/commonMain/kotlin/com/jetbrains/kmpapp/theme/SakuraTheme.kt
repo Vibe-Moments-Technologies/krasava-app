@@ -84,3 +84,16 @@ val MatrixDarkColors = darkColorScheme(
     surface = Color(0xFF030505), onSurface = Color(0xFFD8F5E0),
     surfaceContainer = Color(0xFF0E1612), surfaceContainerHigh = Color(0xFF18241D)
 )
+
+val HalloweenDarkColors = darkColorScheme(
+    primary = Color(0xFFFF5722), onPrimary = Color(0xFF1A0A00),
+    primaryContainer = Color(0xFF7A1A00), onPrimaryContainer = Color(0xFFFFD1C1),
+    secondary = Color(0xFFFF3B3B), onSecondary = Color(0xFF220000),
+    secondaryContainer = Color(0xFF4A0000), onSecondaryContainer = Color(0xFFFFB3B3),
+    tertiary = Color(0xFF9C27B0), onTertiary = Color(0xFF1A0023),
+    tertiaryContainer = Color(0xFF4A0055), onTertiaryContainer = Color(0xFFE1B3FF),
+    background = Color(0xFF050505), onBackground = Color(0xFFF0E8E8),
+    surface = Color(0xFF050505), onSurface = Color(0xFFF0E8E8),
+    surfaceContainer = Color(0xFF150A0A), surfaceContainerHigh = Color(0xFF201010),
+    error = Color(0xFFFF6B6B), onError = Color(0xFF1A0000)
+)

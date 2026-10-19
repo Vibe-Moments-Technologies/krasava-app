@@ -31,11 +31,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import com.jetbrains.kmpapp.screens.components.halloweenEmoji
 import com.jetbrains.kmpapp.screens.components.isService
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleScreen
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
@@ -179,6 +182,7 @@ fun ServicesScreen(
 
 @Composable
 private fun ServiceCard(tab: AppTab, onClick: () -> Unit) {
+    val halloween = com.jetbrains.kmpapp.theme.LocalHalloweenEnabled.current
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -196,12 +200,22 @@ private fun ServiceCard(tab: AppTab, onClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = tab.selectedIcon,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(20.dp)
-                )
+                if (halloween) {
+                    // Декоративно, как и Icon ниже: название карточки читается
+                    // отдельным текстом, эмодзи не должно попадать в скринридер.
+                    Text(
+                        text = tab.halloweenEmoji,
+                        fontSize = 18.sp,
+                        modifier = Modifier.clearAndSetSemantics {}
+                    )
+                } else {
+                    Icon(
+                        imageVector = tab.selectedIcon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {

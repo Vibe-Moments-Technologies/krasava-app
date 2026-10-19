@@ -149,6 +149,7 @@ class ScheduleRepository(
     val isSakuraTheme: StateFlow<Boolean> = storage.isSakuraTheme
     val isCyberpunkTheme: StateFlow<Boolean> = storage.isCyberpunkTheme
     val isMatrixTheme: StateFlow<Boolean> = storage.isMatrixTheme
+    val isHalloweenTheme: StateFlow<Boolean> = storage.isHalloweenTheme
     val cheatsAgreed: StateFlow<Boolean?> = storage.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = storage.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = storage.diagnosticsEnabled
@@ -235,6 +236,7 @@ class ScheduleRepository(
 
     fun setThemeOverlay(overlay: ThemeOverlay) = storage.setThemeOverlay(overlay)
     fun setMatrixTheme(enabled: Boolean) = storage.setMatrixTheme(enabled)
+    fun setHalloweenTheme(enabled: Boolean) = storage.setHalloweenTheme(enabled)
     fun setCheatsAgreed(agreed: Boolean?) = storage.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = storage.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = storage.setDiagnosticsEnabled(enabled)
