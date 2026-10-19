@@ -11,6 +11,14 @@ import kotlinx.coroutines.launch
 /** Рекорд по игре: время в секундах и когда оно было установлено. */
 data class GameRecord(val seconds: Int, val achievedAtMillis: Long)
 
+/** Рекорд в Тетрисе: набранные очки, число линий, уровень и время достижения. */
+data class TetrisRecord(
+    val score: Int,
+    val lines: Int,
+    val level: Int,
+    val achievedAtMillis: Long
+)
+
 /** Снимок незавершённой партии «Сапера» для сохранения между запусками. */
 data class SavedMinesweeperGame(
     val difficultyName: String,
@@ -48,6 +56,9 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     private val _records = MutableStateFlow<Map<String, GameRecord>>(emptyMap())
     val records: StateFlow<Map<String, GameRecord>> = _records.asStateFlow()
 
+    private val _tetrisRecord = MutableStateFlow<TetrisRecord?>(null)
+    val tetrisRecord: StateFlow<TetrisRecord?> = _tetrisRecord.asStateFlow()
+
     // Настройки «Сапера»: читаются при старте (синхронно, ключи маленькие),
     // тумблеры на экране настроек переключают их напрямую.
     private val _boardVertical = MutableStateFlow(true)
@@ -59,6 +70,7 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     init {
         _boardVertical.value = readBool(BOARD_VERTICAL_KEY) ?: true
         _smallCellHintEnabled.value = readBool(SMALL_CELL_HINT_KEY) ?: false
+        _tetrisRecord.value = readTetrisRecord()
     }
 
     /** Вертикальная ориентация поля: ширина и высота меняются местами. */
@@ -108,13 +120,42 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         return true
     }
 
+    /** Рекорд в Тетрисе (null — рекорд ещё не установлен). */
+    fun tetrisRecord(): TetrisRecord? {
+        _tetrisRecord.value?.let { return it }
+        val loaded = readTetrisRecord() ?: return null
+        _tetrisRecord.value = loaded
+        return loaded
+    }
+
+    /**
+     * Сохраняет результат Тетриса, если набранный счёт больше прежнего рекорда.
+     * @return true, если это новый рекорд.
+     */
+    fun submitTetrisResult(score: Int, lines: Int, level: Int, achievedAtMillis: Long): Boolean {
+        val current = tetrisRecord()
+        if (current != null && current.score >= score) return false
+        val updated = TetrisRecord(score, lines, level, achievedAtMillis)
+        _tetrisRecord.value = updated
+        scope.launch {
+            try {
+                platformStorage.saveString(TETRIS_RECORD_KEY, encodeTetris(updated))
+            } catch (e: Exception) {
+                println("Failed to persist tetris record: ${e.message}")
+            }
+        }
+        return true
+    }
+
     /** Удаляет все известные рекорды (используется в «Данные и кэш»). */
     fun clearRecords() {
         val keys = _records.value.keys.toList()
         _records.value = emptyMap()
+        _tetrisRecord.value = null
         scope.launch {
             try {
                 keys.forEach { platformStorage.remove(storageKey(it)) }
+                platformStorage.remove(TETRIS_RECORD_KEY)
             } catch (e: Exception) {
                 println("Failed to clear game records: ${e.message}")
             }
@@ -255,6 +296,9 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
 
     private fun encode(record: GameRecord) = "${record.seconds}|${record.achievedAtMillis}"
 
+    private fun encodeTetris(record: TetrisRecord) =
+        "${record.score}|${record.lines}|${record.level}|${record.achievedAtMillis}"
+
     private fun readRecord(key: String): GameRecord? {
         return try {
             val raw = platformStorage.getString(storageKey(key)) ?: return null
@@ -270,12 +314,31 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         }
     }
 
+    private fun readTetrisRecord(): TetrisRecord? {
+        return try {
+            val raw = platformStorage.getString(TETRIS_RECORD_KEY) ?: return null
+            val parts = raw.split("|")
+            if (parts.size != 4) return null
+            val score = parts[0].trim().toIntOrNull() ?: return null
+            val lines = parts[1].trim().toIntOrNull() ?: return null
+            val level = parts[2].trim().toIntOrNull() ?: return null
+            val at = parts[3].trim().toLongOrNull() ?: return null
+            if (score < 0 || lines < 0 || level <= 0) return null
+            TetrisRecord(score, lines, level, at)
+        } catch (e: Exception) {
+            println("Failed to read tetris record: ${e.message}")
+            null
+        }
+    }
+
     companion object {
         private const val BOARD_VERTICAL_KEY = "games_settings_board_vertical"
         private const val SMALL_CELL_HINT_KEY = "games_settings_small_cell_hint"
 
         private const val SAVED_GAME_KEY = "games_minesweeper_saved_game"
         private const val SAVED_GAME_FORMAT = "mine-saved-1"
+
+        private const val TETRIS_RECORD_KEY = "games_record_tetris_best"
 
         /** Верхняя граница размера поля: 64×48 «Для пенсионеров». */
         private const val MAX_BOARD_CELLS = 64 * 48
