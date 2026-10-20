@@ -1,10 +1,10 @@
 // swift-tools-version: 5.9
 import PackageDescription
 
-// Пакет существует только ради unit-тестов логики виджета: XCTest нельзя
-// запустить иначе, а чистые исходники (модели + движок выбора пары) лежат
-// в iosApp/KrasavaWidget/Logic — там же, откуда их компилирует таргет
-// расширения. Содержимое не дублируется, path указывает на общий каталог.
+// Пакет существует только ради unit-тестов логики виджета: XCTest иначе
+// не запустить. Чистые исходники (модели + движок выбора пары) лежат здесь
+// и подключены к таргету расширения по абсолютному пути в pbxproj — один
+// и тот же код, без дублирования и без второго источника правды.
 let package = Package(
     name: "WidgetKitLogic",
     platforms: [.macOS(.v13), .iOS(.v17)],
@@ -12,14 +12,10 @@ let package = Package(
         .library(name: "WidgetKitLogic", targets: ["WidgetKitLogic"])
     ],
     targets: [
-        .target(
-            name: "WidgetKitLogic",
-            path: "../KrasavaWidget/Logic"
-        ),
+        .target(name: "WidgetKitLogic"),
         .testTarget(
             name: "WidgetKitLogicTests",
-            dependencies: ["WidgetKitLogic"],
-            path: "Tests/WidgetKitLogicTests"
+            dependencies: ["WidgetKitLogic"]
         )
     ]
 )

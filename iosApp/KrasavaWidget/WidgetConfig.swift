@@ -1,6 +1,12 @@
 import AppIntents
 import WidgetKit
 
+// MARK: - Конфигурация виджета
+//
+// По решению владельца параметр один: группа. Виджет работает по умолчанию
+// (берёт расписание, выбранное для уведомлений), но конкретному виджету можно
+// назначить другое расписание через «Изменить виджет».
+
 /// Расписание как вариант выбора в «Изменить виджет» → «Группа».
 /// Требует iOS 17: AppIntent-конфигурация в WidgetKit появилась там же.
 @available(iOS 17.0, *)
@@ -15,7 +21,8 @@ struct WidgetTargetEntity: AppEntity, Identifiable {
 
     var displayRepresentation: DisplayRepresentation {
         DisplayRepresentation(
-            // Данные пользователя, не локализуемые строки — литеральные.
+            // Названия групп и типов приходят из данных приложения, а не из
+            // каталога локализации — подставляем как есть, без строковых ключей.
             title: LocalizedStringResource(stringLiteral: title),
             subtitle: LocalizedStringResource(stringLiteral: typeName)
         )
@@ -51,8 +58,9 @@ struct WidgetTargetQuery: EntityQuery {
     }
 
     func defaultResult() async -> WidgetTargetEntity? {
-        // Намеренно nil: виджет не должен самовольно выбирать группу,
-        // пользователь задаёт её через «Изменить виджет».
+        // nil = «не выбран», и это не ошибка: виджет работает по умолчанию,
+        // подставляя расписание уведомлений (решение владельца). Пользователь
+        // может переопределить его для конкретного виджета.
         nil
     }
 }

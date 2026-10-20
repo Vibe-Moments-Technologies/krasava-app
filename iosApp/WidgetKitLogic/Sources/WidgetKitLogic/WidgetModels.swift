@@ -82,6 +82,66 @@ struct WPayload: Decodable, Equatable {
     let targets: [WTarget]
 }
 
+// MARK: - Статус и контекст дня
+
+/// Статус пары. Один источник правды о том, что показывать пользователю:
+/// ни одно представление не должно решать это самостоятельно (ТЗ п. 19).
+enum LessonStatus: Equatable {
+    /// Пара идёт прямо сейчас.
+    case current
+    /// Ближайшая пара впереди.
+    case upcoming
+    /// До начала меньше порога — с обратным отсчётом.
+    case soon(minutesUntil: Int)
+
+    /// Метка на виджете. Обратный отсчёт допускается только там, где есть
+    /// место (Medium и крупнее) — это решает представление, поэтому `soon`
+    /// отдаёт оба варианта текста.
+    var label: String {
+        switch self {
+        case .current: return "СЕЙЧАС"
+        case .upcoming: return "ДАЛЕЕ"
+        case .soon(let minutes):
+            return minutes > 0 ? "ЧЕРЕЗ \(minutes) МИН" : "СКОРО"
+        }
+    }
+
+    var isCurrent: Bool {
+        if case .current = self { return true }
+        return false
+    }
+}
+
+/// Контекст даты для пары, которая не сегодня (ТЗ п. 6, 16).
+enum DayContext: Equatable {
+    case today
+    case tomorrow
+    case dayAfterTomorrow
+    /// Готовая подпись вида «ПТ, 23 ОКТ».
+    case date(String)
+    case none
+
+    /// Текст для секционного заголовка.
+    var label: String? {
+        switch self {
+        case .today: return nil
+        case .tomorrow: return "ЗАВТРА"
+        case .dayAfterTomorrow: return "ПОСЛЕЗАВТРА"
+        case .date(let text): return text
+        case .none: return nil
+        }
+    }
+
+    /// День в будущем. Нужно для правила ТЗ п. 16: «ДАЛЕЕ» без даты для
+    /// будущего дня недопустимо.
+    var isFuture: Bool {
+        switch self {
+        case .today, .none: return false
+        case .tomorrow, .dayAfterTomorrow, .date: return true
+        }
+    }
+}
+
 // MARK: - Время
 
 /// Временная зона учебного расписания.
