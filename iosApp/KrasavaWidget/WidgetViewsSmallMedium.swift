@@ -165,7 +165,8 @@ struct MediumScheduleWidgetView: View {
         VStack(alignment: .leading, spacing: theme.lineSpacing) {
             HStack(spacing: 5) {
                 LessonStatusView(status: status, theme: theme, palette: palette)
-                if state.primaryDayContext.isFuture, let dayLabel = state.primaryDayLabel {
+                if state.primaryDayContext.isFuture,
+                   let dayLabel = state.primaryDayLongLabel ?? state.primaryDayLabel {
                     // Дата будущего дня прямо в статусной строке: пара не сегодня.
                     Text("· \(dayLabel)")
                         .font(.system(size: theme.statusSize, weight: .bold))

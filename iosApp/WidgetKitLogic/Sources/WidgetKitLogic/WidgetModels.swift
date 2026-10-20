@@ -113,22 +113,50 @@ enum LessonStatus: Equatable {
 }
 
 /// Контекст даты для пары, которая не сегодня (ТЗ п. 6, 16).
+///
+/// Хранит и словесную метку, и точную дату: ТЗ требует «ПОСЛЕЗАВТРА» как
+/// метку (п. 4, 16), но в примере п. 6 для дня через два дня ожидает подпись
+/// «ПТ, 23 ОКТ». Конфликт разрешается по месту: короткая метка нужна там, где
+/// тесно (Small), точная дата — где есть место (Medium и крупнее), а вместе
+/// они всегда дают однозначность, требуемую п. 6 («дата всегда понятна»).
 enum DayContext: Equatable {
     case today
-    case tomorrow
-    case dayAfterTomorrow
-    /// Готовая подпись вида «ПТ, 23 ОКТ».
+    /// Завтра; строки — точная дата и день недели.
+    case tomorrow(date: String, weekday: String)
+    /// Послезавтра.
+    case dayAfterTomorrow(date: String, weekday: String)
+    /// Дальше: «ПН, 26 ОКТ».
     case date(String)
     case none
 
-    /// Текст для секционного заголовка.
+    /// Короткая метка для тесных размеров: «ЗАВТРА», «ПОСЛЕЗАВТРА».
     var label: String? {
         switch self {
-        case .today: return nil
+        case .today, .none: return nil
         case .tomorrow: return "ЗАВТРА"
         case .dayAfterTomorrow: return "ПОСЛЕЗАВТРА"
         case .date(let text): return text
-        case .none: return nil
+        }
+    }
+
+    /// Полная подпись с датой — для размеров, где есть место:
+    /// «ЗАВТРА · ЧЕТВЕРГ», «ПОСЛЕЗАВТРА · ПТ, 23 ОКТ», «ПН, 26 ОКТ».
+    var longLabel: String? {
+        switch self {
+        case .today, .none: return nil
+        case .tomorrow(_, let weekday): return "ЗАВТРА · \(weekday)"
+        case .dayAfterTomorrow(let date, _): return date
+        case .date(let text): return text
+        }
+    }
+
+    /// Точная дата, если она известна. Нужна для проверок и для подписи
+    /// в заголовках, где словесная метка неуместна.
+    var exactDate: String? {
+        switch self {
+        case .today, .none: return nil
+        case .tomorrow(let date, _), .dayAfterTomorrow(let date, _): return date
+        case .date(let text): return text
         }
     }
 

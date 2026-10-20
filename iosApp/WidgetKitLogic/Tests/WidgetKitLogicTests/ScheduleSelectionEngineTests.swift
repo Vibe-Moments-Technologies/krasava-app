@@ -119,17 +119,19 @@ final class ScheduleSelectionEngineTests: XCTestCase {
     // MARK: 7. После последней пары дня — ближайший учебный день
 
     func testAfterLastLessonOfDayMovesToNextStudyDay() {
-        // 22 октября занятий нет, поэтому переход сразу на 23 октября.
+        // 22 октября занятий нет, поэтому переход сразу на 23 октября —
+        // это ровно два дня от 21-го, то есть «ПОСЛЕЗАВТРА» с точной датой.
         let s = state(twoDays, at: "2026-10-21 18:00")
         XCTAssertEqual(s.primaryLesson?.id, "b1", "главной должна стать первая пара 23 октября")
-        XCTAssertEqual(s.primaryDayContext, .date("ПТ, 23 ОКТ"))
+        XCTAssertEqual(s.primaryDayContext, .dayAfterTomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА"))
         XCTAssertEqual(s.primaryDayLabel, "ПТ, 23 ОКТ")
     }
 
     func testDayWithoutLessonsShowsNearestStudyDayAsTomorrow() {
+        // 22 октября смотрим на 23-е: это завтра.
         let s = state(twoDays, at: "2026-10-22 10:00")
         XCTAssertEqual(s.primaryLesson?.id, "b1")
-        XCTAssertEqual(s.primaryDayContext, .tomorrow)
+        XCTAssertEqual(s.primaryDayContext, .tomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА"))
         XCTAssertEqual(s.primaryDayLabel, "ЗАВТРА")
     }
 
@@ -166,6 +168,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ])
         let s = state(t, at: "2026-12-31 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "jan")
+        // Месяц в сокращении — без точки, как в форме ТЗ.
         XCTAssertEqual(s.primaryDayContext, .date("ПН, 11 ЯНВ"))
     }
 
@@ -261,16 +264,26 @@ final class ScheduleSelectionEngineTests: XCTestCase {
 
     func testNonStandardLessonDuration() {
         // Пара 14:20–16:05 (105 минут) — границы должны соблюдаться.
-        let t = target([lesson(id: "long", date: "2026-10-21", start: "14:20", end: "16:05")])
+        // Для проверки статуса нужна вторая пара: иначе в момент окончания
+        // пар впереди нет и главной становится «ничего».
+        let t = target([
+            lesson(id: "long", date: "2026-10-21", start: "14:20", end: "16:05"),
+            lesson(id: "next", date: "2026-10-21", start: "16:20", end: "17:50", bell: 5)
+        ])
         XCTAssertEqual(state(t, at: "2026-10-21 16:04").primaryStatus, .current)
+        XCTAssertEqual(state(t, at: "2026-10-21 16:05").primaryLesson?.id, "next")
         XCTAssertEqual(state(t, at: "2026-10-21 16:05").primaryStatus, .upcoming)
     }
 
     // MARK: Next study day
 
     func testNextStudyDayIsFilledForDayAfterCurrent() {
+        // 23 октября — через два дня от 21-го.
         let s = state(twoDays, at: "2026-10-21 15:00")
-        XCTAssertEqual(s.nextStudyDay, .date("ПТ, 23 ОКТ"))
+        XCTAssertEqual(
+            s.nextStudyDay,
+            .dayAfterTomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА")
+        )
         XCTAssertEqual(s.nextStudyDayLessons.count, 2)
     }
 

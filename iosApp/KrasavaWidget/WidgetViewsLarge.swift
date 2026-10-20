@@ -23,7 +23,7 @@ struct LargeScheduleWidgetView: View {
     private func content(theme: WidgetTheme, height: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: theme.blockSpacing) {
             WidgetDayHeader(
-                text: state.primaryDayLabel ?? "СЕГОДНЯ",
+                text: state.primaryDayLongLabel ?? state.primaryDayLabel ?? "СЕГОДНЯ",
                 theme: theme,
                 palette: palette,
                 trailing: state.freshness.isStale ? "данные устарели" : nil
@@ -148,8 +148,10 @@ struct ExtraLargeScheduleWidgetView: View {
                     zoneB(theme: theme, height: height)
                 }
 
-                // Зона C — ближайший следующий учебный день.
-                if !state.nextStudyDayLessons.isEmpty, let label = state.nextStudyDay.label {
+                // Зона C — ближайший следующий учебный день. Здесь место есть, поэтому
+// подпись полная: «ЗАВТРА · ЧЕТВЕРГ» или «ПТ, 23 ОКТ» (ТЗ п. 11.1).
+                if !state.nextStudyDayLessons.isEmpty,
+                   let label = state.nextStudyDay.longLabel ?? state.nextStudyDay.label {
                     WidgetDivider(palette: palette)
                     zoneC(label: label, theme: theme, height: height)
                 }
@@ -173,7 +175,7 @@ struct ExtraLargeScheduleWidgetView: View {
     private func zoneA(lesson: WLesson, status: LessonStatus, theme: WidgetTheme) -> some View {
         VStack(alignment: .leading, spacing: theme.lineSpacing) {
             WidgetDayHeader(
-                text: state.primaryDayLabel ?? "СЕГОДНЯ",
+                text: state.primaryDayLongLabel ?? state.primaryDayLabel ?? "СЕГОДНЯ",
                 theme: theme,
                 palette: palette,
                 trailing: state.freshness.isStale ? "данные устарели" : nil
