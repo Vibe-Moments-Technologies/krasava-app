@@ -102,8 +102,16 @@ final class ScheduleSelectionEngineTests: XCTestCase {
     func testExactlyAtEndIsNoLongerCurrent() {
         // Верхняя граница строгая: в момент окончания пара уже не идёт,
         // главной становится следующая (ТЗ п. 7, перемены).
+        // До неё ровно 30 минут — это уже статус «скоро» по порогу из ТЗ п. 4.
         let s = state(twoDays, at: "2026-10-21 15:50")
         XCTAssertEqual(s.primaryLesson?.id, "a2")
+        XCTAssertEqual(s.primaryStatus, .soon(minutesUntil: 30))
+    }
+
+    func testUpcomingBeyondSoonThreshold() {
+        // За два часа до пары статус обычный — «ДАЛЕЕ», без отсчёта.
+        let s = state(twoDays, at: "2026-10-21 12:00")
+        XCTAssertEqual(s.primaryLesson?.id, "a1")
         XCTAssertEqual(s.primaryStatus, .upcoming)
     }
 
@@ -116,6 +124,18 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertEqual(s.primaryDayContext, .today)
     }
 
+    // MARK: Порог «скоро» (ТЗ п. 4: 30 минут)
+
+    func testSoonThresholdBoundaries() {
+        // Пара a2 начинается в 16:20.
+        XCTAssertEqual(state(twoDays, at: "2026-10-21 16:05").primaryStatus, .soon(minutesUntil: 15))
+        // Ровно за 30 минут — ещё «скоро».
+        XCTAssertEqual(state(twoDays, at: "2026-10-21 15:50").primaryStatus, .soon(minutesUntil: 30))
+        // Минуту раньше пара a1 ещё идёт, поэтому главная — она, а не a2.
+        XCTAssertEqual(state(twoDays, at: "2026-10-21 15:49").primaryStatus, .current)
+        XCTAssertEqual(state(twoDays, at: "2026-10-21 15:49").primaryLesson?.id, "a1")
+    }
+
     // MARK: 7. После последней пары дня — ближайший учебный день
 
     func testAfterLastLessonOfDayMovesToNextStudyDay() {
@@ -124,7 +144,9 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         let s = state(twoDays, at: "2026-10-21 18:00")
         XCTAssertEqual(s.primaryLesson?.id, "b1", "главной должна стать первая пара 23 октября")
         XCTAssertEqual(s.primaryDayContext, .dayAfterTomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА"))
-        XCTAssertEqual(s.primaryDayLabel, "ПТ, 23 ОКТ")
+        // Короткая метка — для тесных размеров, полная с датой — для шапок.
+        XCTAssertEqual(s.primaryDayLabel, "ПОСЛЕЗАВТРА")
+        XCTAssertEqual(s.primaryDayLongLabel, "ПТ, 23 ОКТ")
     }
 
     func testDayWithoutLessonsShowsNearestStudyDayAsTomorrow() {
@@ -133,6 +155,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertEqual(s.primaryLesson?.id, "b1")
         XCTAssertEqual(s.primaryDayContext, .tomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА"))
         XCTAssertEqual(s.primaryDayLabel, "ЗАВТРА")
+        XCTAssertEqual(s.primaryDayLongLabel, "ЗАВТРА · ПЯТНИЦА")
     }
 
     // MARK: 10. Первый учебный день после выходных
@@ -146,7 +169,11 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ])
         let s = state(t, at: "2026-10-24 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "mon")
-        XCTAssertEqual(s.primaryDayContext, .date("ПН, 26 ОКТ"))
+        // 26 октября — через два дня от субботы 24-го.
+        XCTAssertEqual(
+            s.primaryDayContext,
+            .dayAfterTomorrow(date: "ПН, 26 ОКТ", weekday: "ПОНЕДЕЛЬНИК")
+        )
     }
 
     // MARK: 11–12. Переход через месяц и год
@@ -158,7 +185,12 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ])
         let s = state(t, at: "2026-10-31 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "nov")
-        XCTAssertEqual(s.primaryDayContext, .date("ПН, 02 НОЯ"))
+        // 2 ноября — через два дня от 31 октября; день с ведущим нулём,
+        // месяц в форме приложения без точки.
+        XCTAssertEqual(
+            s.primaryDayContext,
+            .dayAfterTomorrow(date: "ПН, 02 НОЯ", weekday: "ПОНЕДЕЛЬНИК")
+        )
     }
 
     func testYearBoundary() {
@@ -272,7 +304,10 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ])
         XCTAssertEqual(state(t, at: "2026-10-21 16:04").primaryStatus, .current)
         XCTAssertEqual(state(t, at: "2026-10-21 16:05").primaryLesson?.id, "next")
-        XCTAssertEqual(state(t, at: "2026-10-21 16:05").primaryStatus, .upcoming)
+        // До следующей пары 15 минут — это уже «скоро» (порог 30 минут).
+        XCTAssertEqual(state(t, at: "2026-10-21 16:05").primaryStatus, .soon(minutesUntil: 15))
+        // А за час до неё — обычная предстоящая.
+        XCTAssertEqual(state(t, at: "2026-10-21 15:20").primaryStatus, .current)
     }
 
     // MARK: Next study day
