@@ -1,0 +1,64 @@
+name: 🔬 iOS SDK Probe
+
+# Диагностика фактического iOS SDK у раннера: какие Xcode установлены,
+# какие семейства виджетов объявлены в WidgetKit/SwiftUI и доступны ли
+# API, которые требует ТЗ (systemExtraLargePortrait, widgetRenderingMode,
+# containerBackground, AppIntentConfiguration).
+# Временный workflow: нужен, чтобы не гадать о доступности API.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    name: 🔬 Probe SDK
+    runs-on: macos-15
+    steps:
+      - name: 📚 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🔍 Xcode versions
+        run: |
+          echo "=== installed Xcode ==="
+          ls -d /Applications/Xcode*.app 2>/dev/null || true
+          echo "=== default xcodebuild ==="
+          xcodebuild -version || true
+          echo "=== default SDKs ==="
+          xcodebuild -showsdks || true
+
+      - name: 🔍 Probe widget families and APIs in SDK
+        run: |
+          # Ищем в Swift-интерфейсах SDK объявления, от которых зависит ТЗ.
+          for DEV in /Applications/Xcode*.app/Contents/Developer; do
+            VER=$(defaults read "$DEV/../Info" CFBundleShortVersionString 2>/dev/null || echo "?")
+            echo "########## $DEV (Xcode $VER) ##########"
+            SDKROOT_DIR="$DEV/Platforms/iPhoneOS.platform/Developer/SDKs"
+            for IFACE in $(find "$SDKROOT_DIR" -name "*.swiftinterface" -path "*WidgetKit*" 2>/dev/null | head -5); do
+              echo "--- $IFACE ---"
+              grep -o "systemExtraLarge[A-Za-z]*" "$IFACE" 2>/dev/null | sort -u || echo "(no systemExtraLarge*)"
+            done
+            echo "--- SwiftUI: WidgetFamily / rendering mode ---"
+            for IFACE in $(find "$SDKROOT_DIR" -name "*.swiftinterface" -path "*SwiftUI*" 2>/dev/null | head -5); do
+              grep -o "systemExtraLarge[A-Za-z]*\|widgetRenderingMode\|WidgetRenderingMode" "$IFACE" 2>/dev/null | sort -u || true
+            done
+            echo "--- WidgetKit: containerBackground / AppIntentConfiguration ---"
+            for IFACE in $(find "$SDKROOT_DIR" -name "*.swiftinterface" -path "*WidgetKit*" 2>/dev/null | head -5); do
+              grep -o "containerBackground\|AppIntentConfiguration\|AppIntentTimelineProvider" "$IFACE" 2>/dev/null | sort -u || true
+            done
+          done
+
+      - name: 🔍 Probe with active Xcode
+        run: |
+          # Патчим версию как в основных пайплайнах и смотрим на активный SDK.
+          DEV=$(xcode-select -p)
+          echo "active: $DEV"
+          SDKROOT_DIR="$DEV/Platforms/iPhoneOS.platform/Developer/SDKs"
+          echo "=== available iPhoneOS SDKs ==="
+          ls "$SDKROOT_DIR" 2>/dev/null || true
+          echo "=== systemExtraLarge* в активном WidgetKit ==="
+          grep -rho "systemExtraLarge[A-Za-z]*" "$SDKROOT_DIR"/*/System/Library/Frameworks/WidgetKit.framework/ 2>/dev/null | sort -u || echo "(not found)"
+          echo "=== WidgetFamily enum (SwiftUI) ==="
+          grep -h -A 40 "public enum WidgetFamily" "$SDKROOT_DIR"/*/System/Library/Frameworks/SwiftUI.framework/Modules/SwiftUI.swiftmodule/*.swiftinterface 2>/dev/null | head -60 || echo "(not found)"
