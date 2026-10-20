@@ -1,0 +1,47 @@
+name: 🧪 Widget Logic Tests
+
+# Unit-тесты чистой логики виджета (движок выбора актуальной пары, разбор
+# аудитории, границы занятий). Исходники лежат в iosApp/KrasavaWidget/Logic
+# и подключены к SwiftPM-пакету iosApp/WidgetKitLogic — так XCTest видит те же
+# файлы, что компилирует расширение, без дублирования кода.
+#
+# Запускается при изменениях логики виджетов; Swift недоступен на Windows,
+# поэтому проверка идёт на macOS-раннере.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'iosApp/KrasavaWidget/Logic/**'
+      - 'iosApp/WidgetKitLogic/**'
+  pull_request:
+    paths:
+      - 'iosApp/KrasavaWidget/Logic/**'
+      - 'iosApp/WidgetKitLogic/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: widget-logic-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: 🧪 WidgetKitLogic
+    runs-on: macos-26
+    steps:
+      - name: 📚 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔍 Toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: 🧪 Run tests
+        working-directory: iosApp/WidgetKitLogic
+        run: |
+          set -o pipefail
+          swift test --parallel 2>&1 | tail -60
