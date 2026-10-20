@@ -22,12 +22,12 @@
 		BB0000000000000000000016 /* WidgetData.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000008 /* WidgetData.swift */; };
 		BB0000000000000000000017 /* WidgetConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000009 /* WidgetConfig.swift */; };
 		BB0000000000000000000018 /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000010 /* WidgetTheme.swift */; };
-		BB0000000000000000000033 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000031 /* WidgetModels.swift */; };
+		BB0000000000000000000033 /* WidgetModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000070 /* WidgetModels.swift */; };
 		BB0000000000000000000034 /* ScheduleSelectionEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000032 /* ScheduleSelectionEngine.swift */; };
 		BB0000000000000000000035 /* WidgetPreviewFixtures.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000036 /* WidgetPreviewFixtures.swift */; };
 		BB0000000000000000000037 /* WidgetComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000038 /* WidgetComponents.swift */; };
 		BB0000000000000000000039 /* WidgetViewsSmallMedium.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000040 /* WidgetViewsSmallMedium.swift */; };
-		BB0000000000000000000041 /* WidgetViewsLarge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000042 /* WidgetViewsLarge.swift */; };
+		BB0000000000000000000071 /* WidgetViewsLarge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000072 /* WidgetViewsLarge.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -74,12 +74,12 @@
 		BB0000000000000000000008 /* WidgetData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetData.swift; sourceTree = "<group>"; };
 		BB0000000000000000000009 /* WidgetConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetConfig.swift; sourceTree = "<group>"; };
 		BB0000000000000000000010 /* WidgetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
-		BB0000000000000000000031 /* WidgetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
+		BB0000000000000000000070 /* WidgetModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetModels.swift; sourceTree = "<group>"; };
 		BB0000000000000000000032 /* ScheduleSelectionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSelectionEngine.swift; sourceTree = "<group>"; };
 		BB0000000000000000000036 /* WidgetPreviewFixtures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreviewFixtures.swift; sourceTree = "<group>"; };
 		BB0000000000000000000038 /* WidgetComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetComponents.swift; sourceTree = "<group>"; };
 		BB0000000000000000000040 /* WidgetViewsSmallMedium.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetViewsSmallMedium.swift; sourceTree = "<group>"; };
-		BB0000000000000000000042 /* WidgetViewsLarge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetViewsLarge.swift; sourceTree = "<group>"; };
+		BB0000000000000000000072 /* WidgetViewsLarge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetViewsLarge.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,7 +139,7 @@
 				BB0000000000000000000010 /* WidgetTheme.swift */,
 				BB0000000000000000000038 /* WidgetComponents.swift */,
 				BB0000000000000000000040 /* WidgetViewsSmallMedium.swift */,
-				BB0000000000000000000042 /* WidgetViewsLarge.swift */,
+				BB0000000000000000000072 /* WidgetViewsLarge.swift */,
 				BB0000000000000000000030 /* Logic */,
 				BB0000000000000000000002 /* Info.plist */,
 				BB0000000000000000000003 /* KrasavaWidget.entitlements */,
@@ -150,7 +150,7 @@
 		BB0000000000000000000030 /* Logic */ = {
 			isa = PBXGroup;
 			children = (
-				BB0000000000000000000031 /* WidgetModels.swift */,
+				BB0000000000000000000070 /* WidgetModels.swift */,
 				BB0000000000000000000032 /* ScheduleSelectionEngine.swift */,
 				BB0000000000000000000036 /* WidgetPreviewFixtures.swift */,
 			);
@@ -344,7 +344,7 @@
 				BB0000000000000000000035 /* WidgetPreviewFixtures.swift in Sources */,
 				BB0000000000000000000037 /* WidgetComponents.swift in Sources */,
 				BB0000000000000000000039 /* WidgetViewsSmallMedium.swift in Sources */,
-				BB0000000000000000000041 /* WidgetViewsLarge.swift in Sources */,
+				BB0000000000000000000071 /* WidgetViewsLarge.swift in Sources */,
 				BB0000000000000000000014 /* AppGroupLocator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
