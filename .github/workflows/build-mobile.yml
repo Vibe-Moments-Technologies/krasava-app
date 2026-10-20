@@ -118,7 +118,9 @@ jobs:
 
   build_ipa:
     name: 🍏 Build iOS Unsigned IPA
-    runs-on: macos-15
+    # macos-26 даёт Xcode 26 и SDK iOS 26+: только там объявлено семейство
+    # виджетов systemExtraLargePortrait (Extra Large для iPhone).
+    runs-on: macos-26
     needs: resolve
     steps:
       - name: 📚 Checkout Repository
@@ -157,12 +159,17 @@ jobs:
 
       - name: 🛠️ Set Xcode Version
         run: |
-          if [ -d "/Applications/Xcode_16.4.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
-          elif [ -d "/Applications/Xcode_16.2.app" ]; then
-            sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer
-          fi
+          # Предпочитаем Xcode 26 (SDK iOS 26+ — нужен для extra large widget).
+          # Фолбэки оставлены, чтобы пайплайн не падал, если состав раннера
+          # изменится: без Xcode 26 сборка пройдёт, но без extra large.
+          for V in 26.6 26.5 26.4 16.4 16.2; do
+            if [ -d "/Applications/Xcode_${V}.app" ]; then
+              sudo xcode-select -s "/Applications/Xcode_${V}.app/Contents/Developer"
+              break
+            fi
+          done
           xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
 
       - name: 🔨 Build iOS App (no codesign)
         run: |
