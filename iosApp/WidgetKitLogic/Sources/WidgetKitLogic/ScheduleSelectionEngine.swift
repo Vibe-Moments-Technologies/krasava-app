@@ -170,7 +170,9 @@ struct ScheduleSelectionEngine {
             status = .current
         } else if let start = primary.startDate(timeZone: timeZone) {
             let minutes = Int(start.timeIntervalSince(now) / 60)
-            status = (0..<Self.soonThresholdMinutes).contains(minutes)
+            // Порог включительный: «30 минут до начала» по ТЗ (п. 4) — это уже
+            // статус «скоро», поэтому верхняя граница входит в диапазон.
+            status = (0...Self.soonThresholdMinutes).contains(minutes)
                 ? .soon(minutesUntil: minutes)
                 : .upcoming
         } else {
