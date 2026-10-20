@@ -70,13 +70,19 @@ struct Provider: TimelineProvider {
 
 // MARK: - Общие элементы
 
-/// Служебная строка пары: время · тип · аудитория (+ метка дня справа).
-private func metaLine(_ lesson: WLesson, at now: Date, showDay: Bool) -> some View {
+/// Служебная строка пары: время · тип · аудитория.
+///
+/// Аудитория прижата к правому краю и объявлена layout-приоритетом: раньше
+/// весь ряд лежал в одном HStack, и метка дня выдавливала аудиторию за
+/// край виджета — «347 (С-20)» превращалось в «34…». Метку дня теперь несёт
+/// предмет (см. lessonBlock), а не эта строка.
+private func metaLine(_ lesson: WLesson, at now: Date) -> some View {
     HStack(spacing: 5) {
         Text("\(lesson.start)–\(lesson.end)")
             .font(.system(size: 11, weight: .semibold))
             .monospacedDigit()
             .foregroundColor(lesson.isCurrent(at: now) ? .green : .secondary)
+            .layoutPriority(1)
 
         Text(lesson.type)
             .font(.system(size: 10, weight: .bold))
@@ -85,34 +91,44 @@ private func metaLine(_ lesson: WLesson, at now: Date, showDay: Bool) -> some Vi
             .padding(.vertical, 0.5)
             .background(lesson.typeColor.opacity(0.15))
             .clipShape(Capsule())
+            .layoutPriority(1)
+
+        Spacer(minLength: 4)
 
         if !lesson.roomLabel.isEmpty {
-            // Аудитория — обязательна и заметнее прочего в строке.
+            // Аудитория обязательна: минимум усечения, максимум читаемости.
             Text(lesson.roomLabel)
                 .font(.system(size: 11, weight: .bold))
                 .foregroundColor(.primary)
                 .lineLimit(1)
-        }
-
-        Spacer(minLength: 2)
-
-        if showDay, let marker = lesson.dayMarker {
-            Text(marker)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
+                .minimumScaleFactor(0.75)
+                .layoutPriority(2)
         }
     }
 }
 
 /// Пара целиком: служебная строка + предмет во всю ширину.
+/// Метка дня («завтра», «пт 24») ушла во вторую строку — там есть место,
+/// и она больше не конкурирует с аудиторией за ширину.
 private func lessonBlock(_ lesson: WLesson, at now: Date, showDay: Bool) -> some View {
     VStack(alignment: .leading, spacing: 1) {
-        metaLine(lesson, at: now, showDay: showDay)
-        Text(lesson.subject)
-            .font(.system(size: 13, weight: .semibold))
-            .lineLimit(2)
-            .minimumScaleFactor(0.85)
-            .fixedSize(horizontal: false, vertical: true)
+        metaLine(lesson, at: now)
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(lesson.subject)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+                // Предмет важнее метки дня: при нехватке ширины ужимается
+                // в первую очередь метка, а не название дисциплины.
+                .layoutPriority(1)
+            if showDay, let marker = lesson.dayMarker {
+                Text(marker)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+        }
     }
 }
 
@@ -257,20 +273,27 @@ struct KrasavaWidgetView: View {
                 Text(lesson.subject)
                     .font(.system(size: 14, weight: .bold))
                     .lineLimit(3)
-                    .minimumScaleFactor(0.8)
-                    .fixedSize(horizontal: false, vertical: true)
+                    // Без fixedSize: он заставляет текст занять полную высоту
+                    // и мешает minimumScaleFactor ужать строку вместо обрезки.
+                    .minimumScaleFactor(0.7)
+                    .layoutPriority(1)
 
                 Spacer(minLength: 0)
 
-                Text("\(lesson.start)–\(lesson.end)")
-                    .font(.system(size: 12, weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundColor(lesson.isCurrent(at: entry.date) ? .green : .primary)
-
-                if !lesson.roomLabel.isEmpty {
-                    Text(lesson.roomLabel)
-                        .font(.system(size: 12, weight: .bold))
-                        .lineLimit(1)
+                // Время и аудитория одной строкой: раньше это были две строки,
+                // и они съедали высоту, из-за которой предмет обрезался.
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text("\(lesson.start)–\(lesson.end)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundColor(lesson.isCurrent(at: entry.date) ? .green : .primary)
+                    if !lesson.roomLabel.isEmpty {
+                        Text(lesson.roomLabel)
+                            .font(.system(size: 12, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+                    Spacer(minLength: 0)
                 }
 
                 HStack(spacing: 4) {
@@ -285,14 +308,16 @@ struct KrasavaWidgetView: View {
                     }
                 }
             }
-            .padding(12)
+            .padding(10)
         }
     }
 
     /// Medium: до трёх пар двумя строками — служебная + предмет во всю ширину.
+    /// Отступы и межстрочный интервал подобраны по высоте medium (~160pt):
+    /// шапка 16 + три пары по ~40 + зазоры 6×2 = 148pt, плюс padding 10×2.
     @ViewBuilder
     private func listView(target: WTarget, lessons: [WLesson]) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 5) {
             header(target, lessons: lessons)
 
             ForEach(Array(lessons.enumerated()), id: \.offset) { _, lesson in
@@ -300,13 +325,13 @@ struct KrasavaWidgetView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(10)
     }
 
-    /// Large: до десяти пар с разделителями дней — «Сегодня» / «Завтра» / дата.
+    /// Large: до шести пар с разделителями дней — «Сегодня» / «Завтра» / дата.
     @ViewBuilder
     private func largeView(target: WTarget, lessons: [WLesson]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             header(target, lessons: lessons)
 
             ForEach(Array(lessons.enumerated()), id: \.offset) { index, lesson in
@@ -314,13 +339,13 @@ struct KrasavaWidgetView: View {
                     Text(dayHeader(for: lesson))
                         .font(.system(size: 10, weight: .heavy))
                         .foregroundColor(.secondary)
-                        .padding(.top, index == 0 ? 0 : 3)
+                        .padding(.top, index == 0 ? 0 : 4)
                 }
                 lessonBlock(lesson, at: entry.date, showDay: false)
             }
             Spacer(minLength: 0)
         }
-        .padding(12)
+        .padding(10)
     }
 
     @ViewBuilder
