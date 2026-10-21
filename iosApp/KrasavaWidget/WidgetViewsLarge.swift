@@ -150,38 +150,25 @@ struct LargeScheduleWidgetView: View {
                 LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
             }
 
-            // Аудитория и время в одну строку. Если они не помещаются рядом,
-            // аудитория переносится на свою строку, но кампус не отделяется.
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: Space.s10) {
-                    ClassroomLabel(
-                        lesson: lesson,
-                        palette: palette,
-                        size: typography.room(24...30),
-                        weight: .bold
-                    )
-                    Spacer(minLength: Space.s4)
-                    LessonTimeLabel(
-                        lesson: lesson,
-                        palette: palette,
-                        size: typography.primaryTime(17...20),
-                        weight: .semibold
-                    )
-                }
-                VStack(alignment: .leading, spacing: Space.s2) {
-                    ClassroomLabel(
-                        lesson: lesson,
-                        palette: palette,
-                        size: typography.room(24...30),
-                        weight: .bold
-                    )
-                    LessonTimeLabel(
-                        lesson: lesson,
-                        palette: palette,
-                        size: typography.primaryTime(17...20),
-                        weight: .semibold
-                    )
-                }
+            // Аудитория и время в одну строку. `ViewThatFits` недоступен на
+            // iOS 15 (минимум проекта — 15.3), поэтому при нехватке ширины
+            // ужимается аудитория: у ClassroomLabel есть minimumScaleFactor
+            // и единый Text, так что кампус не отделяется от номера.
+            HStack(alignment: .firstTextBaseline, spacing: Space.s10) {
+                ClassroomLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.room(24...30),
+                    weight: .bold
+                )
+                .layoutPriority(1)
+                Spacer(minLength: Space.s4)
+                LessonTimeLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.primaryTime(17...20),
+                    weight: .semibold
+                )
             }
             .padding(.top, Space.s2)
 
