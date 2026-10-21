@@ -213,12 +213,13 @@ struct RenderingModeReader: View {
     }
 
     private var mode: WidgetPaletteMode {
-        switch renderingMode {
-        // accented и vibrant — варианты тонирования системой.
-        case .accented, .vibrant: return .tinted
-        case .fullColor: return .fullColor
-        @unknown default: return .fullColor
-        }
+        // В SDK iOS 26 у WidgetRenderingMode больше вариантов, чем fullColor /
+        // accented / vibrant, и перечислять их по именам нельзя: набор растёт
+        // от версии к версии. Всё, что не полный цвет, считаем тонированием —
+        // это безопасный вариант: акценты станут монохромными, читаемость
+        // обеспечивают текстовые метки статуса.
+        if case .fullColor = renderingMode { return .fullColor }
+        return .tinted
     }
 }
 
