@@ -1,14 +1,15 @@
 import SwiftUI
 
-// MARK: - Small: одна актуальная пара
+// MARK: - Small: одна активная пара (ТЗ п. 4)
 //
-// Назначение (ТЗ п. 8): максимально быстрый доступ к одной паре. Пользователь
-// должен с одного взгляда различить аудиторию, время и актуальность.
+// Назначение: только активная пара. Никаких следующих занятий, преподавателя,
+// списков дней и информационных блоков за пределами главной пары.
 //
-// Порядок блоков продиктован приоритетами: сначала то, что отвечает на вопрос
-// «куда идти» (аудитория), затем «когда» (время), затем «что» (название).
-// Группа, преподаватель и декоративные иконки не выводятся — они не нужны
-// на домашнем экране и отнимают место у P0.
+// Структура строго в таком порядке (ТЗ п. 4.2):
+//   A. Header (статус + бейдж типа)
+//   B. Classroom (основной визуальный акцент, 20–26 pt)
+//   C. LessonTime (одной строкой, 14–16 pt)
+//   D. Subject (максимально полно, 2–3 строки)
 
 struct SmallScheduleWidgetView: View {
     let state: WidgetPresentationState
@@ -16,110 +17,110 @@ struct SmallScheduleWidgetView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let theme = theme(for: geo.size.height)
-            content(theme: theme)
+            let density = WidgetDensity.forHeight(geo.size.height)
+            let typography = WidgetTypography(density: density)
+            content(density: density, typography: typography)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
     }
 
     @ViewBuilder
-    private func content(theme: WidgetTheme) -> some View {
-        VStack(alignment: .leading, spacing: theme.blockSpacing) {
-            if let lesson = state.primaryLesson, let status = state.primaryStatus {
-                header(status: status, theme: theme)
+    private func content(density: WidgetDensity, typography: WidgetTypography) -> some View {
+        if let lesson = state.primaryLesson, let status = state.primaryStatus {
+            VStack(alignment: .leading, spacing: 0) {
+                header(lesson: lesson, status: status, density: density, typography: typography)
 
-                // Аудитория — главный элемент, поэтому сразу после статуса.
-                ClassroomView(lesson: lesson, theme: theme)
+                // Отступы из ТЗ п. 4.3: 8 после Header, 6 после Classroom,
+                // 6 после Time. При нехватке высоты сокращаются первыми.
+                Spacer().frame(height: density >= .regular ? Space.s8 : Space.s6)
 
-                LessonTimeView(
-                    lesson: lesson, theme: theme, status: status, palette: palette
+                ClassroomLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.room(20...26),
+                    weight: .bold
                 )
+                .layoutPriority(3)
 
-                SubjectTitleView(
-                    lesson: lesson, theme: theme,
-                    lines: subjectLines(for: theme),
+                Spacer().frame(height: Space.s6)
+
+                LessonTimeLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.primaryTime(14...16),
                     weight: .semibold
                 )
-                .layoutPriority(1)
+                .layoutPriority(2)
 
+                Spacer().frame(height: Space.s6)
+
+                // Пункт D: название максимально полно. Единственный элемент,
+                // которому разрешено занять остаток высоты (ТЗ п. 4.4).
+                Text(lesson.subject)
+                    .font(.system(size: typography.subject(11...13), weight: .medium))
+                    .foregroundColor(palette.subjectText)
+                    .lineLimit(density.subjectLines)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
+
+                // Композиция прижата кверху: больших Spacer'ов нет, небольшое
+                // естественное пустое пространство снизу допустимо (п. 4.4).
                 Spacer(minLength: 0)
-
-                footer(lesson: lesson, theme: theme)
-            } else {
-                emptyState(theme: theme)
             }
-        }
-        .padding(theme.padding)
-    }
-
-    /// Статус без обратного отсчёта: на Small место дороже (дополнение владельца).
-    @ViewBuilder
-    private func header(status: LessonStatus, theme: WidgetTheme) -> some View {
-        HStack(spacing: 5) {
-            LessonStatusView(
-                status: status, theme: theme, palette: palette, allowCountdown: false
+        } else {
+            WidgetEmptyStateView(
+                reason: state.emptyReason,
+                targetTitle: state.targetTitle,
+                palette: palette,
+                compact: true
             )
-            Spacer(minLength: 0)
-            // По ТЗ п. 8.3 при очень длинном названии бейдж типа убирается
-            // первым — здесь он есть только если статус не занят датой.
-            if state.primaryDayContext == .today, let lesson = state.primaryLesson {
-                LessonTypeBadge(lesson: lesson, theme: theme, palette: palette)
+        }
+    }
+
+    /// Блок A. Слева статус, справа компактный тип. Если активная пара не
+    /// сегодня, вместо бейджа показывается дата: ТЗ п. 4.2 требует контекст
+    /// даты и запрещает дублировать его внизу.
+    @ViewBuilder
+    private func header(
+        lesson: WLesson,
+        status: LessonStatus,
+        density: WidgetDensity,
+        typography: WidgetTypography
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
+            // На Small обратного отсчёта нет: место дороже, точное время
+            // информативнее (дополнение владельца).
+            LessonStatusLabel(
+                status: status,
+                palette: palette,
+                size: typography.status(10...11),
+                allowCountdown: false
+            )
+
+            Spacer(minLength: Space.s4)
+
+            if state.primaryDay.isFuture, let dayLabel = state.primaryDay.fullLabel {
+                Text(dayLabel)
+                    .font(.system(size: typography.caption, weight: .semibold))
+                    .foregroundColor(palette.mutedText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            } else if density >= .compact {
+                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
             }
         }
-    }
-
-    /// Дата будущего дня обязательна (ТЗ п. 2, 16): «ДАЛЕЕ» без даты для
-    /// завтрашней пары недопустимо.
-    @ViewBuilder
-    private func footer(lesson: WLesson, theme: WidgetTheme) -> some View {
-        if let dayLabel = state.primaryDayLabel, state.primaryDayContext.isFuture {
-            Text(dayLabel)
-                .font(.system(size: theme.sectionSize, weight: .heavy))
-                .foregroundColor(palette.secondary)
-                .lineLimit(1)
-        } else if !lesson.teacher.isEmpty {
-            // Преподаватель — P4: показывается, только если день уже подписан
-            // не был и место осталось.
-            Text(lesson.teacher)
-                .font(.system(size: theme.sectionSize))
-                .foregroundColor(palette.muted)
-                .lineLimit(1)
-        }
-    }
-
-    /// Сколько строк дать названию: длинные дисциплины получают третью строку.
-    private func subjectLines(for theme: WidgetTheme) -> Int {
-        theme.density == .dense ? 3 : 2
-    }
-
-    private func emptyState(theme: WidgetTheme) -> some View {
-        WidgetEmptyStateView(
-            reason: state.emptyReason,
-            targetTitle: state.targetTitle,
-            theme: theme,
-            palette: palette,
-            compact: true
-        )
-    }
-
-    private func theme(for height: CGFloat) -> WidgetTheme {
-        let subject = state.primaryLesson?.subject ?? ""
-        return WidgetTheme(
-            density: WidgetDensity.forSubject(subject, in: height),
-            availableHeight: height
-        )
     }
 }
 
-// MARK: - Medium: текущая + следующая
+// MARK: - Medium: активная + 1–2 следующие (ТЗ п. 5)
 //
-// Назначение (ТЗ п. 9): актуальная пара и следующая после неё.
+// Компоновка по ТЗ п. 5.2: горизонтальное разделение. Слева активная пара
+// (55–60% ширины), справа следующие занятия (40–45%) под общим заголовком
+// «ДАЛЕЕ». Между зонами тонкий разделитель.
 //
-// Из двух вариантов компоновки выбран вертикальный (B): главная пара крупно
-// сверху, следующая — компактной строкой снизу. Горизонтальные зоны (A) дают
-// главной паре всего ~65% ширины medium, и длинные названия вроде
-// «Организационное и правовое обеспечение информационной безопасности»
-// обрезаются, тогда как вертикальная раскладка отдаёт названию всю ширину.
+// Количество следующих пар выбирается по фактическому месту (ТЗ п. 5.3):
+// Mode 0 — только активная, Mode 1 — одна следующая, Mode 2 — две.
 
 struct MediumScheduleWidgetView: View {
     let state: WidgetPresentationState
@@ -127,129 +128,189 @@ struct MediumScheduleWidgetView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let theme = theme(for: geo.size.height)
-            content(theme: theme)
+            let density = WidgetDensity.forHeight(geo.size.height)
+            let typography = WidgetTypography(density: density)
+            content(density: density, typography: typography, size: geo.size)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
     }
 
     @ViewBuilder
-    private func content(theme: WidgetTheme) -> some View {
-        VStack(alignment: .leading, spacing: theme.blockSpacing) {
-            if let lesson = state.primaryLesson, let status = state.primaryStatus {
-                primary(lesson: lesson, status: status, theme: theme)
-
-                if let next = state.upcomingLessons.first {
-                    // ТЗ п. 9.4: пустую зону «Далее» без данных не создаём.
-                    WidgetDivider(palette: palette)
-                    secondary(next: next, theme: theme)
-                }
-
-                Spacer(minLength: 0)
+    private func content(
+        density: WidgetDensity,
+        typography: WidgetTypography,
+        size: CGSize
+    ) -> some View {
+        if let lesson = state.primaryLesson, let status = state.primaryStatus {
+            let rows = upcomingRows(density: density, size: size)
+            if rows == 0 {
+                // Mode 0: других занятий дня нет — главный блок на всю ширину.
+                primary(lesson: lesson, status: status, density: density, typography: typography)
             } else {
-                WidgetEmptyStateView(
-                    reason: state.emptyReason,
-                    targetTitle: state.targetTitle,
-                    theme: theme,
-                    palette: palette
-                )
-            }
-        }
-        .padding(theme.padding)
-    }
+                HStack(alignment: .top, spacing: Space.s10) {
+                    primary(lesson: lesson, status: status, density: density, typography: typography)
+                        // Левая зона 55–60%: главная пара доминирует.
+                        .frame(width: primaryWidth(of: size, rows: rows), alignment: .topLeading)
 
-    /// Главная пара: статус, аудитория, время, название. Здесь отсчёт уместен —
-    /// место есть, и он не отнимает у P0 (дополнение владельца).
-    @ViewBuilder
-    private func primary(lesson: WLesson, status: LessonStatus, theme: WidgetTheme) -> some View {
-        VStack(alignment: .leading, spacing: theme.lineSpacing) {
-            HStack(spacing: 5) {
-                LessonStatusView(status: status, theme: theme, palette: palette)
-                if state.primaryDayContext.isFuture,
-                   let dayLabel = state.primaryDayLongLabel ?? state.primaryDayLabel {
-                    // Дата будущего дня прямо в статусной строке: пара не сегодня.
-                    Text("· \(dayLabel)")
-                        .font(.system(size: theme.statusSize, weight: .bold))
-                        .foregroundColor(palette.secondary)
-                        .lineLimit(1)
+                    WidgetDivider(palette: palette)
+                        .frame(width: 1)
+                        .frame(maxHeight: .infinity)
+
+                    upcoming(
+                        lessons: Array(state.upcomingLessons.prefix(rows)),
+                        density: density,
+                        typography: typography
+                    )
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                Spacer(minLength: 0)
-                LessonTypeBadge(lesson: lesson, theme: theme, palette: palette)
             }
-
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                LessonTimeView(
-                    lesson: lesson, theme: theme, status: status, palette: palette
-                )
-                Spacer(minLength: 4)
-                ClassroomView(lesson: lesson, theme: theme, compact: true)
-                    // Аудитория приоритетнее названия: она P0, название P1.
-                    .layoutPriority(1)
-            }
-
-            SubjectTitleView(lesson: lesson, theme: theme, lines: 2)
-                .layoutPriority(2)
+        } else {
+            WidgetEmptyStateView(
+                reason: state.emptyReason,
+                targetTitle: state.targetTitle,
+                palette: palette
+            )
         }
     }
 
-    /// Следующая пара: время · аудитория · сокращённое название.
+    /// Сколько следующих пар влезает. Считается по фактическому размеру,
+    /// а не выводится «на удачу» (ТЗ п. 5.3).
+    private func upcomingRows(density: WidgetDensity, size: CGSize) -> Int {
+        let available = state.upcomingLessons.count
+        guard available > 0 else { return 0 }
+        // Заголовок «ДАЛЕЕ» ≈ 16 pt, запись ≈ rowHeight.
+        let budget = size.height - Space.s16 - 16
+        let fits = Int(budget / density.rowHeight)
+        // Максимум две (ТЗ п. 5.3). Если две не помещаются без ухудшения
+        // основных данных — одна.
+        return max(0, min(min(fits, 2), available))
+    }
+
+    /// Левая зона: 58% при двух следующих парах, 55% при одной — правая зона
+    /// должна уметь сокращаться (ТЗ п. 9.2).
+    private func primaryWidth(of size: CGSize, rows: Int) -> CGFloat {
+        size.width * (rows >= 2 ? 0.58 : 0.55)
+    }
+
+    // MARK: Левая зона
+
     @ViewBuilder
-    private func secondary(next: WLesson, theme: WidgetTheme) -> some View {
-        VStack(alignment: .leading, spacing: theme.lineSpacing) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text("ДАЛЕЕ")
-                    .font(.system(size: theme.sectionSize, weight: .heavy))
-                    .foregroundColor(palette.secondary)
-                LessonTimeView(
-                    lesson: next, theme: theme, status: nil, palette: palette, compact: true
+    private func primary(
+        lesson: WLesson,
+        status: LessonStatus,
+        density: WidgetDensity,
+        typography: WidgetTypography
+    ) -> some View {
+        VStack(alignment: .leading, spacing: density.lineSpacing) {
+            // Статус и тип. На Medium отсчёт уместен: место есть, и он
+            // не отнимает у P0-данных (дополнение владельца).
+            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
+                LessonStatusLabel(
+                    status: status,
+                    palette: palette,
+                    size: typography.status(10...11),
+                    allowCountdown: true
                 )
-                Spacer(minLength: 2)
-                ClassroomView(lesson: next, theme: theme, compact: true)
+                Spacer(minLength: Space.s4)
+                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
             }
-            // Название следующей пары — вторичное: одна строка с усадкой
-            // (ТЗ п. 9.2: второстепенная зона должна уметь сокращаться).
-            SubjectTitleView(lesson: next, theme: theme, compact: true, lines: 1, weight: .regular)
-                .foregroundColor(palette.secondary)
+
+            // Аудитория — главный акцент левой зоны.
+            ClassroomLabel(
+                lesson: lesson,
+                palette: palette,
+                size: typography.room(16...20),
+                weight: .bold
+            )
+            .padding(.top, Space.s4)
+
+            LessonTimeLabel(
+                lesson: lesson,
+                palette: palette,
+                size: typography.primaryTime(12...15),
+                weight: .semibold
+            )
+
+            Text(lesson.subject)
+                .font(.system(size: typography.subject(11...13), weight: .medium))
+                .foregroundColor(palette.subjectText)
+                .lineLimit(density.subjectLines)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, Space.s2)
+                .layoutPriority(1)
+
+            // Вторичные метаданные: преподаватель и число групп. Скрываются
+            // первыми при нехватке места (ТЗ п. 5.6).
+            if density.showsTeacher {
+                TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
+            }
+            if density.showsGroupIndicator {
+                MultiGroupIndicator(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.teacher - 1,
+                    showWord: density >= .regular
+                )
+            }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "Далее \(next.start), \(next.subject), аудитория \(next.roomDisplay)"
-        )
     }
 
-    private func theme(for height: CGFloat) -> WidgetTheme {
-        let subject = state.primaryLesson?.subject ?? ""
-        return WidgetTheme(
-            density: WidgetDensity.forSubject(subject, in: height),
-            availableHeight: height
-        )
+    // MARK: Правая зона
+
+    @ViewBuilder
+    private func upcoming(
+        lessons: [WLesson],
+        density: WidgetDensity,
+        typography: WidgetTypography
+    ) -> some View {
+        VStack(alignment: .leading, spacing: density.rowSpacing) {
+            // Общий заголовок один раз, а не перед каждой записью (ТЗ п. 5.2).
+            WidgetSectionTitle(
+                text: "ДАЛЕЕ",
+                palette: palette,
+                size: typography.caption
+            )
+
+            ForEach(Array(lessons.enumerated()), id: \.element.id) { index, lesson in
+                if index > 0 {
+                    WidgetDivider(palette: palette)
+                }
+                UpcomingLessonRow(
+                    lesson: lesson,
+                    palette: palette,
+                    density: density,
+                    typography: typography
+                )
+            }
+        }
     }
 }
 
-// MARK: - Пустые состояния
+// MARK: - Пустые состояния (ТЗ п. 10.4)
 //
-// ТЗ п. 27: состояния различаются и не подменяют друг друга техническими
-// текстами. «Нет занятий» ≠ «нет данных» ≠ «нет группы».
+// «Нет занятий» ≠ «нет данных» ≠ «нет группы». Технические тексты ошибок
+// пользователю не показываются, но действие объясняется.
 
 struct WidgetEmptyStateView: View {
     let reason: EmptyReason?
     let targetTitle: String?
-    let theme: WidgetTheme
     let palette: WidgetPalette
     var compact: Bool = false
 
     var body: some View {
-        VStack(spacing: compact ? 4 : 6) {
+        VStack(spacing: compact ? Space.s4 : Space.s6) {
             Image(systemName: icon)
                 .font(.system(size: compact ? 20 : 24))
                 .foregroundColor(iconTint)
             Text(title)
-                .font(.system(size: theme.subjectSize - 1, weight: .bold))
+                .font(.system(size: compact ? 13 : 15, weight: .semibold))
+                .foregroundColor(palette.subjectText)
                 .multilineTextAlignment(.center)
             if let subtitle {
                 Text(subtitle)
-                    .font(.system(size: theme.sectionSize))
-                    .foregroundColor(palette.secondary)
+                    .font(.system(size: compact ? 11 : 12))
+                    .foregroundColor(palette.mutedText)
                     .multilineTextAlignment(.center)
                     .lineLimit(compact ? 2 : 3)
             }
@@ -272,8 +333,8 @@ struct WidgetEmptyStateView: View {
 
     private var iconTint: Color {
         switch reason {
-        case .badData, .noAppGroup: return palette.upcomingAccent
-        default: return palette.secondary
+        case .badData, .noAppGroup: return palette.activeAccent
+        default: return palette.mutedText
         }
     }
 
@@ -288,8 +349,6 @@ struct WidgetEmptyStateView: View {
         }
     }
 
-    /// Подсказка не должна раскрывать технические детали (ТЗ п. 27), но должна
-    /// объяснять действие: как исправить.
     private var subtitle: String? {
         switch reason {
         case .noLessons:

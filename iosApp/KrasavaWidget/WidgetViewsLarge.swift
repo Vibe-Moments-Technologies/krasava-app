@@ -1,11 +1,13 @@
 import SwiftUI
 
-// MARK: - Large: день целиком
+// MARK: - Large: день целиком (ТЗ п. 6)
 //
-// Назначение (ТЗ п. 10): актуальная пара и расписание на оставшуюся часть
-// учебного дня. Шапка подписывает день, главная пара выделена сильнее
-// остальных, ниже — компактный список, а не карточки на каждую пару
-// (ТЗ п. 10.2: уплотнить список без потери читаемости).
+// Вертикальное расширение Medium. Показывает подробную активную пару, все
+// последующие занятия выбранного дня, которые помещаются, и при наличии
+// места — ближайший следующий учебный день отдельным разделом.
+//
+// Корневой контейнер — VStack(alignment: .leading, spacing: 0): пространство
+// задаётся на уровне секций, а не одним общим интервалом (ТЗ п. 6.2).
 
 struct LargeScheduleWidgetView: View {
     let state: WidgetPresentationState
@@ -13,115 +15,279 @@ struct LargeScheduleWidgetView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let theme = theme(for: geo.size.height)
-            content(theme: theme, height: geo.size.height)
+            let density = WidgetDensity.forHeight(geo.size.height)
+            let typography = WidgetTypography(density: density)
+            content(density: density, typography: typography, size: geo.size)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
     }
 
     @ViewBuilder
-    private func content(theme: WidgetTheme, height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: theme.blockSpacing) {
-            WidgetDayHeader(
-                text: state.primaryDayLongLabel ?? state.primaryDayLabel ?? "СЕГОДНЯ",
-                theme: theme,
-                palette: palette,
-                trailing: state.freshness.isStale ? "данные устарели" : nil
-            )
-
-            if let lesson = state.primaryLesson, let status = state.primaryStatus {
-                primary(lesson: lesson, status: status, theme: theme)
-
-                if !state.upcomingLessons.isEmpty {
-                    WidgetDivider(palette: palette)
-                    WidgetSectionHeader(
-                        text: sectionTitle,
-                        theme: theme,
-                        palette: palette
+    private func content(density: WidgetDensity, typography: WidgetTypography, size: CGSize) -> some View {
+        if let lesson = state.primaryLesson, let status = state.primaryStatus {
+            VStack(alignment: .leading, spacing: 0) {
+                // Заголовок выбранного учебного дня (ТЗ п. 6.3): приглушённый,
+                // 11–12 pt. Дата не должна быть самым крупным элементом.
+                HStack(spacing: Space.s6) {
+                    WidgetSectionTitle(
+                        text: state.headerTitle,
+                        palette: palette,
+                        size: typography.caption,
+                        isDayHeader: true
                     )
-                    // Количество пар определяется доступной высотой, а не
-                    // константой (ТЗ п. 10.3): считаем по фактическому размеру,
-                    // чтобы не выводить обрезанную пару снизу.
-                    let rows = rowCount(height: height, theme: theme)
-                    ForEach(Array(state.upcomingLessons.prefix(rows)), id: \.id) { item in
-                        CompactLessonRow(lesson: item, theme: theme, palette: palette)
-                    }
-                    if state.upcomingLessons.count > rows {
-                        Text("Ещё \(state.upcomingLessons.count - rows)")
-                            .font(.system(size: theme.sectionSize, weight: .bold))
-                            .foregroundColor(palette.secondary)
+                    Spacer(minLength: 0)
+                    if state.freshness.isStale {
+                        Text("данные устарели")
+                            .font(.system(size: typography.caption - 1))
+                            .foregroundColor(palette.mutedText)
+                            .lineLimit(1)
                     }
                 }
-            } else {
-                WidgetEmptyStateView(
-                    reason: state.emptyReason,
-                    targetTitle: state.targetTitle,
-                    theme: theme,
-                    palette: palette
-                )
-            }
 
-            Spacer(minLength: 0)
-        }
-        .padding(theme.padding)
-    }
+                Spacer().frame(height: Space.s8)
 
-    /// Заголовок секции зависит от того, чей день показывается (ТЗ п. 10.1).
-    private var sectionTitle: String {
-        state.primaryDayContext == .today ? "ДАЛЕЕ СЕГОДНЯ" : "ДАЛЕЕ"
-    }
+                // Главная пара (ТЗ п. 6.4): статус и тип, крупная аудитория
+                // с временем, название, метаданные.
+                primary(lesson: lesson, status: status, density: density, typography: typography)
 
-    @ViewBuilder
-    private func primary(lesson: WLesson, status: LessonStatus, theme: WidgetTheme) -> some View {
-        VStack(alignment: .leading, spacing: theme.lineSpacing) {
-            HStack(spacing: 5) {
-                LessonStatusView(status: status, theme: theme, palette: palette)
+                // Раздел следующих занятий — только если они есть.
+                if !state.upcomingLessons.isEmpty {
+                    Spacer().frame(height: Space.s10)
+                    WidgetDivider(palette: palette)
+                    Spacer().frame(height: Space.s10)
+
+                    WidgetSectionTitle(
+                        text: state.primaryDay.isToday ? "ДАЛЕЕ СЕГОДНЯ" : "ДАЛЕЕ",
+                        palette: palette,
+                        size: typography.caption
+                    )
+                    Spacer().frame(height: Space.s6)
+
+                    let rows = upcomingRows(density: density, size: size, typography: typography)
+                    ForEach(Array(state.upcomingLessons.prefix(rows).enumerated()), id: \.element.id) { index, item in
+                        if index > 0 {
+                            Spacer().frame(height: density.rowSpacing)
+                        }
+                        UpcomingLessonRow(
+                            lesson: item,
+                            palette: palette,
+                            density: density,
+                            typography: typography,
+                            showsType: density >= .regular
+                        )
+                    }
+                    if state.upcomingLessons.count > rows {
+                        Spacer().frame(height: Space.s4)
+                        Text("Ещё \(state.upcomingLessons.count - rows)")
+                            .font(.system(size: typography.caption))
+                            .foregroundColor(palette.mutedText)
+                    }
+                }
+
+                // Раздел ближайшего следующего учебного дня (ТЗ п. 6.8):
+                // только при достаточной высоте для заголовка и хотя бы одной
+                // полноценной записи. Одинокий заголовок не выводится.
+                if let nextDay = state.nextDays.first,
+                   let rows = nextDayRows(nextDay, density: density, size: size, typography: typography),
+                   rows > 0 {
+                    Spacer().frame(height: Space.s10)
+                    WidgetDivider(palette: palette)
+                    Spacer().frame(height: Space.s10)
+
+                    WidgetSectionTitle(
+                        text: nextDay.label,
+                        palette: palette,
+                        size: typography.caption,
+                        isDayHeader: true
+                    )
+                    Spacer().frame(height: Space.s6)
+
+                    ForEach(Array(nextDay.lessons.prefix(rows).enumerated()), id: \.element.id) { index, item in
+                        if index > 0 {
+                            Spacer().frame(height: density.rowSpacing)
+                        }
+                        UpcomingLessonRow(
+                            lesson: item,
+                            palette: palette,
+                            density: density,
+                            typography: typography
+                        )
+                    }
+                }
+
                 Spacer(minLength: 0)
-                LessonTypeBadge(lesson: lesson, theme: theme, palette: palette)
             }
-
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                // Крупная аудитория — главный элемент Large (ТЗ п. 10.1).
-                ClassroomView(lesson: lesson, theme: theme)
-                Spacer(minLength: 4)
-                LessonTimeView(
-                    lesson: lesson, theme: theme, status: status, palette: palette
-                )
-            }
-
-            // Название главной пары: в Large место есть — до трёх строк,
-            // чтобы длинные дисциплины читались полностью (ТЗ п. 15).
-            SubjectTitleView(lesson: lesson, theme: theme, lines: 3, weight: .bold)
+        } else {
+            WidgetEmptyStateView(
+                reason: state.emptyReason,
+                targetTitle: state.targetTitle,
+                palette: palette
+            )
         }
     }
 
-    /// Сколько строк списка влезает: главная пара ~110pt, шапка ~20pt,
-    /// строка списка ~40pt (время с аудиторией + до двух строк названия).
-    private func rowCount(height: CGFloat, theme: WidgetTheme) -> Int {
-        let available = height - theme.padding * 2 - 20 - 110 - theme.blockSpacing * 3
-        let rowHeight: CGFloat = theme.density == .dense ? 36 : 44
-        let fits = Int(available / rowHeight)
-        return max(1, min(fits, state.upcomingLessons.count))
+    // MARK: Главная пара
+
+    /// ТЗ п. 6.4: статус слева, тип справа; ниже крупная аудитория и время;
+    /// затем название; затем метаданные. Высота — по содержимому, без
+    /// фиксированного frame (ТЗ п. 6.5).
+    @ViewBuilder
+    private func primary(
+        lesson: WLesson,
+        status: LessonStatus,
+        density: WidgetDensity,
+        typography: WidgetTypography
+    ) -> some View {
+        VStack(alignment: .leading, spacing: density.lineSpacing) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
+                LessonStatusLabel(
+                    status: status,
+                    palette: palette,
+                    size: typography.status(11...12),
+                    allowCountdown: true
+                )
+                Spacer(minLength: Space.s4)
+                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
+            }
+
+            // Аудитория и время в одну строку. Если они не помещаются рядом,
+            // аудитория переносится на свою строку, но кампус не отделяется.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.s10) {
+                    ClassroomLabel(
+                        lesson: lesson,
+                        palette: palette,
+                        size: typography.room(24...30),
+                        weight: .bold
+                    )
+                    Spacer(minLength: Space.s4)
+                    LessonTimeLabel(
+                        lesson: lesson,
+                        palette: palette,
+                        size: typography.primaryTime(17...20),
+                        weight: .semibold
+                    )
+                }
+                VStack(alignment: .leading, spacing: Space.s2) {
+                    ClassroomLabel(
+                        lesson: lesson,
+                        palette: palette,
+                        size: typography.room(24...30),
+                        weight: .bold
+                    )
+                    LessonTimeLabel(
+                        lesson: lesson,
+                        palette: palette,
+                        size: typography.primaryTime(17...20),
+                        weight: .semibold
+                    )
+                }
+            }
+            .padding(.top, Space.s2)
+
+            Text(lesson.subject)
+                .font(.system(size: typography.subject(13...15), weight: .medium))
+                .foregroundColor(palette.subjectText)
+                .lineLimit(density.subjectLines)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, Space.s2)
+                .layoutPriority(1)
+
+            // Метаданные в одну строку: преподаватель и индикатор групп.
+            // Место под отсутствующего преподавателя не резервируется.
+            let hasTeacher = lesson.teacherDisplay != nil && density.showsTeacher
+            let hasGroups = lesson.isShared && density.showsGroupIndicator
+            if hasTeacher || hasGroups {
+                HStack(spacing: Space.s8) {
+                    if hasTeacher {
+                        TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
+                    }
+                    if hasGroups {
+                        MultiGroupIndicator(
+                            lesson: lesson,
+                            palette: palette,
+                            size: typography.teacher - 1,
+                            showWord: density >= .regular
+                        )
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, Space.s2)
+            }
+        }
     }
 
-    private func theme(for height: CGFloat) -> WidgetTheme {
-        let subject = state.primaryLesson?.subject ?? ""
-        return WidgetTheme(
-            density: WidgetDensity.forSubject(subject, in: height),
-            availableHeight: height
-        )
+    // MARK: Расчёт вместимости (ТЗ п. 6.7, 9.4)
+
+    /// Сколько записей выбранного дня влезает.
+    ///
+    /// Алгоритм: из доступной высоты вычитается главная секция (её высота
+    /// зависит от плотности), затем каждая запись добавляется, пока хватает
+    /// места. Показываются только полностью помещающиеся записи.
+    private func upcomingRows(
+        density: WidgetDensity,
+        size: CGSize,
+        typography: WidgetTypography
+    ) -> Int {
+        let available = state.upcomingLessons.count
+        guard available > 0 else { return 0 }
+
+        // Главная секция: статус + аудитория + название (до 3 строк) + метаданные.
+        let primaryHeight: CGFloat = density >= .regular ? 132 : 112
+        // Резерв под раздел будущего дня: заголовок + одна запись.
+        let nextDayReserve = state.nextDays.isEmpty ? 0 : (density.rowHeight + 28)
+
+        var budget = size.height - primaryHeight - nextDayReserve - 60
+        var rows = 0
+        while rows < available {
+            let cost = density.rowHeight + (rows > 0 ? density.rowSpacing : 0)
+            if budget < cost { break }
+            budget -= cost
+            rows += 1
+        }
+        return rows
+    }
+
+    /// Сколько записей будущего дня влезает в оставшееся место.
+    ///
+    /// Возвращает nil, если места не хватает даже на одну полноценную запись:
+    /// в этом случае раздел не выводится вовсе (ТЗ п. 6.8).
+    private func nextDayRows(
+        _ day: WidgetDay,
+        density: WidgetDensity,
+        size: CGSize,
+        typography: WidgetTypography
+    ) -> Int? {
+        let primaryHeight: CGFloat = density >= .regular ? 132 : 112
+        // Заголовок + разделители + отступы раздела.
+        let sectionChrome: CGFloat = 56
+        let usedByUpcoming = CGFloat(state.upcomingLessons.count) * density.rowHeight
+
+        var budget = size.height - primaryHeight - sectionChrome - usedByUpcoming - 28
+        guard budget >= density.rowHeight else { return nil }
+
+        var rows = 0
+        for _ in day.lessons {
+            if budget < density.rowHeight { break }
+            budget -= density.rowHeight
+            rows += 1
+        }
+        return rows > 0 ? rows : nil
     }
 }
 
-// MARK: - Extra Large Portrait: информационная панель
+// MARK: - Extra Large Portrait: гибридная панель (ТЗ п. 7)
 //
-// Назначение (ТЗ п. 11): самостоятельный интерфейс из трёх смысловых зон, а не
-// масштабированный Large. Зоны: A — главная пара, B — остаток выбранного дня,
-// C — ближайший следующий учебный день.
+// Три смысловые зоны в фиксированном порядке: активная пара, остаток
+// выбранного дня, следующие учебные дни. Высота секций зависит от данных
+// (ТЗ п. 7.6), а не от фиксированных пропорций: если зона B пуста, её место
+// занимает зона C.
 //
-// Пропорции зон определяются содержимым (ТЗ п. 11.3): если занятий в дне
-// больше нет, зона B не рисуется вовсе, а место отдаётся зоне C. Пустые блоки
-// и фиксированные высоты запрещены.
+// Примечание по доступности API: `systemExtraLargePortrait` в SDK iOS
+// объявлен как `@available(iOS, unavailable)` — на iPhone такого семейства
+// нет. Композиция реализована и используется для iPad-размера
+// `systemExtraLarge`; на iPhone виджет её не покажет, но логика готова.
 
 struct ExtraLargeScheduleWidgetView: View {
     let state: WidgetPresentationState
@@ -129,210 +295,266 @@ struct ExtraLargeScheduleWidgetView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let theme = theme(for: geo.size.height)
-            // ТЗ п. 11.6: iPad (`systemExtraLarge`) — горизонтальная компоновка,
-            // вертикальная панель — для узкого и высокого контейнера. Признак
-            // берётся по фактическому соотношению сторон, а не по семейству:
-            // один и тот же размер на разных экранах разный (ТЗ п. 25).
+            let density = WidgetDensity.forHeight(geo.size.height)
+            let typography = WidgetTypography(density: density)
             let isLandscape = geo.size.width > geo.size.height * 1.15
             Group {
                 if isLandscape {
-                    landscapeContent(theme: theme, width: geo.size.width)
+                    landscape(density: density, typography: typography, size: geo.size)
                 } else {
-                    content(theme: theme, height: geo.size.height)
+                    portrait(density: density, typography: typography, size: geo.size)
                 }
             }
             .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
     }
 
-    // MARK: Горизонтальная панель (iPad)
+    // MARK: Вертикальная панель
 
-    /// Три колонки: главная пара — остаток дня — следующий учебный день.
-    /// Колонки, для которых нет данных, не рисуются (ТЗ п. 11.2, 11.3).
     @ViewBuilder
-    private func landscapeContent(theme: WidgetTheme, width: CGFloat) -> some View {
+    private func portrait(density: WidgetDensity, typography: WidgetTypography, size: CGSize) -> some View {
         if let lesson = state.primaryLesson, let status = state.primaryStatus {
-            HStack(alignment: .top, spacing: theme.blockSpacing * 1.5) {
-                zoneA(lesson: lesson, status: status, theme: theme)
-                    // Главная зона получает половину ширины — она доминирует.
-                    .frame(width: width * 0.42, alignment: .topLeading)
+            VStack(alignment: .leading, spacing: 0) {
+                zoneA(lesson: lesson, status: status, density: density, typography: typography)
 
+                // Зона B — остаток выбранного дня. Не рисуется, если пуста.
                 if !state.upcomingLessons.isEmpty {
-                    VStack(alignment: .leading, spacing: 0) {
-                        WidgetDivider(palette: palette).frame(width: 1, height: .infinity)
-                    }
-                    zoneB(theme: theme, height: 320)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    sectionSeparator()
+                    zoneB(density: density, typography: typography, size: size)
                 }
 
-                if !state.nextStudyDayLessons.isEmpty,
-                   let label = state.nextStudyDay.longLabel ?? state.nextStudyDay.label {
-                    VStack(alignment: .leading, spacing: 0) {
-                        WidgetDivider(palette: palette).frame(width: 1, height: .infinity)
-                    }
-                    zoneC(label: label, theme: theme, height: 320)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                // Зона C — следующие учебные дни: до двух, каждый со своим
+                // заголовком (ТЗ п. 7.5).
+                if !state.nextDays.isEmpty {
+                    sectionSeparator()
+                    zoneC(density: density, typography: typography, size: size)
                 }
+
+                Spacer(minLength: 0)
             }
-            .padding(theme.padding)
         } else {
             WidgetEmptyStateView(
                 reason: state.emptyReason,
                 targetTitle: state.targetTitle,
-                theme: theme,
                 palette: palette
             )
-            .padding(theme.padding)
         }
     }
 
-    @ViewBuilder
-    private func content(theme: WidgetTheme, height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: theme.blockSpacing) {
-            if let lesson = state.primaryLesson, let status = state.primaryStatus {
-                // Зона A — главная пара.
-                zoneA(lesson: lesson, status: status, theme: theme)
+    // MARK: Горизонтальная панель (iPad, ТЗ п. 1.2)
 
-                // Зона B — остаток выбранного дня. Не рисуется, если пуста.
+    /// Три колонки: активная пара — остаток дня — следующий учебный день.
+    /// Колонки без данных не рисуются.
+    @ViewBuilder
+    private func landscape(density: WidgetDensity, typography: WidgetTypography, size: CGSize) -> some View {
+        if let lesson = state.primaryLesson, let status = state.primaryStatus {
+            HStack(alignment: .top, spacing: Space.s12) {
+                // Активная пара доминирует: ей отдаётся 42% ширины.
+                zoneA(lesson: lesson, status: status, density: density, typography: typography)
+                    .frame(width: size.width * 0.42, alignment: .topLeading)
+
                 if !state.upcomingLessons.isEmpty {
-                    WidgetDivider(palette: palette)
-                    zoneB(theme: theme, height: height)
+                    columnSeparator()
+                    zoneB(density: density, typography: typography, size: size)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
 
-                // Зона C — ближайший следующий учебный день. Здесь место есть, поэтому
-// подпись полная: «ЗАВТРА · ЧЕТВЕРГ» или «ПТ, 23 ОКТ» (ТЗ п. 11.1).
-                if !state.nextStudyDayLessons.isEmpty,
-                   let label = state.nextStudyDay.longLabel ?? state.nextStudyDay.label {
-                    WidgetDivider(palette: palette)
-                    zoneC(label: label, theme: theme, height: height)
+                if let nextDay = state.nextDays.first {
+                    columnSeparator()
+                    VStack(alignment: .leading, spacing: density.rowSpacing) {
+                        WidgetSectionTitle(
+                            text: nextDay.label,
+                            palette: palette,
+                            size: typography.caption,
+                            isDayHeader: true
+                        )
+                        ForEach(Array(nextDay.lessons.prefix(3).enumerated()), id: \.element.id) { index, item in
+                            if index > 0 { Spacer().frame(height: Space.s4) }
+                            UpcomingLessonRow(
+                                lesson: item,
+                                palette: palette,
+                                density: density,
+                                typography: typography
+                            )
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-            } else {
-                WidgetEmptyStateView(
-                    reason: state.emptyReason,
-                    targetTitle: state.targetTitle,
-                    theme: theme,
-                    palette: palette
-                )
             }
-
-            Spacer(minLength: 0)
+        } else {
+            WidgetEmptyStateView(
+                reason: state.emptyReason,
+                targetTitle: state.targetTitle,
+                palette: palette
+            )
         }
-        .padding(theme.padding)
     }
 
-    // MARK: Зона A
+    // MARK: Зона A — активная пара (ТЗ п. 7.3)
 
     @ViewBuilder
-    private func zoneA(lesson: WLesson, status: LessonStatus, theme: WidgetTheme) -> some View {
-        VStack(alignment: .leading, spacing: theme.lineSpacing) {
-            WidgetDayHeader(
-                text: state.primaryDayLongLabel ?? state.primaryDayLabel ?? "СЕГОДНЯ",
-                theme: theme,
+    private func zoneA(
+        lesson: WLesson,
+        status: LessonStatus,
+        density: WidgetDensity,
+        typography: WidgetTypography
+    ) -> some View {
+        VStack(alignment: .leading, spacing: density.lineSpacing) {
+            // Заголовок даты: «СРЕДА · 21 ОКТЯБРЯ» или «СЕГОДНЯ · СРЕДА».
+            WidgetSectionTitle(
+                text: state.headerTitle,
                 palette: palette,
-                trailing: state.freshness.isStale ? "данные устарели" : nil
+                size: typography.caption,
+                isDayHeader: true
             )
 
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                LessonStatusView(status: status, theme: theme, palette: palette)
-                Spacer(minLength: 0)
-                LessonTypeBadge(lesson: lesson, theme: theme, palette: palette)
+            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
+                LessonStatusLabel(
+                    status: status,
+                    palette: palette,
+                    size: typography.status(12...13),
+                    allowCountdown: true
+                )
+                Spacer(minLength: Space.s4)
+                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
             }
+            .padding(.top, Space.s4)
 
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                // Крупная аудитория доминирует (ТЗ п. 11.1).
-                ClassroomView(lesson: lesson, theme: theme)
-                Spacer(minLength: 8)
-                LessonTimeView(
-                    lesson: lesson, theme: theme, status: status, palette: palette
+            ClassroomLabel(
+                lesson: lesson,
+                palette: palette,
+                size: typography.room(27...34),
+                weight: .bold
+            )
+            .padding(.top, Space.s4)
+
+            LessonTimeLabel(
+                lesson: lesson,
+                palette: palette,
+                size: typography.primaryTime(18...22),
+                weight: .semibold
+            )
+
+            Text(lesson.subject)
+                .font(.system(size: typography.subject(14...16), weight: .medium))
+                .foregroundColor(palette.subjectText)
+                .lineLimit(density.subjectLines + 1)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, Space.s4)
+
+            if density.showsTeacher, let _ = lesson.teacherDisplay {
+                TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
+            }
+            if density.showsGroupIndicator, lesson.isShared {
+                MultiGroupIndicator(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.teacher,
+                    showWord: true
                 )
             }
-
-            // Полное название: в Extra Large места достаточно, чтобы показать
-            // четыре строки даже для самых длинных дисциплин (ТЗ п. 15).
-            SubjectTitleView(lesson: lesson, theme: theme, lines: 4, weight: .bold)
-
-            if !lesson.teacher.isEmpty {
-                // Преподаватель — P4: в панели место есть, поэтому показываем.
-                Text(lesson.teacher)
-                    .font(.system(size: theme.sectionSize))
-                    .foregroundColor(palette.muted)
-                    .lineLimit(1)
-            }
         }
     }
 
-    // MARK: Зона B
+    // MARK: Зона B — остаток дня (ТЗ п. 7.4)
 
     @ViewBuilder
-    private func zoneB(theme: WidgetTheme, height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: theme.rowSpacing) {
-            WidgetSectionHeader(
-                text: state.primaryDayContext == .today ? "ДАЛЕЕ СЕГОДНЯ" : "ДАЛЕЕ",
-                theme: theme,
-                palette: palette
+    private func zoneB(density: WidgetDensity, typography: WidgetTypography, size: CGSize) -> some View {
+        VStack(alignment: .leading, spacing: density.rowSpacing) {
+            WidgetSectionTitle(
+                text: state.primaryDay.isToday ? "ДАЛЕЕ СЕГОДНЯ" : "ДАЛЕЕ",
+                palette: palette,
+                size: typography.caption
             )
-            ForEach(Array(state.upcomingLessons.prefix(rowsForZoneB(height: height, theme: theme))), id: \.id) { item in
-                CompactLessonRow(lesson: item, theme: theme, palette: palette)
+
+            let rows = zoneBRows(density: density, size: size)
+            ForEach(Array(state.upcomingLessons.prefix(rows).enumerated()), id: \.element.id) { index, item in
+                if index > 0 {
+                    Spacer().frame(height: Space.s4)
+                }
+                UpcomingLessonRow(
+                    lesson: item,
+                    palette: palette,
+                    density: density,
+                    typography: typography,
+                    showsType: density >= .regular
+                )
             }
         }
     }
 
-    // MARK: Зона C
+    // MARK: Зона C — следующие учебные дни (ТЗ п. 7.5)
 
     @ViewBuilder
-    private func zoneC(label: String, theme: WidgetTheme, height: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: theme.rowSpacing) {
-            WidgetSectionHeader(
-                text: label,
-                theme: theme,
-                palette: palette
-            )
-            // ТЗ п. 11.1: 1–3 занятия следующего дня, если позволяет место.
-            ForEach(Array(state.nextStudyDayLessons.prefix(rowsForZoneC(height: height, theme: theme))), id: \.id) { item in
-                CompactLessonRow(lesson: item, theme: theme, palette: palette)
+    private func zoneC(density: WidgetDensity, typography: WidgetTypography, size: CGSize) -> some View {
+        VStack(alignment: .leading, spacing: density.rowSpacing) {
+            ForEach(Array(state.nextDays.prefix(2).enumerated()), id: \.element.date) { dayIndex, day in
+                if dayIndex > 0 {
+                    Spacer().frame(height: Space.s6)
+                }
+                // Каждый день обязан иметь собственный заголовок: смешивать
+                // занятия разных дней под одной подписью нельзя (ТЗ п. 7.5).
+                WidgetSectionTitle(
+                    text: day.label,
+                    palette: palette,
+                    size: typography.caption,
+                    isDayHeader: true
+                )
+                let limit = dayIndex == 0 ? 3 : 1
+                ForEach(Array(day.lessons.prefix(limit).enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        Spacer().frame(height: Space.s4)
+                    }
+                    UpcomingLessonRow(
+                        lesson: item,
+                        palette: palette,
+                        density: density,
+                        typography: typography
+                    )
+                }
             }
         }
     }
 
-    // MARK: Расчёт вместимости
+    // MARK: Расчёты и украшения
 
-    /// Зона B получает оставшееся место после A и (если есть) C.
-    /// Оценка по высоте: зона A ~170pt, заголовок зоны C ~20pt,
-    /// строка списка ~38pt. Зона C резервирует до трёх строк, только если
-    /// будущий день вообще известен, — иначе всё место отдаётся зоне B.
-    private func rowsForZoneB(height: CGFloat, theme: WidgetTheme) -> Int {
-        let rowHeight: CGFloat = theme.density == .dense ? 32 : 38
-        var reserved: CGFloat = theme.padding * 2 + 170 + 20 * 2 + theme.blockSpacing * 3
-        if !state.nextStudyDayLessons.isEmpty {
-            reserved += min(CGFloat(state.nextStudyDayLessons.count), 3) * rowHeight + 20
+    /// Сколько записей остатка дня влезает в вертикальной панели.
+    ///
+    /// ТЗ п. 7.6: приоритет — активная пара, затем остаток дня, затем
+    /// будущие дни. Поэтому будущим дням резервируется минимум, а остаток
+    /// отдаётся зоне B.
+    private func zoneBRows(density: WidgetDensity, size: CGSize) -> Int {
+        let available = state.upcomingLessons.count
+        guard available > 0 else { return 0 }
+
+        let zoneAHeight: CGFloat = density >= .regular ? 190 : 165
+        let zoneCHeight: CGFloat = state.nextDays.isEmpty ? 0 : 140
+        var budget = size.height - zoneAHeight - zoneCHeight - 40
+
+        var rows = 0
+        while rows < available {
+            let cost = density.rowHeight + (rows > 0 ? Space.s4 : 0)
+            if budget < cost { break }
+            budget -= cost
+            rows += 1
         }
-        let available = height - reserved
-        let fits = Int(available / rowHeight)
-        return max(1, min(fits, state.upcomingLessons.count))
+        return rows
     }
 
-    private func rowsForZoneC(height: CGFloat, theme: WidgetTheme) -> Int {
-        let rowHeight: CGFloat = theme.density == .dense ? 32 : 38
-        // Не даём зоне C съесть место у текущего дня: максимум три строки.
-        let fits = Int((height * 0.25) / rowHeight)
-        return max(1, min(fits, 3))
+    @ViewBuilder
+    private func sectionSeparator() -> some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: Space.s10)
+            WidgetDivider(palette: palette)
+            Spacer().frame(height: Space.s10)
+        }
     }
 
-    private func theme(for height: CGFloat) -> WidgetTheme {
-        let subject = state.primaryLesson?.subject ?? ""
-        return WidgetTheme(
-            density: WidgetDensity.forSubject(subject, in: height),
-            availableHeight: height
-        )
-    }
-}
-
-// MARK: - Сегодня/завтра в подписи
-
-extension DataFreshness {
-    var isStale: Bool {
-        if case .stale = self { return true }
-        return false
+    @ViewBuilder
+    private func columnSeparator() -> some View {
+        WidgetDivider(palette: palette)
+            .frame(width: 1)
+            .frame(maxHeight: .infinity)
     }
 }

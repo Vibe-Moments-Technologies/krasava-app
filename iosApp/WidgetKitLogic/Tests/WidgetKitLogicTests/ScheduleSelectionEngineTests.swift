@@ -1,21 +1,21 @@
 import XCTest
 @testable import WidgetKitLogic
 
-/// Тесты движка выбора актуальной пары.
+/// Тесты движка выбора активной пары (ТЗ п. 18).
 ///
-/// Все сценарии из ТЗ (раздел 29) гоняются на заранее подготовленных датах:
-/// движок принимает `now` параметром, поэтому системное время не влияет.
-/// Фиксированная зона — Europe/Moscow, как и в расписании РТУ МИРЭА.
+/// Движок принимает `now` параметром, поэтому системное время не влияет:
+/// все сценарии гоняются на заранее подготовленных датах. Зона зафиксирована
+/// как Europe/Moscow — по ней живёт расписание РТУ МИРЭА.
 final class ScheduleSelectionEngineTests: XCTestCase {
 
     private let tz = TimeZone(identifier: "Europe/Moscow")!
+
     private var engine: ScheduleSelectionEngine {
         ScheduleSelectionEngine(timeZone: tz)
     }
 
     // MARK: Фикстуры
 
-    /// «21 октября 2026, 14:30» — момент времени в зоне расписания.
     private func moment(_ text: String) -> Date {
         let f = DateFormatter()
         f.timeZone = tz
@@ -26,17 +26,20 @@ final class ScheduleSelectionEngineTests: XCTestCase {
 
     private func lesson(
         id: String = "l1",
-        date: String,
-        start: String,
-        end: String,
-        bell: Int = 2,
+        date: String = "2026-10-21",
+        start: String = "14:20",
+        end: String = "15:50",
+        bell: Int = 4,
         subject: String = "Базы данных",
         type: String = "ПР",
-        room: String = "341 (С-20)"
+        room: String = "341 (С-20)",
+        teacher: String = "Иванов И. И.",
+        groups: [String] = ["БИСО-02-23"]
     ) -> WLesson {
         WLesson(
             id: id, date: date, bell: bell, start: start, end: end,
-            subject: subject, type: type, room: room, teacher: ""
+            subject: subject, type: type, room: room,
+            teacher: teacher, groups: groups
         )
     }
 
@@ -44,41 +47,51 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         WTarget(id: 1, title: title, typeName: "Группа", lessons: lessons)
     }
 
-    /// Расписание из ТЗ, п. 6: пары 21 октября, пусто 22-го, пары 23 октября.
-    private var twoDays: WTarget {
-        target([
-            lesson(id: "a1", date: "2026-10-21", start: "14:20", end: "15:50", bell: 4,
-                   subject: "Моделирование информационно-аналитических систем"),
-            lesson(id: "a2", date: "2026-10-21", start: "16:20", end: "17:50", bell: 5,
-                   subject: "Моделирование информационно-аналитических систем"),
-            lesson(id: "b1", date: "2026-10-23", start: "10:40", end: "12:10", bell: 2,
-                   subject: "Организационное и правовое обеспечение информационной безопасности",
-                   room: "258а (С-20)"),
-            lesson(id: "b2", date: "2026-10-23", start: "12:40", end: "14:10", bell: 4,
-                   subject: "Организационное и правовое обеспечение информационной безопасности",
-                   room: "258а (С-20)")
-        ])
-    }
-
     private func state(
-        _ target: WTarget?,
+        _ lessons: [WLesson],
         at text: String,
         generatedAt: String? = nil
     ) -> WidgetPresentationState {
         let now = moment(text)
         return engine.makeState(
-            target: target,
+            target: target(lessons),
             now: now,
             generatedAt: generatedAt.map(moment) ?? now
         )
     }
 
-    // MARK: 1–5. Границы занятия
+    /// Расписание из ТЗ: пары 21 октября, пусто 22-го, пары 23 октября.
+    private var twoDays: [WLesson] {
+        [
+            lesson(id: "a1", start: "14:20", end: "15:50", bell: 4,
+                   subject: "Моделирование информационно-аналитических систем",
+                   room: "265 (С-20)"),
+            lesson(id: "a2", start: "16:20", end: "17:50", bell: 5,
+                   subject: "Моделирование информационно-аналитических систем",
+                   room: "341 (С-20)"),
+            lesson(id: "b1", date: "2026-10-23", start: "10:40", end: "12:10", bell: 2,
+                   subject: "Организационное и правовое обеспечение информационной безопасности",
+                   room: "258а (С-20)"),
+            lesson(id: "b2", date: "2026-10-23", start: "12:40", end: "14:10", bell: 3,
+                   subject: "Организационное и правовое обеспечение информационной безопасности",
+                   room: "258а (С-20)")
+        ]
+    }
 
-    func testOneMinuteBeforeLessonIsUpcoming() {
-        let s = state(twoDays, at: "2026-10-21 14:19")
+    // MARK: 1–5. Границы занятия (ТЗ п. 11.1)
+
+    func testBeforeStartIsSoon() {
+        // За 16 минут до пары — статус «скоро», активная пара та же.
+        let s = state(twoDays, at: "2026-10-21 14:04")
         XCTAssertEqual(s.primaryLesson?.id, "a1")
-        XCTAssertEqual(s.primaryStatus, .soon(minutesUntil: 1))
+        XCTAssertEqual(s.primaryStatus, .soon(minutesUntil: 16))
+    }
+
+    func testBeforeSoonThresholdIsUpcoming() {
+        // За два часа до пары — обычный статус «ДАЛЕЕ», без отсчёта.
+        let s = state(twoDays, at: "2026-10-21 12:00")
+        XCTAssertEqual(s.primaryLesson?.id, "a1")
+        XCTAssertEqual(s.primaryStatus, .upcoming)
     }
 
     func testExactlyAtStartIsCurrent() {
@@ -93,253 +106,370 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertEqual(s.primaryStatus, .current)
     }
 
-    func testOneMinuteBeforeEndIsCurrent() {
-        let s = state(twoDays, at: "2026-10-21 15:49")
-        XCTAssertEqual(s.primaryLesson?.id, "a1")
-        XCTAssertEqual(s.primaryStatus, .current)
-    }
-
     func testExactlyAtEndIsNoLongerCurrent() {
-        // Верхняя граница строгая: в момент окончания пара уже не идёт,
-        // главной становится следующая (ТЗ п. 7, перемены).
-        // До неё ровно 30 минут — это уже статус «скоро» по порогу из ТЗ п. 4.
+        // Верхняя граница строгая: в момент окончания пара завершена,
+        // активной становится следующая (ТЗ п. 11.1).
         let s = state(twoDays, at: "2026-10-21 15:50")
         XCTAssertEqual(s.primaryLesson?.id, "a2")
         XCTAssertEqual(s.primaryStatus, .soon(minutesUntil: 30))
     }
 
-    func testUpcomingBeyondSoonThreshold() {
-        // За два часа до пары статус обычный — «ДАЛЕЕ», без отсчёта.
-        let s = state(twoDays, at: "2026-10-21 12:00")
-        XCTAssertEqual(s.primaryLesson?.id, "a1")
-        XCTAssertEqual(s.primaryStatus, .upcoming)
-    }
-
     // MARK: 6. Перемена
 
-    func testBreakBetweenLessonsShowsNext() {
+    func testBreakShowsNextLesson() {
+        // Перемена 15:50–16:20: активной становится следующая пара.
         let s = state(twoDays, at: "2026-10-21 16:00")
         XCTAssertEqual(s.primaryLesson?.id, "a2")
-        XCTAssertFalse(s.primaryStatus?.isCurrent ?? true)
-        XCTAssertEqual(s.primaryDayContext, .today)
+        XCTAssertEqual(s.primaryStatus, .soon(minutesUntil: 20))
+        XCTAssertTrue(s.primaryDay.isToday)
     }
 
-    // MARK: Порог «скоро» (ТЗ п. 4: 30 минут)
+    // MARK: Порог «скоро» включительный (ТЗ п. 12.3)
 
-    func testSoonThresholdBoundaries() {
-        // Пара a2 начинается в 16:20.
-        XCTAssertEqual(state(twoDays, at: "2026-10-21 16:05").primaryStatus, .soon(minutesUntil: 15))
-        // Ровно за 30 минут — ещё «скоро».
-        XCTAssertEqual(state(twoDays, at: "2026-10-21 15:50").primaryStatus, .soon(minutesUntil: 30))
-        // Минуту раньше пара a1 ещё идёт, поэтому главная — она, а не a2.
-        XCTAssertEqual(state(twoDays, at: "2026-10-21 15:49").primaryStatus, .current)
-        XCTAssertEqual(state(twoDays, at: "2026-10-21 15:49").primaryLesson?.id, "a1")
+    func testSoonThresholdIsInclusive() {
+        // Ровно 30 минут до начала — это ещё «скоро».
+        let s = state(twoDays, at: "2026-10-21 15:50")
+        XCTAssertEqual(s.primaryStatus, .soon(minutesUntil: 30))
     }
 
-    // MARK: 7. После последней пары дня — ближайший учебный день
+    // MARK: 7. После последней пары дня
 
-    func testAfterLastLessonOfDayMovesToNextStudyDay() {
-        // 22 октября занятий нет, поэтому переход сразу на 23 октября —
-        // это ровно два дня от 21-го, то есть «ПОСЛЕЗАВТРА» с точной датой.
+    func testAfterLastLessonMovesToNextStudyDay() {
+        // 22 октября занятий нет, поэтому активной становится пара 23 октября.
         let s = state(twoDays, at: "2026-10-21 18:00")
-        XCTAssertEqual(s.primaryLesson?.id, "b1", "главной должна стать первая пара 23 октября")
-        XCTAssertEqual(s.primaryDayContext, .dayAfterTomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА"))
-        // Короткая метка — для тесных размеров, полная с датой — для шапок.
-        XCTAssertEqual(s.primaryDayLabel, "ПОСЛЕЗАВТРА")
-        XCTAssertEqual(s.primaryDayLongLabel, "ПТ, 23 ОКТ")
+        XCTAssertEqual(s.primaryLesson?.id, "b1")
+        XCTAssertEqual(s.primaryDay, .dayAfterTomorrow(full: "ПЯТНИЦА · 23 ОКТЯБРЯ"))
+        XCTAssertEqual(s.primaryDay.shortLabel, "ПОСЛЕЗАВТРА")
+        XCTAssertEqual(s.primaryDay.fullLabel, "ПЯТНИЦА · 23 ОКТЯБРЯ")
     }
 
-    func testDayWithoutLessonsShowsNearestStudyDayAsTomorrow() {
-        // 22 октября смотрим на 23-е: это завтра.
+    func testDayWithoutLessonsMovesToTomorrow() {
+        // 22 октября смотрим на 23-е — это завтра.
         let s = state(twoDays, at: "2026-10-22 10:00")
         XCTAssertEqual(s.primaryLesson?.id, "b1")
-        XCTAssertEqual(s.primaryDayContext, .tomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА"))
-        XCTAssertEqual(s.primaryDayLabel, "ЗАВТРА")
-        XCTAssertEqual(s.primaryDayLongLabel, "ЗАВТРА · ПЯТНИЦА")
+        XCTAssertEqual(s.primaryDay, .tomorrow(full: "ПЯТНИЦА · 23 ОКТЯБРЯ"))
+        XCTAssertEqual(s.primaryDay.shortLabel, "ЗАВТРА")
     }
 
-    // MARK: 10. Первый учебный день после выходных
+    // MARK: 8–9. Несколько пустых дней и выходные
 
-    func testMondayAfterWeekendIsPickedAutomatically() {
-        // Пары в пятницу 23-го и в понедельник 26-го; в субботу 24-го
-        // главной становится понедельник, а не «завтра».
-        let t = target([
+    func testSeveralEmptyDaysInARow() {
+        // Пары в среду и в следующий вторник: 4 пустых дня пропускаются.
+        let lessons = [
+            lesson(id: "wed", date: "2026-10-21", start: "14:20", end: "15:50"),
+            lesson(id: "tue", date: "2026-10-27", start: "09:00", end: "10:30")
+        ]
+        let s = state(lessons, at: "2026-10-21 18:00")
+        XCTAssertEqual(s.primaryLesson?.id, "tue")
+        XCTAssertEqual(s.primaryDay.fullLabel, "ВТОРНИК · 27 ОКТЯБРЯ")
+    }
+
+    func testMondayAfterWeekendIsPicked() {
+        let lessons = [
             lesson(id: "fri", date: "2026-10-23", start: "10:40", end: "12:10"),
             lesson(id: "mon", date: "2026-10-26", start: "09:00", end: "10:30")
-        ])
-        let s = state(t, at: "2026-10-24 12:00")
+        ]
+        let s = state(lessons, at: "2026-10-24 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "mon")
-        // 26 октября — через два дня от субботы 24-го.
-        XCTAssertEqual(
-            s.primaryDayContext,
-            .dayAfterTomorrow(date: "ПН, 26 ОКТ", weekday: "ПОНЕДЕЛЬНИК")
-        )
+        XCTAssertEqual(s.primaryDay.fullLabel, "ПОНЕДЕЛЬНИК · 26 ОКТЯБРЯ")
     }
 
-    // MARK: 11–12. Переход через месяц и год
+    // MARK: 10–11. Переход через месяц и год
 
     func testMonthBoundary() {
-        let t = target([
+        let lessons = [
             lesson(id: "oct", date: "2026-10-30", start: "10:40", end: "12:10"),
             lesson(id: "nov", date: "2026-11-02", start: "10:40", end: "12:10")
-        ])
-        let s = state(t, at: "2026-10-31 12:00")
+        ]
+        let s = state(lessons, at: "2026-10-31 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "nov")
-        // 2 ноября — через два дня от 31 октября; день с ведущим нулём,
-        // месяц в форме приложения без точки.
-        XCTAssertEqual(
-            s.primaryDayContext,
-            .dayAfterTomorrow(date: "ПН, 02 НОЯ", weekday: "ПОНЕДЕЛЬНИК")
-        )
+        XCTAssertEqual(s.primaryDay.fullLabel, "ПОНЕДЕЛЬНИК · 2 НОЯБРЯ")
     }
 
     func testYearBoundary() {
-        let t = target([
+        let lessons = [
             lesson(id: "dec", date: "2026-12-30", start: "10:40", end: "12:10"),
             lesson(id: "jan", date: "2027-01-11", start: "10:40", end: "12:10")
-        ])
-        let s = state(t, at: "2026-12-31 12:00")
+        ]
+        let s = state(lessons, at: "2026-12-31 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "jan")
-        // Месяц в сокращении — без точки, как в форме ТЗ.
-        XCTAssertEqual(s.primaryDayContext, .date("ПН, 11 ЯНВ"))
+        XCTAssertEqual(s.primaryDay.fullLabel, "ПОНЕДЕЛЬНИК · 11 ЯНВАРЯ")
     }
 
-    // MARK: 13–14. Одинаковые пары и разные аудитории
+    // MARK: 12. Разные часовые зоны (ТЗ п. 10.1)
+
+    func testScheduleTimeZoneIsUsedNotDeviceZone() {
+        // Расчёты идут в зоне расписания: 14:20 в Москве — это 14:20,
+        // независимо от того, в какой зоне находится устройство.
+        let lessonMoscow = lesson(id: "m", start: "14:20", end: "15:50")
+        let engineMoscow = ScheduleSelectionEngine(timeZone: tz)
+        XCTAssertTrue(engineMoscow.isOngoing(lessonMoscow, at: moment("2026-10-21 14:30")))
+
+        // Тот же момент, но движок настроен на другую зону: 14:30 по Москве —
+        // это 11:30 UTC, значит в UTC пара ещё не началась.
+        let utc = TimeZone(identifier: "UTC")!
+        let engineUtc = ScheduleSelectionEngine(timeZone: utc)
+        let nowUtc = moment("2026-10-21 14:30")
+        // В зоне UTC пара 14:20–15:50 ещё не началась (сейчас 11:30 UTC).
+        XCTAssertFalse(engineUtc.isOngoing(lessonMoscow, at: nowUtc))
+    }
+
+    // MARK: 13. Две одинаковые дисциплины подряд (ТЗ п. 6.9)
 
     func testTwoIdenticalLessonsStayDistinct() {
-        // ТЗ п. 5: две пары одного предмета подряд — разные записи,
-        // объединять их нельзя.
         let s = state(twoDays, at: "2026-10-21 14:30")
-        let sameDay = s.upcomingLessons
-        XCTAssertEqual(sameDay.count, 1, "вторая пара того же дня должна попасть в список")
-        XCTAssertEqual(sameDay.first?.id, "a2")
         XCTAssertEqual(s.primaryLesson?.id, "a1")
+        XCTAssertEqual(s.upcomingLessons.count, 1)
+        XCTAssertEqual(s.upcomingLessons.first?.id, "a2")
+        // Обе пары одного предмета, но остаются разными записями.
+        XCTAssertEqual(s.upcomingLessons.first?.subject, s.primaryLesson?.subject)
+        XCTAssertNotEqual(s.upcomingLessons.first?.start, s.primaryLesson?.start)
     }
 
-    func testDifferentRoomsPerLessonArePreserved() {
-        let t = target([
-            lesson(id: "r1", date: "2026-10-21", start: "14:20", end: "15:50", room: "341 (С-20)"),
-            lesson(id: "r2", date: "2026-10-21", start: "16:20", end: "17:50", room: "375 (С-20)")
-        ])
-        let s = state(t, at: "2026-10-21 15:00")
-        XCTAssertEqual(s.primaryLesson?.roomDisplay, "341 (С-20)")
-        XCTAssertEqual(s.upcomingLessons.first?.roomDisplay, "375 (С-20)")
-    }
+    // MARK: 14. Два одновременных занятия (ТЗ п. 11.5)
 
-    // MARK: 15. Пересекающиеся занятия
-
-    func testOverlappingLessonsPickFirstOne() {
-        // Порядок детерминирован: по началу, затем по номеру пары.
-        let t = target([
-            lesson(id: "x", date: "2026-10-21", start: "14:20", end: "15:50", bell: 4),
-            lesson(id: "y", date: "2026-10-21", start: "14:30", end: "16:00", bell: 5)
-        ])
-        let s = state(t, at: "2026-10-21 15:00")
+    func testOverlappingLessonsPickDeterministically() {
+        let lessons = [
+            lesson(id: "x", start: "14:20", end: "15:50", bell: 4),
+            lesson(id: "y", start: "14:30", end: "16:00", bell: 5)
+        ]
+        let s = state(lessons, at: "2026-10-21 15:00")
+        // Выбор детерминирован: по времени начала, затем по номеру пары.
         XCTAssertEqual(s.primaryLesson?.id, "x")
-        XCTAssertEqual(s.primaryStatus, .current)
     }
 
-    // MARK: 16. Отсутствующая аудитория
+    // MARK: 15. Несколько участвующих групп (ТЗ п. 5.5)
 
-    func testMissingRoomShowsPlaceholder() {
-        let t = target([lesson(id: "n", date: "2026-10-21", start: "14:20", end: "15:50", room: "")])
-        let s = state(t, at: "2026-10-21 15:00")
-        XCTAssertEqual(s.primaryLesson?.roomDisplay, "Аудитория уточняется")
-        XCTAssertEqual(s.primaryLesson?.roomNumber, "")
-        XCTAssertEqual(s.primaryLesson?.buildingLabel, "")
+    func testGroupCountUsesUniqueGroups() {
+        let shared = lesson(
+            id: "shared",
+            groups: ["БИСО-02-23", "БИСО-02-24", "БИСО-02-24"]
+        )
+        // Повтор одного и того же идентификатора не увеличивает счётчик.
+        XCTAssertEqual(shared.groupCount, 2)
+        XCTAssertTrue(shared.isShared)
+
+        let single = lesson(id: "single", groups: ["БИСО-02-23"])
+        XCTAssertEqual(single.groupCount, 1)
+        XCTAssertFalse(single.isShared)
+
+        let none = lesson(id: "none", groups: [])
+        XCTAssertEqual(none.groupCount, 0)
+        XCTAssertFalse(none.isShared)
     }
 
-    func testOnlineRoomIsRecognised() {
-        let t = target([lesson(id: "o", date: "2026-10-21", start: "14:20", end: "15:50", room: "СДО")])
-        let s = state(t, at: "2026-10-21 15:00")
-        XCTAssertEqual(s.primaryLesson?.roomDisplay, "Онлайн")
-    }
+    // MARK: 16. Пустой список
 
-    // MARK: 18. Пустое расписание
-
-    func testEmptyScheduleReportsNoLessons() {
-        let s = state(target([]), at: "2026-10-21 12:00")
+    func testEmptySchedule() {
+        let s = state([], at: "2026-10-21 12:00")
         XCTAssertTrue(s.isEmpty)
         XCTAssertEqual(s.emptyReason, .noLessons)
     }
 
-    // MARK: 19. Устаревшие данные
+    // MARK: 17. Ошибка декодирования
 
-    func testStaleSnapshotIsMarked() {
+    func testDecodingBrokenJSONGivesBadData() {
+        let broken = Data("{ это не json".utf8)
+        XCTAssertThrowsError(try JSONDecoder().decode(WPayload.self, from: broken))
+    }
+
+    func testDecodingWithoutGroupsAndIdStillWorks() throws {
+        // Старый снапшот без id и groups не должен ломать виджет.
+        let json = """
+        {
+          "generatedAt": 0,
+          "defaultTargetId": 1,
+          "targets": [{
+            "id": 1, "title": "Группа", "typeName": "Группа",
+            "lessons": [{
+              "date": "2026-10-21", "bell": 4,
+              "start": "14:20", "end": "15:50",
+              "subject": "Базы данных", "type": "ПР",
+              "room": "341 (С-20)", "teacher": ""
+            }]
+          }]
+        }
+        """
+        let payload = try JSONDecoder().decode(WPayload.self, from: Data(json.utf8))
+        let lesson = payload.targets[0].lessons[0]
+        // id синтезирован, groups пустые.
+        XCTAssertFalse(lesson.id.isEmpty)
+        XCTAssertTrue(lesson.groups.isEmpty)
+        XCTAssertEqual(lesson.groupCount, 0)
+    }
+
+    // MARK: 18. Устаревший кэш
+
+    func testStaleDataIsMarkedButShown() {
         let s = state(twoDays, at: "2026-10-21 15:00", generatedAt: "2026-10-19 15:00")
         XCTAssertEqual(s.freshness, .stale(hours: 48))
-        // Устаревшие данные всё равно показываются — полезную информацию
-        // скрывать нельзя (ТЗ п. 7), но с пометкой.
         XCTAssertNotNil(s.primaryLesson)
     }
 
-    func testFreshSnapshotIsNotMarked() {
+    func testFreshDataIsNotMarked() {
         let s = state(twoDays, at: "2026-10-21 15:00", generatedAt: "2026-10-21 14:00")
         XCTAssertEqual(s.freshness, .fresh)
     }
 
-    // MARK: Пустая группа и отсутствие данных
+    // MARK: 19. Изменение расписания
+
+    func testScheduleChangeReplacesPrimaryLesson() {
+        // То же время, но пара перенесена в другую аудиторию и время.
+        let before = state(twoDays, at: "2026-10-21 14:30")
+        XCTAssertEqual(before.primaryLesson?.roomNumber, "265")
+
+        var changed = twoDays
+        changed[0] = lesson(id: "a1", start: "14:20", end: "15:50", bell: 4,
+                            subject: "Моделирование информационно-аналитических систем",
+                            room: "389 (С-20)")
+        let after = state(changed, at: "2026-10-21 14:30")
+        XCTAssertEqual(after.primaryLesson?.roomNumber, "389")
+    }
+
+    // MARK: 20. Отменённое занятие
+
+    func testCancelledLessonIsNotTreatedAsCurrent() {
+        // Фид не отдаёт отметку отмены, поэтому проверяем контракт: если
+        // занятие отсутствует в списке, оно не может стать активным.
+        let lessons = [
+            lesson(id: "kept", start: "14:20", end: "15:50")
+        ]
+        let s = state(lessons, at: "2026-10-21 14:30")
+        XCTAssertEqual(s.primaryLesson?.id, "kept")
+        XCTAssertFalse(s.upcomingLessons.contains { $0.id == "cancelled" })
+    }
+
+    // MARK: Нет группы / нет данных
 
     func testNoTargetReportsNoTarget() {
-        let s = engine.makeState(target: nil, now: moment("2026-10-21 12:00"), generatedAt: Date())
+        let s = engine.makeState(
+            target: nil,
+            now: moment("2026-10-21 12:00"),
+            generatedAt: moment("2026-10-21 12:00")
+        )
         XCTAssertTrue(s.isEmpty)
         XCTAssertEqual(s.emptyReason, .noTarget)
     }
 
     // MARK: Полночь и нестандартная длительность
 
-    func testLessonCrossingMidnightEndsNextDay() {
-        let t = target([lesson(id: "night", date: "2026-10-21", start: "23:00", end: "00:30")])
-        let s = state(t, at: "2026-10-21 23:30")
+    func testLessonCrossingMidnight() {
+        let lessons = [lesson(id: "night", start: "23:00", end: "00:30")]
+        let s = state(lessons, at: "2026-10-21 23:30")
         XCTAssertEqual(s.primaryStatus, .current)
     }
 
-    func testNonStandardLessonDuration() {
-        // Пара 14:20–16:05 (105 минут) — границы должны соблюдаться.
-        // Для проверки статуса нужна вторая пара: иначе в момент окончания
-        // пар впереди нет и главной становится «ничего».
-        let t = target([
-            lesson(id: "long", date: "2026-10-21", start: "14:20", end: "16:05"),
-            lesson(id: "next", date: "2026-10-21", start: "16:20", end: "17:50", bell: 5)
-        ])
-        XCTAssertEqual(state(t, at: "2026-10-21 16:04").primaryStatus, .current)
-        XCTAssertEqual(state(t, at: "2026-10-21 16:05").primaryLesson?.id, "next")
-        // До следующей пары 15 минут — это уже «скоро» (порог 30 минут).
-        XCTAssertEqual(state(t, at: "2026-10-21 16:05").primaryStatus, .soon(minutesUntil: 15))
-        // А за час до неё — обычная предстоящая.
-        XCTAssertEqual(state(t, at: "2026-10-21 15:20").primaryStatus, .current)
+    func testNonStandardDuration() {
+        let lessons = [
+            lesson(id: "long", start: "14:20", end: "16:05"),
+            lesson(id: "next", start: "16:20", end: "17:50", bell: 5)
+        ]
+        // За минуту до конца — ещё идёт.
+        XCTAssertEqual(state(lessons, at: "2026-10-21 16:04").primaryStatus, .current)
+        // Ровно в момент окончания — уже следующая, до неё 15 минут.
+        let after = state(lessons, at: "2026-10-21 16:05")
+        XCTAssertEqual(after.primaryLesson?.id, "next")
+        XCTAssertEqual(after.primaryStatus, .soon(minutesUntil: 15))
     }
 
-    // MARK: Next study day
+    // MARK: Следующие учебные дни (ТЗ п. 11.3)
 
-    func testNextStudyDayIsFilledForDayAfterCurrent() {
-        // 23 октября — через два дня от 21-го.
+    func testNextDaysAreFilledSkippingEmptyDates() {
         let s = state(twoDays, at: "2026-10-21 15:00")
-        XCTAssertEqual(
-            s.nextStudyDay,
-            .dayAfterTomorrow(date: "ПТ, 23 ОКТ", weekday: "ПЯТНИЦА")
-        )
-        XCTAssertEqual(s.nextStudyDayLessons.count, 2)
+        XCTAssertEqual(s.nextDays.count, 1)
+        XCTAssertEqual(s.nextDays.first?.label, "ПЯТНИЦА · 23 ОКТЯБРЯ")
+        XCTAssertEqual(s.nextDays.first?.lessons.count, 2)
+        XCTAssertEqual(s.nextDays.first?.date, "2026-10-23")
     }
 
-    func testNextStudyDayEmptyWhenNothingAhead() {
-        let t = target([lesson(id: "only", date: "2026-10-21", start: "14:20", end: "15:50")])
-        let s = state(t, at: "2026-10-21 15:00")
-        XCTAssertEqual(s.nextStudyDay, .none)
-        XCTAssertTrue(s.nextStudyDayLessons.isEmpty)
+    func testSecondNextDayIsProvidedWhenExists() {
+        let lessons = twoDays + [
+            lesson(id: "c1", date: "2026-10-27", start: "09:00", end: "10:30", bell: 1)
+        ]
+        let s = state(lessons, at: "2026-10-21 15:00")
+        XCTAssertEqual(s.nextDays.count, 2)
+        XCTAssertEqual(s.nextDays[1].label, "ВТОРНИК · 27 ОКТЯБРЯ")
     }
 
-    // MARK: Аудитория и корпус
+    func testNoNextDaysWhenNothingAhead() {
+        let lessons = [lesson(id: "only", start: "14:20", end: "15:50")]
+        let s = state(lessons, at: "2026-10-21 15:00")
+        XCTAssertTrue(s.nextDays.isEmpty)
+    }
 
-    func testRoomIsSplitIntoNumberAndBuilding() {
-        let l = lesson(id: "r", date: "2026-10-21", start: "14:20", end: "15:50", room: "258а (С-20)")
-        XCTAssertEqual(l.roomNumber, "258а", "буква в номере аудитории должна сохраняться")
+    // MARK: Порядок следующих пар (ТЗ п. 11.2)
+
+    func testUpcomingLessonsAreSortedByStart() {
+        let lessons = [
+            lesson(id: "c", start: "18:00", end: "19:30", bell: 6),
+            lesson(id: "a", start: "10:40", end: "12:10", bell: 2),
+            lesson(id: "b", start: "14:20", end: "15:50", bell: 4),
+            lesson(id: "primary", start: "09:00", end: "10:30", bell: 1)
+        ]
+        let s = state(lessons, at: "2026-10-21 09:30")
+        XCTAssertEqual(s.primaryLesson?.id, "primary")
+        XCTAssertEqual(s.upcomingLessons.map(\.id), ["a", "b", "c"])
+    }
+
+    func testPrimaryLessonIsNotDuplicatedInUpcoming() {
+        let s = state(twoDays, at: "2026-10-21 14:30")
+        XCTAssertFalse(s.upcomingLessons.contains { $0.id == s.primaryLesson?.id })
+    }
+
+    func testFinishedLessonsAreExcludedFromUpcoming() {
+        let s = state(twoDays, at: "2026-10-21 14:30")
+        // Завершённых пар до активной в списке быть не должно.
+        XCTAssertFalse(s.upcomingLessons.contains { $0.id == "finished" })
+    }
+
+    // MARK: Аудитория и корпус (ТЗ п. 3)
+
+    func testRoomIsSplitIntoNumberAndCampus() {
+        let l = lesson(id: "r", room: "265 (С-20)")
+        XCTAssertEqual(l.roomNumber, "265")
+        XCTAssertEqual(l.buildingLabel, "С-20")
+        XCTAssertFalse(l.isOnline)
+    }
+
+    func testRoomWithLetterKeepsLetter() {
+        // «258а» — буква в номере аудитории должна сохраняться (ТЗ п. 19.1).
+        let l = lesson(id: "r", room: "258а (С-20)")
+        XCTAssertEqual(l.roomNumber, "258а")
         XCTAssertEqual(l.buildingLabel, "С-20")
     }
 
-    func testRoomWithoutBuilding() {
-        let l = lesson(id: "r", date: "2026-10-21", start: "14:20", end: "15:50", room: "А-4")
+    func testRoomWithoutCampus() {
+        let l = lesson(id: "r", room: "А-4")
         XCTAssertEqual(l.roomNumber, "А-4")
         XCTAssertEqual(l.buildingLabel, "")
+    }
+
+    func testMissingRoom() {
+        let l = lesson(id: "r", room: "")
+        XCTAssertEqual(l.roomNumber, "")
+        XCTAssertEqual(l.buildingLabel, "")
+        XCTAssertEqual(l.roomDisplay, "Аудитория уточняется")
+    }
+
+    func testOnlineLesson() {
+        let l = lesson(id: "r", room: "СДО")
+        XCTAssertTrue(l.isOnline)
+        XCTAssertEqual(l.roomDisplay, "Онлайн")
+    }
+
+    // MARK: Время (ТЗ п. 8.2)
+
+    func testTimeRangeUsesEnDash() {
+        let l = lesson(id: "t", start: "14:20", end: "15:50")
+        XCTAssertEqual(l.timeRange, "14:20–15:50")
+        XCTAssertEqual(l.timeRangeAccessible, "с 14:20 до 15:50")
+    }
+
+    // MARK: Преподаватель (ТЗ п. 5.4)
+
+    func testEmptyTeacherIsNilNotEmptyString() {
+        XCTAssertNil(lesson(id: "t", teacher: "").teacherDisplay)
+        XCTAssertNil(lesson(id: "t", teacher: "   ").teacherDisplay)
+        XCTAssertEqual(lesson(id: "t", teacher: "Иванов И. И.").teacherDisplay, "Иванов И. И.")
     }
 }

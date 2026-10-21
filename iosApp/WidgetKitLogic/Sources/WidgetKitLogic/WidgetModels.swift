@@ -22,6 +22,10 @@ struct WLesson: Decodable, Identifiable, Equatable {
     let type: String      // ЛК/ПР/ЛАБ/ДР/ДОП
     let room: String
     let teacher: String
+    /// Учебные группы, участвующие в паре. По ним считается индикатор
+    /// совместного занятия: ТЗ п. 5.5 запрещает выводить его из числа
+    /// преподавателей или повторов пар.
+    let groups: [String]
 
     init(
         id: String,
@@ -32,7 +36,8 @@ struct WLesson: Decodable, Identifiable, Equatable {
         subject: String,
         type: String,
         room: String,
-        teacher: String
+        teacher: String,
+        groups: [String] = []
     ) {
         self.id = id
         self.date = date
@@ -43,13 +48,14 @@ struct WLesson: Decodable, Identifiable, Equatable {
         self.type = type
         self.room = room
         self.teacher = teacher
+        self.groups = groups
     }
 
     /// Поле `id` в JSON может отсутствовать (старый снапшот в контейнере) —
     /// тогда синтезируем ключ из даты, времени и названия, чтобы виджет
     /// не падал на декодировании.
     enum CodingKeys: String, CodingKey {
-        case id, date, bell, start, end, subject, type, room, teacher
+        case id, date, bell, start, end, subject, type, room, teacher, groups
     }
 
     init(from decoder: Decoder) throws {
@@ -62,9 +68,17 @@ struct WLesson: Decodable, Identifiable, Equatable {
         type = try c.decode(String.self, forKey: .type)
         room = try c.decode(String.self, forKey: .room)
         teacher = try c.decode(String.self, forKey: .teacher)
+        groups = (try? c.decode([String].self, forKey: .groups)) ?? []
         id = (try? c.decode(String.self, forKey: .id))
             ?? "\(date)-\(start)-\(subject)"
     }
+
+    /// Количество уникальных учебных групп в паре (ТЗ п. 5.5, 10.3).
+    var groupCount: Int { Set(groups).count }
+
+    /// Показывать ли индикатор совместного занятия: только если групп
+    /// действительно больше одной.
+    var isShared: Bool { groupCount > 1 }
 }
 
 /// Расписание, сохранённое в приложении (группа, преподаватель или аудитория).
@@ -84,89 +98,83 @@ struct WPayload: Decodable, Equatable {
 
 // MARK: - Статус и контекст дня
 
-/// Статус пары. Один источник правды о том, что показывать пользователю:
-/// ни одно представление не должно решать это самостоятельно (ТЗ п. 19).
+/// Статус пары. Формируется бизнес-логикой, а не View: ТЗ п. 8.3 запрещает
+/// независимый вызов текущего времени внутри представления.
 enum LessonStatus: Equatable {
     /// Пара идёт прямо сейчас.
     case current
-    /// Ближайшая пара впереди.
+    /// Ближайшая пара впереди (дальше порога «скоро»).
     case upcoming
     /// До начала меньше порога — с обратным отсчётом.
     case soon(minutesUntil: Int)
-
-    /// Метка на виджете. Обратный отсчёт допускается только там, где есть
-    /// место (Medium и крупнее) — это решает представление, поэтому `soon`
-    /// отдаёт оба варианта текста.
-    var label: String {
-        switch self {
-        case .current: return "СЕЙЧАС"
-        case .upcoming: return "ДАЛЕЕ"
-        case .soon(let minutes):
-            return minutes > 0 ? "ЧЕРЕЗ \(minutes) МИН" : "СКОРО"
-        }
-    }
 
     var isCurrent: Bool {
         if case .current = self { return true }
         return false
     }
+
+    /// Короткая метка без обратного отсчёта. Её видят все размеры.
+    var shortLabel: String {
+        switch self {
+        case .current: return "СЕЙЧАС"
+        case .upcoming: return "ДАЛЕЕ"
+        case .soon: return "СКОРО"
+        }
+    }
+
+    /// Метка с обратным отсчётом — только там, где есть место (Medium и
+    /// крупнее, дополнение владельца: на Small место дороже точного времени).
+    var countdownLabel: String {
+        guard case .soon(let minutes) = self, minutes > 0 else { return shortLabel }
+        return minutes == 1 ? "ЧЕРЕЗ 1 МИН" : "ЧЕРЕЗ \(minutes) МИН"
+    }
 }
 
-/// Контекст даты для пары, которая не сегодня (ТЗ п. 6, 16).
+/// День, к которому относится активная пара.
 ///
-/// Хранит и словесную метку, и точную дату: ТЗ требует «ПОСЛЕЗАВТРА» как
-/// метку (п. 4, 16), но в примере п. 6 для дня через два дня ожидает подпись
-/// «ПТ, 23 ОКТ». Конфликт разрешается по месту: короткая метка нужна там, где
-/// тесно (Small), точная дата — где есть место (Medium и крупнее), а вместе
-/// они всегда дают однозначность, требуемую п. 6 («дата всегда понятна»).
+/// Хранит короткую метку и полную подпись: на Small нужна короткая
+/// («ЗАВТРА»), на Medium и крупнее — полная с датой и днём недели
+/// («ПЯТНИЦА · 23 ОКТЯБРЯ»), как в макетах. Требование «дата всегда понятна»
+/// выполняется в обоих случаях.
 enum DayContext: Equatable {
     case today
-    /// Завтра; строки — точная дата и день недели.
-    case tomorrow(date: String, weekday: String)
+    /// Завтра.
+    case tomorrow(full: String)
     /// Послезавтра.
-    case dayAfterTomorrow(date: String, weekday: String)
-    /// Дальше: «ПН, 26 ОКТ».
-    case date(String)
+    case dayAfterTomorrow(full: String)
+    /// Дальше.
+    case date(full: String)
     case none
 
-    /// Короткая метка для тесных размеров: «ЗАВТРА», «ПОСЛЕЗАВТРА».
-    var label: String? {
+    /// Короткая метка для тесных размеров.
+    var shortLabel: String? {
         switch self {
         case .today, .none: return nil
         case .tomorrow: return "ЗАВТРА"
         case .dayAfterTomorrow: return "ПОСЛЕЗАВТРА"
-        case .date(let text): return text
+        case .date(let full): return full
         }
     }
 
-    /// Полная подпись с датой — для размеров, где есть место:
-    /// «ЗАВТРА · ЧЕТВЕРГ», «ПОСЛЕЗАВТРА · ПТ, 23 ОКТ», «ПН, 26 ОКТ».
-    var longLabel: String? {
+    /// Полная подпись с датой и днём недели.
+    var fullLabel: String? {
         switch self {
         case .today, .none: return nil
-        case .tomorrow(_, let weekday): return "ЗАВТРА · \(weekday)"
-        case .dayAfterTomorrow(let date, _): return date
-        case .date(let text): return text
+        case .tomorrow(let full), .dayAfterTomorrow(let full): return full
+        case .date(let full): return full
         }
     }
 
-    /// Точная дата, если она известна. Нужна для проверок и для подписи
-    /// в заголовках, где словесная метка неуместна.
-    var exactDate: String? {
-        switch self {
-        case .today, .none: return nil
-        case .tomorrow(let date, _), .dayAfterTomorrow(let date, _): return date
-        case .date(let text): return text
-        }
-    }
-
-    /// День в будущем. Нужно для правила ТЗ п. 16: «ДАЛЕЕ» без даты для
-    /// будущего дня недопустимо.
     var isFuture: Bool {
         switch self {
         case .today, .none: return false
         case .tomorrow, .dayAfterTomorrow, .date: return true
         }
+    }
+
+    var isToday: Bool {
+        if case .today = self { return true }
+        return false
     }
 }
 
@@ -277,4 +285,38 @@ extension WLesson {
         return String(trimmed[trimmed.index(after: open)..<close])
             .trimmingCharacters(in: .whitespaces)
     }
+
+    /// Дистанционное занятие: вместо номера аудитории показывается «Онлайн»
+    /// (ТЗ п. 3.3). Определяется по данным фида, а не догадкой.
+    var isOnline: Bool {
+        let lower = roomLabel.lowercased()
+        if lower.isEmpty { return false }
+        return lower.contains("сдо") || lower.contains("дистант") || lower.contains("онлайн")
+    }
+
+    /// Интервал одной строкой с типографским тире (ТЗ п. 8.2).
+    var timeRange: String {
+        "\(start)–\(end)"
+    }
+
+    /// Тот же интервал в форме для VoiceOver: «с 14:20 до 15:50».
+    var timeRangeAccessible: String {
+        "с \(start) до \(end)"
+    }
+
+    /// Имя преподавателя для показа. Пустое значение → nil, чтобы вью не
+    /// рисовала пустую строку и не резервировала под неё место.
+    ///
+    /// Сокращений здесь нет: ТЗ п. 5.4 запрещает неустойчивые эвристики,
+    /// а фид уже отдаёт имена в пригодном виде.
+    var teacherDisplay: String? {
+        let trimmed = teacher.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// Короткое название дисциплины для компактных строк.
+    ///
+    /// Собственных сокращений не изобретаем (ТЗ п. 10.2): если фид не отдал
+    /// короткое имя, используется полное с ограничением строк.
+    var shortSubject: String { subject }
 }

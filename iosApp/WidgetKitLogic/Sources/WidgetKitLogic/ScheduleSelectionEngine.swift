@@ -2,12 +2,12 @@ import Foundation
 
 // MARK: - Состояние презентации
 
-/// Причина пустого состояния. По ТЗ (п. 27) «нет занятий» и «нет данных» —
-/// разные вещи, и показывать их одинаково запрещено.
+/// Причина пустого состояния. По ТЗ (п. 10.4) «нет занятий» и «нет данных» —
+/// разные вещи, показывать их одинаково запрещено.
 enum EmptyReason: Equatable {
     /// Занятий нет в загруженном расписании.
     case noLessons
-    /// Группа не выбрана вовсе (нет конфигурации виджета и нет дефолта).
+    /// Группа не выбрана вовсе.
     case noTarget
     /// Данных в контейнере ещё нет — приложение не писало снапшот.
     case noData
@@ -17,36 +17,54 @@ enum EmptyReason: Equatable {
     case noAppGroup
 }
 
-/// Свежесть данных: по ТЗ (п. 7) устаревший кэш можно показывать, но
-/// с честной пометкой, а не как актуальный.
+/// Свежесть данных: устаревший кэш можно показывать, но с честной пометкой.
 enum DataFreshness: Equatable {
     case fresh
     /// Возраст снапшота в часах.
     case stale(hours: Int)
+
+    var isStale: Bool {
+        if case .stale = self { return true }
+        return false
+    }
 }
 
-/// Готовое к отображению состояние. Все четыре виджета получают его из одного
-/// движка — это требование ТЗ (п. 19): выбором пары не должна заниматься вёрстка.
+/// Учебный день в готовом виде: подпись и занятия.
+struct WidgetDay: Equatable {
+    /// Подпись для заголовка: «ПЯТНИЦА · 23 ОКТЯБРЯ».
+    let label: String
+    /// Занятия дня в хронологическом порядке.
+    let lessons: [WLesson]
+    /// Дата дня («yyyy-MM-dd») — для заголовков и будущих deep links.
+    let date: String
+}
+
+/// Готовое к отображению состояние.
+///
+/// Все четыре виджета получают его из одного движка — это требование ТЗ
+/// (п. 11): выбором активной пары не должна заниматься вёрстка.
 struct WidgetPresentationState: Equatable {
     let generatedAt: Date
     let freshness: DataFreshness
-    /// Название выбранного расписания (для заголовков и пустых состояний).
+    /// Название выбранного расписания (для пустых состояний).
     let targetTitle: String?
+
+    /// Активная пара: текущая, иначе ближайшая предстоящая, иначе первая
+    /// пара ближайшего учебного дня (ТЗ п. 1.1).
     let primaryLesson: WLesson?
     let primaryStatus: LessonStatus?
-    /// Подпись дня главной пары. nil — пара сегодня.
-    let primaryDayContext: DayContext
-    /// Подпись шапки: «СЕГОДНЯ · СРЕДА», «ЗАВТРА · ЧЕТВЕРГ», «ПТ, 23 ОКТ».
+    /// День активной пары.
+    let primaryDay: DayContext
+    /// Заголовок выбранного учебного дня: «СЕГОДНЯ · СРЕДА».
     let primaryDayLabel: String?
-    /// Та же подпись, но всегда с точной датой — для шапок Medium и крупнее,
-    /// где место есть и метка «ПОСЛЕЗАВТРА» без даты была бы неполной (ТЗ п. 6).
-    let primaryDayLongLabel: String?
-    /// Остальные занятия того же учебного дня, в порядке следования.
+
+    /// Остальные занятия того же учебного дня (активная исключена).
     let upcomingLessons: [WLesson]
-    /// Ближайший следующий учебный день (не сегодня).
-    let nextStudyDay: DayContext
-    /// Занятия ближайшего следующего учебного дня.
-    let nextStudyDayLessons: [WLesson]
+
+    /// Ближайшие следующие учебные дни с занятиями, по порядку.
+    /// Первый — ближайший; второй добавляется, только если он есть.
+    let nextDays: [WidgetDay]
+
     /// Заполнено, только если показывать нечего.
     let emptyReason: EmptyReason?
 
@@ -57,28 +75,31 @@ struct WidgetPresentationState: Equatable {
             targetTitle: nil,
             primaryLesson: nil,
             primaryStatus: nil,
-            primaryDayContext: .none,
+            primaryDay: .none,
             primaryDayLabel: nil,
-            primaryDayLongLabel: nil,
             upcomingLessons: [],
-            nextStudyDay: .none,
-            nextStudyDayLessons: [],
+            nextDays: [],
             emptyReason: reason
         )
     }
 
     var isEmpty: Bool { primaryLesson == nil }
+
+    /// Полный заголовок дня для шапок Large/Extra Large.
+    var headerTitle: String {
+        primaryDayLabel ?? primaryDay.fullLabel ?? primaryDay.shortLabel ?? "СЕГОДНЯ"
+    }
 }
 
 // MARK: - Движок
 
-/// Выбор актуальной пары и подготовка состояния для вью.
+/// Выбор активной пары и подготовка состояния для вью.
 ///
 /// Чистая логика: время передаётся параметром, зависимости — только календарь
-/// и зона расписания. Это позволяет прогнать все сценарии ТЗ (п. 29) на
-/// заранее подготовленных датах без опоры на системное время.
+/// и зона расписания. Это позволяет прогнать все сценарии ТЗ (п. 18) на
+/// заранее подготовленных датах без опоры на системные часы.
 struct ScheduleSelectionEngine {
-    /// Порог статуса «скоро» (ТЗ п. 4): 30 минут до начала.
+    /// Порог статуса «СКОРО» (ТЗ п. 12.3): 30 минут до начала, включительно.
     static let soonThresholdMinutes = 30
 
     let calendar: Calendar
@@ -96,8 +117,9 @@ struct ScheduleSelectionEngine {
     ///
     /// - Parameters:
     ///   - target: выбранное расписание (nil — группа не выбрана).
-    ///   - now: текущий момент.
+    ///   - now: текущий момент (в тестах — заранее заданный).
     ///   - generatedAt: когда снапшот был записан приложением.
+    ///   - staleAfterHours: с какого возраста данные считаются устаревшими.
     func makeState(
         target: WTarget?,
         now: Date,
@@ -109,89 +131,64 @@ struct ScheduleSelectionEngine {
         }
 
         let lessons = ordered(target.lessons)
-        guard !lessons.isEmpty else {
-            return WidgetPresentationState(
-                generatedAt: generatedAt,
-                freshness: freshness(generatedAt: generatedAt, now: now, staleAfterHours: staleAfterHours),
-                targetTitle: target.title,
-                primaryLesson: nil,
-                primaryStatus: nil,
-                primaryDayContext: .none,
-                primaryDayLabel: nil,
-                primaryDayLongLabel: nil,
-                upcomingLessons: [],
-                nextStudyDay: .none,
-                nextStudyDayLessons: [],
-                emptyReason: .noLessons
-            )
-        }
-
         let fresh = freshness(generatedAt: generatedAt, now: now, staleAfterHours: staleAfterHours)
 
-        // 1. Пара, идущая сейчас.
-        let current = lessons.first { isOngoing($0, at: now) }
-
-        // 2. Ближайшая предстоящая (в том числе в будущие дни).
-        let upcoming = lessons.first { lesson in
-            guard let start = lesson.startDate(timeZone: timeZone) else { return false }
-            return start > now
-        }
-
-        let primary = current ?? upcoming
-        guard let primary else {
-            // Все пары уже прошли: показываем спокойное пустое состояние,
-            // но с датой — что именно закончилось (ТЗ п. 27).
+        guard !lessons.isEmpty else {
             return WidgetPresentationState(
                 generatedAt: generatedAt,
                 freshness: fresh,
                 targetTitle: target.title,
                 primaryLesson: nil,
                 primaryStatus: nil,
-                primaryDayContext: .none,
+                primaryDay: .none,
                 primaryDayLabel: nil,
-                primaryDayLongLabel: nil,
                 upcomingLessons: [],
-                nextStudyDay: .none,
-                nextStudyDayLessons: [],
+                nextDays: [],
                 emptyReason: .noLessons
             )
         }
 
-        let primaryDay = dayStart(primary)
-        let isToday = calendar.isDate(primaryDay, inSameDayAs: now)
-
-        let status: LessonStatus
-        if current != nil {
-            status = .current
-        } else if let start = primary.startDate(timeZone: timeZone) {
-            let minutes = Int(start.timeIntervalSince(now) / 60)
-            // Порог включительный: «30 минут до начала» по ТЗ (п. 4) — это уже
-            // статус «скоро», поэтому верхняя граница входит в диапазон.
-            status = (0...Self.soonThresholdMinutes).contains(minutes)
-                ? .soon(minutesUntil: minutes)
-                : .upcoming
-        } else {
-            status = .upcoming
-        }
-
-        // 3. Остальные пары того же учебного дня — в порядке следования.
-        let sameDay = lessons.filter { calendar.isDate(dayStart($0), inSameDayAs: primaryDay) }
-        let upcomingSameDay = sameDay.filter { lesson in
+        // 1. Активная пара: текущая → ближайшая предстоящая.
+        let current = lessons.first { isOngoing($0, at: now) }
+        let upcoming = lessons.first { lesson in
             guard let start = lesson.startDate(timeZone: timeZone) else { return false }
-            return start > now && lesson.id != primary.id
+            return start > now
+        }
+        let primary = current ?? upcoming
+
+        guard let primary else {
+            // Все пары уже прошли: показывать нечего.
+            return WidgetPresentationState(
+                generatedAt: generatedAt,
+                freshness: fresh,
+                targetTitle: target.title,
+                primaryLesson: nil,
+                primaryStatus: nil,
+                primaryDay: .none,
+                primaryDayLabel: nil,
+                upcomingLessons: [],
+                nextDays: [],
+                emptyReason: .noLessons
+            )
         }
 
-        // 4. Ближайший следующий учебный день — по ТЗ (п. 6) это не обязательно
-        // следующий календарный день, а следующий день, где есть занятия.
-        let futureDays = lessons
-            .map { dayStart($0) }
-            .filter { $0 > primaryDay }
-        let nextDay = futureDays.min()
-        let nextDayLessons = nextDay.map { day in
-            lessons.filter { calendar.isDate(dayStart($0), inSameDayAs: day) }
-        } ?? []
+        let primaryDayStart = dayStart(primary)
+        let isToday = calendar.isDate(primaryDayStart, inSameDayAs: now)
 
-        let dayContext = context(for: primaryDay, now: now)
+        let status = status(for: primary, current: current, now: now)
+        let dayContext = context(for: primaryDayStart, now: now)
+
+        // 2. Остальные занятия того же учебного дня, кроме активной.
+        let sameDayLessons = lessons.filter {
+            calendar.isDate(dayStart($0), inSameDayAs: primaryDayStart)
+        }
+        let upcomingSameDay = sameDayLessons.filter { lesson in
+            lesson.id != primary.id && (lesson.startDate(timeZone: timeZone) ?? .distantPast) > now
+        }
+
+        // 3. Следующие учебные дни. По ТЗ (п. 11.3) перебираем календарные
+        //    даты через Calendar, а не прибавлением 86400 секунд.
+        let futureDays = nextStudyDays(after: primaryDayStart, in: lessons, now: now, limit: 2)
 
         return WidgetPresentationState(
             generatedAt: generatedAt,
@@ -199,28 +196,20 @@ struct ScheduleSelectionEngine {
             targetTitle: target.title,
             primaryLesson: primary,
             primaryStatus: status,
-            primaryDayContext: dayContext,
-            primaryDayLabel: isToday
-                ? headerTodayLabel(primaryDay)
-                : dayContext.label,
-            // Полная подпись с точной датой — для шапок, где место есть.
-            // Сегодняшний день всегда подписывается заголовком с днём недели.
-            primaryDayLongLabel: isToday
-                ? headerTodayLabel(primaryDay)
-                : (dayContext.longLabel ?? dayContext.label),
+            primaryDay: dayContext,
+            primaryDayLabel: isToday ? todayHeader(primaryDayStart) : dayContext.fullLabel,
             upcomingLessons: upcomingSameDay,
-            nextStudyDay: nextDay.map { context(for: $0, now: now) } ?? .none,
-            nextStudyDayLessons: nextDayLessons,
+            nextDays: futureDays,
             emptyReason: nil
         )
     }
 
     // MARK: Примитивы
 
-    /// Пара идёт сейчас: `start <= now < end` (ТЗ п. 4).
+    /// Пара идёт сейчас: `start <= now < end` (ТЗ п. 11.1).
     ///
-    /// Особый случай — перемены: завершившаяся пара главной не считается
-    /// (ТЗ п. 7), поэтому верхняя граница строгая.
+    /// Верхняя граница строгая: в момент окончания пара уже завершена,
+    /// поэтому во время перемены активной становится следующая.
     func isOngoing(_ lesson: WLesson, at now: Date) -> Bool {
         guard let s = lesson.startDate(timeZone: timeZone),
               let e = lesson.endDate(timeZone: timeZone) else { return false }
@@ -239,8 +228,17 @@ struct ScheduleSelectionEngine {
     }
 
     func dayStart(_ lesson: WLesson) -> Date {
-        ScheduleClock.parseDay(lesson.date, calendar: calendar)
-            ?? Date.distantPast
+        ScheduleClock.parseDay(lesson.date, calendar: calendar) ?? .distantPast
+    }
+
+    private func status(for primary: WLesson, current: WLesson?, now: Date) -> LessonStatus {
+        if current != nil { return .current }
+        guard let start = primary.startDate(timeZone: timeZone) else { return .upcoming }
+        let minutes = Int(start.timeIntervalSince(now) / 60)
+        // Порог включительный: «30 минут до начала» — это уже «СКОРО».
+        return (0...Self.soonThresholdMinutes).contains(minutes)
+            ? .soon(minutesUntil: minutes)
+            : .upcoming
     }
 
     private func freshness(generatedAt: Date, now: Date, staleAfterHours: Int) -> DataFreshness {
@@ -248,12 +246,38 @@ struct ScheduleSelectionEngine {
         return hours >= staleAfterHours ? .stale(hours: hours) : .fresh
     }
 
-    /// Контекст дня относительно `now`.
+    /// Ближайшие учебные дни после указанного, в порядке следования.
     ///
-    /// Ближайшие дни несут и словесную метку, и точную дату: ТЗ требует
-    /// «ПОСЛЕЗАВТРА» (п. 16), но в примере п. 6 для того же дня ожидает
-    /// «ПТ, 23 ОКТ». Представление выбирает подходящую подпись по своему
-    /// размеру, поэтому требование «дата всегда понятна» выполняется всюду.
+    /// Пустые календарные дни пропускаются: виджет переходит к ближайшему
+    /// дню, где занятия действительно есть (ТЗ п. 1.1, 11.3).
+    func nextStudyDays(
+        after day: Date,
+        in lessons: [WLesson],
+        now: Date,
+        limit: Int
+    ) -> [WidgetDay] {
+        var dayStarts: [Date] = []
+        for lesson in lessons {
+            let start = dayStart(lesson)
+            guard start > day else { continue }
+            if !dayStarts.contains(where: { calendar.isDate($0, inSameDayAs: start) }) {
+                dayStarts.append(start)
+            }
+        }
+
+        return dayStarts.sorted().prefix(limit).map { startOfDay in
+            let dayLessons = lessons.filter {
+                calendar.isDate(self.dayStart($0), inSameDayAs: startOfDay)
+            }
+            return WidgetDay(
+                label: weekdayDateLabel(startOfDay),
+                lessons: dayLessons,
+                date: dateString(startOfDay)
+            )
+        }
+    }
+
+    /// Контекст дня относительно `now`.
     func context(for day: Date, now: Date) -> DayContext {
         let today = calendar.startOfDay(for: now)
         let diff = calendar.dateComponents([.day], from: today, to: day).day ?? 0
@@ -261,55 +285,54 @@ struct ScheduleSelectionEngine {
         case 0:
             return .today
         case 1:
-            return .tomorrow(date: longDateLabel(day), weekday: weekdayLabel(day))
+            return .tomorrow(full: weekdayDateLabel(day))
         case 2:
-            return .dayAfterTomorrow(date: longDateLabel(day), weekday: weekdayLabel(day))
-        case let d where d > 2:
-            return .date(longDateLabel(day))
+            return .dayAfterTomorrow(full: weekdayDateLabel(day))
         default:
-            return .none
+            return .date(full: weekdayDateLabel(day))
         }
     }
 
-    /// «ЧЕТВЕРГ» — полное название дня недели для подписи с датой.
-    func weekdayLabel(_ day: Date) -> String {
-        let f = DateFormatter()
-        f.calendar = calendar
-        f.timeZone = timeZone
-        f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "EEEE"
-        return f.string(from: day).uppercased()
-    }
+    // MARK: Форматирование дат (ТЗ п. 11.4)
 
-    /// «ПТ, 23 ОКТ» — заголовок для дня, который не сегодня и не завтра.
-    ///
-    /// Формат собирается вручную, а не через `MMM`: русская локаль даёт
-    /// «нояб», «сент» и номер дня без ведущего нуля («2 НОЯБ»), тогда как
-    /// интерфейс приложения использует «НОЯ», «СЕН» и двухзначный день.
-    func longDateLabel(_ day: Date) -> String {
-        let comps = calendar.dateComponents([.day, .month, .weekday], from: day)
-        let weekday = Self.shortWeekdays[max(0, min(6, (comps.weekday ?? 1) - 1))]
-        let dayNumber = String(format: "%02d", comps.day ?? 1)
-        let month = Self.shortMonths[max(0, min(11, (comps.month ?? 1) - 1))]
-        return "\(weekday), \(dayNumber) \(month)"
-    }
-
-    /// Сокращения дней недели (1 — воскресенье в григорианском календаре).
-    private static let shortWeekdays = ["ВС", "ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ"]
-
-    /// Сокращения месяцев в принятой в приложении форме.
-    private static let shortMonths = [
-        "ЯНВ", "ФЕВ", "МАР", "АПР", "МАЙ", "ИЮН",
-        "ИЮЛ", "АВГ", "СЕН", "ОКТ", "НОЯ", "ДЕК"
+    /// Полные названия месяцев в родительном падеже — как в макетах
+    /// («23 ОКТЯБРЯ»). Русская локаль через DateFormatter даёт другие формы.
+    private static let months = [
+        "ЯНВАРЯ", "ФЕВРАЛЯ", "МАРТА", "АПРЕЛЯ", "МАЯ", "ИЮНЯ",
+        "ИЮЛЯ", "АВГУСТА", "СЕНТЯБРЯ", "ОКТЯБРЯ", "НОЯБРЯ", "ДЕКАБРЯ"
     ]
 
-    /// «СЕГОДНЯ · СРЕДА» — заголовок шапки для сегодняшнего дня.
-    private func headerTodayLabel(_ day: Date) -> String {
-        let f = DateFormatter()
-        f.calendar = calendar
-        f.timeZone = timeZone
-        f.locale = Locale(identifier: "ru_RU")
-        f.dateFormat = "EEEE"
-        return "СЕГОДНЯ · " + f.string(from: day).uppercased()
+    /// Полные названия дней недели.
+    private static let weekdays = [
+        "ВОСКРЕСЕНЬЕ", "ПОНЕДЕЛЬНИК", "ВТОРНИК", "СРЕДА",
+        "ЧЕТВЕРГ", "ПЯТНИЦА", "СУББОТА"
+    ]
+
+    /// «ПЯТНИЦА · 23 ОКТЯБРЯ» — подпись учебного дня.
+    ///
+    /// Формат собирается вручную: DateFormatter с русской локалью даёт
+    /// «пятница, 23 октября» — строчными и с запятой, а макет требует
+    /// заглавных и разделителя «·».
+    func weekdayDateLabel(_ day: Date) -> String {
+        let comps = calendar.dateComponents([.day, .month, .weekday], from: day)
+        let weekday = Self.weekdays[max(0, min(6, (comps.weekday ?? 1) - 1))]
+        let month = Self.months[max(0, min(11, (comps.month ?? 1) - 1))]
+        return "\(weekday) · \(comps.day ?? 1) \(month)"
+    }
+
+    /// «СЕГОДНЯ · СРЕДА» — заголовок для сегодняшнего дня.
+    func todayHeader(_ day: Date) -> String {
+        let comps = calendar.dateComponents([.weekday], from: day)
+        let weekday = Self.weekdays[max(0, min(6, (comps.weekday ?? 1) - 1))]
+        return "СЕГОДНЯ · \(weekday)"
+    }
+
+    /// Дата в формате снапшота «yyyy-MM-dd».
+    func dateString(_ day: Date) -> String {
+        let comps = calendar.dateComponents([.year, .month, .day], from: day)
+        return String(
+            format: "%04d-%02d-%02d",
+            comps.year ?? 1970, comps.month ?? 1, comps.day ?? 1
+        )
     }
 }

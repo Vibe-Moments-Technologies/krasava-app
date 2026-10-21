@@ -1,236 +1,280 @@
 import SwiftUI
-import WidgetKit
 
 // MARK: - Дизайн-система виджетов
 //
-// Единые токены типографики, интервалов и цветов для всех четырёх размеров.
-// Требование ТЗ (п. 13): не привязывать интерфейс к произвольным пиксельным
-// константам, но и не разбрасывать размеры шрифтов по вью. Всё, что относится
-// к оформлению, живёт здесь; вью только выбирают токен.
+// Токены из согласованных макетов: графитовая поверхность, светлый текст,
+// голубой акцент статуса, зелёный акцент практики. Значения — стартовая
+// спецификация (ТЗ п. 2.1), а не жёстко зашитый тёмный фон: светлая тема имеет
+// собственные семантические токены, а системное тонирование учитывается отдельно.
+//
+// Статус пары и контекст даты живут в WidgetKitLogic (WidgetModels.swift):
+// по ТЗ п. 8.3 их формирует бизнес-логика, а не View.
 
-/// Плотность компоновки. Режим подбирается по содержимому, а не настройкой
-/// пользователя (ТЗ п. 25): при длинных названиях виджет переходит на более
-/// компактные строки, чтобы не обрезать аудиторию и время.
-enum WidgetDensity {
-    case comfortable
-    case compact
-    case dense
+// MARK: - Сетка отступов (ТЗ п. 2.3)
 
-    /// Порог длины названия дисциплины, после которого нужен более плотный
-    /// режим: «Моделирование информационно-аналитических систем» — 46 символов.
-    static func forSubject(_ subject: String, in availableHeight: CGFloat) -> WidgetDensity {
-        let long = subject.count > 46
-        if availableHeight < 300 || (long && availableHeight < 360) {
-            return .dense
-        }
-        if long || availableHeight < 420 {
-            return .compact
-        }
-        return .comfortable
-    }
+/// Шаг сетки. Используется вместо случайных отступов по месту.
+enum Space {
+    static let s2: CGFloat = 2
+    static let s4: CGFloat = 4
+    static let s6: CGFloat = 6
+    static let s8: CGFloat = 8
+    static let s10: CGFloat = 10
+    static let s12: CGFloat = 12
+    static let s16: CGFloat = 16
 }
 
-/// Типографика и интервалы виджета.
+// MARK: - Плотность (ТЗ п. 9.2, 9.3)
+
+/// Уровень плотности компоновки.
 ///
-/// Иерархия по ТЗ (п. 13): аудитория — самый заметный элемент, время — второй
-/// акцент, название — основной текст с максимальной полнотой, статус —
-/// небольшой акцентный заголовок.
-struct WidgetTheme {
-    let density: WidgetDensity
-    /// Доступная высота виджета в точках — влияет на масштаб аудитории.
-    let availableHeight: CGFloat
+/// Regular — нормальные размеры и полные метаданные, Compact — меньше
+/// промежутков и вторичных данных, Minimal — только обязательные сведения.
+/// Выбирается по фактическому размеру контейнера, а не по семейству:
+/// размеры виджетов отличаются между устройствами (ТЗ п. 9.1).
+enum WidgetDensity: Int, Comparable {
+    case minimal = 0
+    case compact = 1
+    case regular = 2
 
-    init(density: WidgetDensity = .comfortable, availableHeight: CGFloat = 400) {
-        self.density = density
-        self.availableHeight = availableHeight
+    static func < (a: WidgetDensity, b: WidgetDensity) -> Bool {
+        a.rawValue < b.rawValue
     }
 
-    // MARK: Интервалы
+    /// Порог по высоте контейнера в точках.
+    static func forHeight(_ height: CGFloat) -> WidgetDensity {
+        if height < 150 { return .minimal }
+        if height < 320 { return .compact }
+        return .regular
+    }
 
-    /// Внешний отступ контента от края виджета.
-    var padding: CGFloat {
-        switch density {
-        case .comfortable: return 14
-        case .compact: return 12
-        case .dense: return 10
+    /// Показывать ли преподавателя — вторичные метаданные.
+    var showsTeacher: Bool { self >= .regular }
+
+    /// Показывать ли индикатор нескольких групп.
+    var showsGroupIndicator: Bool { self >= .compact }
+
+    /// Максимум строк названия главной дисциплины.
+    var subjectLines: Int {
+        switch self {
+        case .minimal: return 2
+        case .compact: return 2
+        case .regular: return 3
         }
     }
 
-    /// Зазор между смысловыми блоками (шапка, пары).
+    /// Максимум строк названия следующей пары.
+    var rowSubjectLines: Int {
+        self >= .regular ? 2 : 1
+    }
+
+    /// Зазор между смысловыми блоками.
     var blockSpacing: CGFloat {
-        switch density {
-        case .comfortable: return 8
-        case .compact: return 6
-        case .dense: return 5
+        switch self {
+        case .minimal: return Space.s4
+        case .compact: return Space.s6
+        case .regular: return Space.s8
         }
     }
 
-    /// Зазор между строками внутри одной пары (служебная строка / название).
+    /// Зазор между строками внутри одного блока.
     var lineSpacing: CGFloat {
-        switch density {
-        case .comfortable: return 2
-        case .compact: return 1.5
-        case .dense: return 1
+        switch self {
+        case .minimal, .compact: return Space.s2
+        case .regular: return Space.s4
         }
     }
 
     /// Зазор между отдельными парами в списке.
     var rowSpacing: CGFloat {
-        switch density {
-        case .comfortable: return 10
-        case .compact: return 8
-        case .dense: return 6
+        switch self {
+        case .minimal: return Space.s6
+        case .compact: return Space.s8
+        case .regular: return Space.s10
         }
     }
 
-    // MARK: Типографика
-
-    /// Номер аудитории — главный элемент (P0). Крупнее всего остального.
-    var roomSize: CGFloat {
-        switch density {
-        case .comfortable: return availableHeight > 600 ? 44 : 30
-        case .compact: return availableHeight > 600 ? 38 : 26
-        case .dense: return availableHeight > 600 ? 32 : 22
-        }
-    }
-
-    /// Корпус («С-20») — рядом с номером, заметно мельче.
-    var buildingSize: CGFloat {
-        switch density {
-        case .comfortable: return 15
-        case .compact: return 13
-        case .dense: return 11
-        }
-    }
-
-    /// Время занятия — второй акцент (P0). Всегда одной строкой.
-    var timeSize: CGFloat {
-        switch density {
-        case .comfortable: return 15
-        case .compact: return 13
-        case .dense: return 12
-        }
-    }
-
-    /// Шрифт времени в компактной строке списка (Medium/Large/Extra).
-    var rowTimeSize: CGFloat {
-        switch density {
-        case .comfortable: return 13
-        case .compact: return 12
-        case .dense: return 11
-        }
-    }
-
-    /// Название дисциплины — основной текст (P1).
-    var subjectSize: CGFloat {
-        switch density {
-        case .comfortable: return 15
-        case .compact: return 13
-        case .dense: return 12
-        }
-    }
-
-    /// Название в компактной строке списка.
-    var rowSubjectSize: CGFloat {
-        switch density {
-        case .comfortable: return 13
-        case .compact: return 12
-        case .dense: return 11
-        }
-    }
-
-    /// Статус («СЕЙЧАС», «ДАЛЕЕ») — небольшой акцентный заголовок.
-    var statusSize: CGFloat { 11 }
-
-    /// Заголовок дня («СЕГОДНЯ · СРЕДА») в шапке.
-    var headerSize: CGFloat {
-        switch density {
-        case .comfortable: return 13
-        case .compact: return 12
-        case .dense: return 11
-        }
-    }
-
-    /// Секционный заголовок («ДАЛЕЕ СЕГОДНЯ», «ЗАВТРА · ЧЕТВЕРГ»).
-    var sectionSize: CGFloat { 11 }
-
-    /// Бейдж типа занятия (P3).
-    var badgeSize: CGFloat {
-        switch density {
-        case .comfortable: return 10
-        case .compact: return 9.5
-        case .dense: return 9
-        }
-    }
-
-    /// Подпись аудитории в компактной строке.
-    var rowRoomSize: CGFloat {
-        switch density {
-        case .comfortable: return 13
-        case .compact: return 12
-        case .dense: return 11
+    /// Высота одной строки следующей пары: по ней считается, сколько влезает.
+    var rowHeight: CGFloat {
+        switch self {
+        case .minimal: return 34
+        case .compact: return 42
+        case .regular: return 48
         }
     }
 }
 
-// MARK: - Цвета
+// MARK: - Типографика (ТЗ п. 2.2)
 
-/// Режим рендеринга виджета в терминах, не зависящих от версии iOS.
+/// Набор размеров шрифта для конкретного размера виджета.
 ///
-/// `WidgetRenderingMode` доступен только с iOS 16, а минимальная версия
-/// проекта — 15.3, поэтому собственный тип: значение подставляется там, где
-/// системный API доступен, иначе остаётся `.fullColor`.
-enum WidgetPaletteMode {
-    case fullColor
-    case tinted
+/// Диапазоны из ТЗ: Small 20–26 pt аудитория, Medium 16–20, Large 24–30,
+/// Extra Large 27–34. Внутри диапазона размер выбирается по плотности.
+struct WidgetTypography {
+    let density: WidgetDensity
+
+    private func pick(_ regular: CGFloat, _ compact: CGFloat, _ minimal: CGFloat) -> CGFloat {
+        switch density {
+        case .regular: return regular
+        case .compact: return compact
+        case .minimal: return minimal
+        }
+    }
+
+    /// Аудитория главной пары. `range` — диапазон из таблицы ТЗ.
+    func room(_ range: ClosedRange<CGFloat>) -> CGFloat {
+        pick(range.upperBound, (range.lowerBound + range.upperBound) / 2, range.lowerBound)
+    }
+
+    /// Время главной пары.
+    func primaryTime(_ range: ClosedRange<CGFloat>) -> CGFloat {
+        pick(range.upperBound, (range.lowerBound + range.upperBound) / 2, range.lowerBound)
+    }
+
+    /// Название главной дисциплины.
+    func subject(_ range: ClosedRange<CGFloat>) -> CGFloat {
+        pick(range.upperBound, (range.lowerBound + range.upperBound) / 2, range.lowerBound)
+    }
+
+    /// Статус.
+    func status(_ range: ClosedRange<CGFloat>) -> CGFloat {
+        pick(range.upperBound, range.upperBound, range.lowerBound)
+    }
+
+    /// Аудитория следующей пары.
+    func rowRoom(_ range: ClosedRange<CGFloat>) -> CGFloat {
+        pick(range.upperBound, (range.lowerBound + range.upperBound) / 2, range.lowerBound)
+    }
+
+    /// Время следующей пары.
+    func rowTime(_ range: ClosedRange<CGFloat>) -> CGFloat {
+        pick(range.upperBound, (range.lowerBound + range.upperBound) / 2, range.lowerBound)
+    }
+
+    /// Название следующей пары.
+    func rowSubject(_ range: ClosedRange<CGFloat>) -> CGFloat {
+        pick(range.upperBound, (range.lowerBound + range.upperBound) / 2, range.lowerBound)
+    }
+
+    /// Преподаватель и корпусные метаданные.
+    var teacher: CGFloat { pick(12, 11, 10) }
+
+    /// Служебные подписи: заголовки дней, «ДАЛЕЕ».
+    var caption: CGFloat { pick(12, 11, 10) }
+
+    /// Бейдж типа занятия.
+    var badge: CGFloat { pick(11, 10, 9) }
 }
 
-/// Палитра виджета.
+// MARK: - Палитра (ТЗ п. 2.1, 15.4)
+
+/// Семантические цвета.
 ///
-/// Отдельный тип, а не набор `.green`/`.secondary` по месту: цвета должны
-/// поддерживать режимы тонирования (ТЗ п. 14), когда система переопределяет
-/// фон и может убрать цветность. В режиме тонирования акценты становятся
-/// монохромными, а смысл переносится на текст — поэтому вью дополнительно
-/// показывает словесный статус, а не полагается только на цвет.
+/// Тёмная схема использует графитовые значения из макета. Светлая — не
+/// «инверсия тёмной»: подобраны собственные значения с достаточным контрастом
+/// на светлом фоне (ТЗ п. 15.4).
 struct WidgetPalette {
-    let mode: WidgetPaletteMode
+    let colorScheme: ColorScheme
+    /// Режим тонирования: акценты становятся монохромными.
+    let isTinted: Bool
 
-    init(mode: WidgetPaletteMode = .fullColor) {
-        self.mode = mode
+    init(colorScheme: ColorScheme = .dark, isTinted: Bool = false) {
+        self.colorScheme = colorScheme
+        self.isTinted = isTinted
     }
 
-    /// В тонированном режиме цвет как указатель смысла ненадёжен.
-    private var isTinted: Bool {
-        if case .tinted = mode { return true }
-        return false
+    private var isDark: Bool { colorScheme == .dark }
+
+    // MARK: Поверхности
+
+    /// Общий фон виджета.
+    var surfaceBackground: Color {
+        isDark ? Color(hex: 0x292C31) : Color(hex: 0xF2F3F5)
     }
 
-    var primary: Color { .primary }
-    var secondary: Color { .secondary }
-    var muted: Color { isTinted ? .secondary : Color.gray }
+    /// Дополнительная поверхность: выделение главной пары в Extra Large.
+    var subtleSurface: Color {
+        isDark ? Color(hex: 0x353940) : Color(hex: 0xE6E8EC)
+    }
 
-    var divider: Color { Color.secondary.opacity(isTinted ? 0.25 : 0.18) }
+    /// Разделители.
+    var divider: Color {
+        isDark ? Color(hex: 0x51545D) : Color(hex: 0xC7CAD1)
+    }
 
-    /// Акцент идущей пары.
-    var currentAccent: Color { isTinted ? .primary : .green }
-    /// Акцент будущей пары.
-    var upcomingAccent: Color { isTinted ? .primary : .blue }
+    // MARK: Текст
 
-    /// Цвет бейджа типа занятия.
+    /// Аудитория и время главной пары.
+    var primaryText: Color {
+        isDark ? Color(hex: 0xF5F5F7) : Color(hex: 0x1C1D21)
+    }
+
+    /// Названия дисциплин.
+    var subjectText: Color {
+        isDark ? Color(hex: 0xE5E7EC) : Color(hex: 0x2B2D33)
+    }
+
+    /// Преподаватель, корпусные метаданные.
+    var secondaryText: Color {
+        isDark ? Color(hex: 0xB6BAC4) : Color(hex: 0x5C606B)
+    }
+
+    /// Служебные подписи: заголовки дней, «ДАЛЕЕ».
+    var mutedText: Color {
+        isDark ? Color(hex: 0x969BA6) : Color(hex: 0x777C88)
+    }
+
+    // MARK: Акценты
+
+    /// «СЕЙЧАС», «ДАЛЕЕ». В тонировании цвет смысла не несёт — статус
+    /// дополнительно подписан текстом (ТЗ п. 15.3).
+    var activeAccent: Color {
+        if isTinted { return primaryText }
+        return isDark ? Color(hex: 0x65B5FF) : Color(hex: 0x0071C5)
+    }
+
+    /// Практика и другие типы занятий.
+    var practiceAccent: Color {
+        if isTinted { return primaryText }
+        return isDark ? Color(hex: 0x78D99D) : Color(hex: 0x1B7F45)
+    }
+
+    // MARK: Тип занятия
+
+    /// Цвет бейджа типа. Мягкое выделение, неизвестные типы — нейтральные.
     func typeColor(_ type: String) -> Color {
-        guard !isTinted else { return .primary }
+        guard !isTinted else { return primaryText }
         switch type {
-        case "ЛК": return .blue
-        case "ПР": return .green
-        case "ЛАБ": return .orange
-        case "ДОП": return .pink
-        case "СРС": return .purple
-        default: return .gray
+        case "ПР":
+            return practiceAccent
+        case "ЛК":
+            return isDark ? Color(hex: 0x8FB8FF) : Color(hex: 0x2F5FBF)
+        case "ЛАБ", "ЛБ":
+            return isDark ? Color(hex: 0xE3B368) : Color(hex: 0x8A5A00)
+        case "ЭКЗ", "ЗАЧ", "КР":
+            return isDark ? Color(hex: 0xE58C8C) : Color(hex: 0xA02B2B)
+        default:
+            return secondaryText
         }
     }
 
-    /// Цвет текста статуса.
-    func accent(for status: LessonStatus) -> Color {
-        status.isCurrent ? currentAccent : upcomingAccent
+    /// Фон бейджа: мягкая заливка того же тона.
+    func typeBackground(_ type: String) -> Color {
+        typeColor(type).opacity(isTinted ? 0 : 0.16)
+    }
+}
+
+// MARK: - Хелпер цвета
+
+extension Color {
+    /// Цвет из 0xRRGGBB — палитра задаётся в одном месте и совпадает
+    /// с таблицей токенов из макета.
+    init(hex: UInt32) {
+        self.init(
+            .sRGB,
+            red: Double((hex >> 16) & 0xFF) / 255,
+            green: Double((hex >> 8) & 0xFF) / 255,
+            blue: Double(hex & 0xFF) / 255,
+            opacity: 1
+        )
     }
 }

@@ -1,151 +1,139 @@
 import SwiftUI
 
-// MARK: - Общие компоненты виджетов
+// MARK: - Общие компоненты виджетов (ТЗ п. 8)
 //
-// Один набор деталей на все четыре размера (ТЗ п. 17): аудитория, время,
-// название, бейдж типа, статус всегда выглядят и усекаются одинаково.
-// Представления не решают, что важнее — это уже решено здесь и в токенах.
+// Один набор деталей на все четыре размера: аудитория, время, название,
+// бейдж типа, статус всегда выглядят и усекаются одинаково. Представления
+// не решают, что важнее — это решено здесь и в токенах.
 
-/// Аудитория и корпус — P0: никогда не обрезается номер (ТЗ п. 2).
+// MARK: - Аудитория (ТЗ п. 3)
+
+/// Неразрывное обозначение аудитории с корпусом: `265 (С-20)`.
 ///
-/// Номер крупный (главный элемент иерархии), корпус — рядом, мельче.
-/// Если корпуса нет, строка не резервирует под него место.
-struct ClassroomView: View {
+/// Главное требование (ТЗ п. 3.1, 3.2): аудитория и корпус — единый блок,
+/// который никогда не переносится и не получает многоточие. Поэтому собирается
+/// один `Text` с двумя фрагментами разного веса: измеряется как целое,
+/// усечение невозможно, визуальная иерархия сохраняется.
+struct ClassroomLabel: View {
     let lesson: WLesson
-    let theme: WidgetTheme
-    /// Компактный вариант — для строк списка, где аудитория не главная.
-    var compact: Bool = false
-
-    var body: some View {
-        let number = lesson.roomNumber
-        let building = lesson.buildingLabel
-
-        if number.isEmpty {
-            // ТЗ п. 7: пустоты и «— (—)» быть не должно — показываем подпись.
-            Text(lesson.roomDisplay)
-                .font(.system(size: compact ? theme.rowRoomSize : theme.buildingSize,
-                              weight: .semibold))
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-        } else if compact {
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(number)
-                    .font(.system(size: theme.rowRoomSize, weight: .bold))
-                if !building.isEmpty {
-                    Text(building)
-                        .font(.system(size: theme.rowRoomSize - 2))
-                        .foregroundColor(.secondary)
-                }
-            }
-            // Номер аудитории не усекается: он P0, вторичное ужимается первым.
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-        } else {
-            VStack(alignment: .leading, spacing: 0) {
-                Text(number)
-                    .font(.system(size: theme.roomSize, weight: .bold))
-                    .lineLimit(1)
-                    // Усадка вместо обрезки: «341» и «258а» должны читаться целиком.
-                    .minimumScaleFactor(0.7)
-                if !building.isEmpty {
-                    Text(building)
-                        .font(.system(size: theme.buildingSize, weight: .medium))
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-            }
-        }
-    }
-}
-
-/// Время занятия — P0: всегда одной строкой, не разрывается (ТЗ п. 8.2).
-struct LessonTimeView: View {
-    let lesson: WLesson
-    let theme: WidgetTheme
-    let status: LessonStatus?
     let palette: WidgetPalette
-    /// Крупный вариант — главная пара, компактный — строка списка.
-    var compact: Bool = false
+    /// Размер номера аудитории в пунктах.
+    let size: CGFloat
+    /// Начертание номера (ТЗ п. 2.2: `.bold` или `.semibold`).
+    var weight: Font.Weight = .bold
 
     var body: some View {
-        Text("\(lesson.start)–\(lesson.end)")
-            .font(.system(
-                size: compact ? theme.rowTimeSize : theme.timeSize,
-                weight: compact ? .semibold : .bold
-            ))
-            // Моноширинные цифры: строки списка не «пляшут» по ширине.
-            .monospacedDigit()
-            .foregroundColor(status?.isCurrent == true ? palette.currentAccent : .primary)
+        content
+            // Одна строка и никакого многоточия: при нехватке ширины
+            // срабатывает усадка, а не обрезка (ТЗ п. 3.2).
             .lineLimit(1)
-            .fixedSize(horizontal: true, vertical: false)
-    }
-}
-
-/// Название дисциплины — P1: максимально полно, усадка вместо многоточия.
-struct SubjectTitleView: View {
-    let lesson: WLesson
-    let theme: WidgetTheme
-    var compact: Bool = false
-    var lines: Int = 2
-    var weight: Font.Weight = .semibold
-
-    var body: some View {
-        Text(lesson.subject)
-            .font(.system(size: compact ? theme.rowSubjectSize : theme.subjectSize, weight: weight))
-            .lineLimit(lines)
-            // 0.85 читается; бездумные 0.3 по ТЗ п. 15 запрещены.
-            .minimumScaleFactor(0.85)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
-/// Бейдж типа занятия — P3: компактная метка.
-struct LessonTypeBadge: View {
-    let lesson: WLesson
-    let theme: WidgetTheme
-    let palette: WidgetPalette
-
-    var body: some View {
-        let tint = palette.typeColor(lesson.type)
-        Text(lesson.type)
-            .font(.system(size: theme.badgeSize, weight: .bold))
-            .foregroundColor(tint)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 1)
-            .background(tint.opacity(0.15))
-            .clipShape(Capsule())
-            .lineLimit(1)
-            // Тип — второстепенная метка: она уходит первой при нехватке места.
-            .layoutPriority(-1)
-    }
-}
-
-/// Статус пары: «СЕЙЧАС», «ДАЛЕЕ», «ЧЕРЕЗ 25 МИН».
-///
-/// По дополнению владельца обратный отсчёт не выводится на Small — там
-/// место дороже, и точное время информативнее. Флаг `allowCountdown`
-/// включает его только для Medium и крупнее, где он не отнимает у P0.
-struct LessonStatusView: View {
-    let status: LessonStatus
-    let theme: WidgetTheme
-    let palette: WidgetPalette
-    var allowCountdown: Bool = true
-
-    var body: some View {
-        Text(text)
-            .font(.system(size: theme.statusSize, weight: .heavy))
-            .foregroundColor(palette.accent(for: status))
-            .lineLimit(1)
-            // Статус — текстовый, а не только цвет: в тонировании цвет
-            // не несёт смысла (ТЗ п. 14, 28).
+            .minimumScaleFactor(0.7)
             .accessibilityLabel(accessibility)
     }
 
-    private var text: String {
-        if case .soon(let minutes) = status, allowCountdown, minutes > 0 {
-            return minutes == 1 ? "ЧЕРЕЗ 1 МИН" : "ЧЕРЕЗ \(minutes) МИН"
+    @ViewBuilder
+    private var content: some View {
+        if let room = normalizedRoom, let campus = normalizedCampus {
+            // Номер ярче, корпус спокойнее — но одной текстовой строкой.
+            Text(room)
+                .font(.system(size: size, weight: weight))
+                .foregroundColor(palette.primaryText)
+            + Text(" (\(campus))")
+                .font(.system(size: campusSize(roomSize: size), weight: .regular))
+                .foregroundColor(palette.secondaryText)
+        } else if let room = normalizedRoom {
+            // Корпус неизвестен — только аудитория, без пустых скобок.
+            Text(room)
+                .font(.system(size: size, weight: weight))
+                .foregroundColor(palette.primaryText)
+        } else if let campus = normalizedCampus {
+            // Аудитория неизвестна, но корпус есть: обозначение места
+            // без «()» (ТЗ п. 3.3).
+            Text("Корпус \(campus)")
+                .font(.system(size: size * 0.7, weight: .semibold))
+                .foregroundColor(palette.secondaryText)
+        } else {
+            // Ни того, ни другого: короткое сообщение вместо пустоты.
+            Text(lesson.isOnline ? "Онлайн" : "Место уточняется")
+                .font(.system(size: size * 0.62, weight: .semibold))
+                .foregroundColor(palette.secondaryText)
         }
-        return status.isCurrent ? "СЕЙЧАС" : "ДАЛЕЕ"
+    }
+
+    /// Номер аудитории. Пустое значение → nil, чтобы не рисовать «()».
+    private var normalizedRoom: String? {
+        lesson.isOnline ? nil : lesson.roomNumber.nilIfBlank
+    }
+
+    /// Код кампуса.
+    private var normalizedCampus: String? {
+        lesson.buildingLabel.nilIfBlank
+    }
+
+    /// Корпус мельче номера примерно на треть: блок читается как единое
+    /// целое, но номер остаётся главным (ТЗ п. 3.1, 4.2).
+    private func campusSize(roomSize: CGFloat) -> CGFloat {
+        max(roomSize * 0.62, 10)
+    }
+
+    private var accessibility: String {
+        let room = normalizedRoom
+        let campus = normalizedCampus
+        if lesson.isOnline { return "Аудитория: онлайн" }
+        if let room, let campus { return "Аудитория \(room), корпус \(campus)" }
+        if let room { return "Аудитория \(room)" }
+        if let campus { return "Корпус \(campus)" }
+        return "Место уточняется"
+    }
+}
+
+// MARK: - Время (ТЗ п. 8.2)
+
+/// Интервал занятия одной строкой: `14:20–15:50`.
+///
+/// Формат единый для всех занятий: типографское тире, моноширинные цифры,
+/// запрет переноса. Время — P0: не разрывается и не скрывается.
+struct LessonTimeLabel: View {
+    let lesson: WLesson
+    let palette: WidgetPalette
+    let size: CGFloat
+    var weight: Font.Weight = .semibold
+    var color: Color?
+
+    var body: some View {
+        Text(lesson.timeRange)
+            .font(.system(size: size, weight: weight))
+            .monospacedDigit()
+            .foregroundColor(color ?? palette.primaryText)
+            .lineLimit(1)
+            // Время не ужимается вместе с соседями: фиксируем по ширине
+            // содержимого, иначе SwiftUI отдаст место названию.
+            .fixedSize(horizontal: true, vertical: false)
+            .accessibilityLabel(lesson.timeRangeAccessible)
+    }
+}
+
+// MARK: - Статус (ТЗ п. 8.3)
+
+/// Короткая цветовая метка статуса: `СЕЙЧАС`, `ДАЛЕЕ`, `СКОРО`.
+///
+/// Статус приходит из бизнес-логики, вью его не вычисляет. В тонированном
+/// режиме цвет не несёт смысла, поэтому метка всегда ещё и текстовая.
+struct LessonStatusLabel: View {
+    let status: LessonStatus
+    let palette: WidgetPalette
+    let size: CGFloat
+    /// Обратный отсчёт допустим только там, где есть место (Medium+).
+    var allowCountdown: Bool = false
+
+    var body: some View {
+        Text(allowCountdown ? status.countdownLabel : status.shortLabel)
+            .font(.system(size: size, weight: .semibold))
+            .foregroundColor(palette.activeAccent)
+            // Разрядка: короткий статус читается как маркер, а не как слово.
+            .tracking(0.4)
+            .lineLimit(1)
+            .accessibilityLabel(accessibility)
     }
 
     private var accessibility: String {
@@ -157,84 +145,155 @@ struct LessonStatusView: View {
     }
 }
 
-/// Заголовок дня в шапке: «СЕГОДНЯ · СРЕДА», «ЗАВТРА · ЧЕТВЕРГ», «ПТ, 23 ОКТ».
-struct WidgetDayHeader: View {
-    let text: String?
-    let theme: WidgetTheme
+// MARK: - Тип занятия (ТЗ п. 8.4)
+
+/// Компактный бейдж типа: `ПР`, `ЛК`, `ЛБ`.
+///
+/// Мягкое цветовое выделение; неизвестные типы — нейтральное оформление.
+struct LessonTypeBadge: View {
+    let lesson: WLesson
     let palette: WidgetPalette
-    var trailing: String? = nil
+    let size: CGFloat
 
     var body: some View {
-        HStack(spacing: 4) {
-            if let text {
-                Text(text)
-                    .font(.system(size: theme.headerSize, weight: .bold))
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-            if let trailing {
-                Text(trailing)
-                    .font(.system(size: theme.sectionSize))
-                    .foregroundColor(palette.secondary)
-                    .lineLimit(1)
-            }
+        if let type = lesson.type.nilIfBlank {
+            Text(type)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundColor(palette.typeColor(type))
+                .padding(.horizontal, Space.s4)
+                .padding(.vertical, 1)
+                .background(palette.typeBackground(type))
+                .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                .lineLimit(1)
+                .accessibilityLabel("Тип занятия: \(type)")
         }
     }
 }
 
-/// Секционный заголовок: «ДАЛЕЕ СЕГОДНЯ», «ЗАВТРА · ЧЕТВЕРГ», «ЕЩЁ 2 ПАРЫ».
-struct WidgetSectionHeader: View {
-    let text: String
-    let theme: WidgetTheme
+// MARK: - Преподаватель (ТЗ п. 8.5)
+
+/// Имя преподавателя. Сокращение делает модель, а не вью: ТЗ п. 5.4
+/// запрещает неустойчивые эвристики для иностранных и составных имён.
+struct TeacherLabel: View {
+    let lesson: WLesson
     let palette: WidgetPalette
+    let size: CGFloat
 
     var body: some View {
-        Text(text)
-            .font(.system(size: theme.sectionSize, weight: .heavy))
-            .foregroundColor(palette.secondary)
-            .lineLimit(1)
+        if let teacher = lesson.teacherDisplay {
+            Text(teacher)
+                .font(.system(size: size, weight: .regular))
+                .foregroundColor(palette.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
     }
 }
 
-/// Строка списка: время и аудитория в одну линию, название — во всю ширину.
+// MARK: - Несколько групп (ТЗ п. 8.6)
+
+/// Индикатор совместного занятия: `person.2.fill` + «2 группы».
 ///
-/// Такая раскладка выбрана вместо однострочной: в одну строку названию
-/// остаётся ~30 символов, и «Моделирование информационно-аналитических
-/// систем» обрезается; в двух строках влезает целиком почти без прироста
-/// высоты (одна строка вместо 1.4 за счёт плотного межстрочного зазора).
-struct CompactLessonRow: View {
+/// Появляется только если в модели известно больше одной уникальной группы
+/// (ТЗ п. 5.5). Для тесной компоновки остаётся иконка с числом.
+struct MultiGroupIndicator: View {
     let lesson: WLesson
-    let theme: WidgetTheme
     let palette: WidgetPalette
-    var status: LessonStatus? = nil
-    /// Показывать ли номер пары (для дистанта и пар без аудитории).
-    var showType: Bool = true
+    let size: CGFloat
+    /// Показывать ли слово «группы» или оставить только число.
+    var showWord: Bool = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: theme.lineSpacing) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                LessonTimeView(
-                    lesson: lesson, theme: theme, status: status,
-                    palette: palette, compact: true
-                )
-                if showType {
-                    LessonTypeBadge(lesson: lesson, theme: theme, palette: palette)
-                }
-                Spacer(minLength: 2)
-                ClassroomView(lesson: lesson, theme: theme, compact: true)
+        if lesson.isShared {
+            HStack(spacing: Space.s2) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: size))
+                    .foregroundColor(palette.mutedText)
+                Text(label)
+                    .font(.system(size: size, weight: .regular))
+                    .foregroundColor(palette.mutedText)
+                    .lineLimit(1)
             }
-            SubjectTitleView(lesson: lesson, theme: theme, compact: true, lines: 2)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Совместное занятие, групп: \(lesson.groupCount)")
+        }
+    }
+
+    /// «2 группы» / «5 групп» — по правилам русского счёта.
+    private var label: String {
+        let count = lesson.groupCount
+        guard showWord else { return "\(count)" }
+        let noun: String
+        switch count % 10 {
+        case 1 where count % 100 != 11: noun = "группа"
+        case 2...4 where !(11...14).contains(count % 100): noun = "группы"
+        default: noun = "групп"
+        }
+        return "\(count) \(noun)"
+    }
+}
+
+// MARK: - Строка следующей пары (ТЗ п. 8.8)
+
+/// Компактная запись следующей пары.
+///
+/// Две строки: сверху время и аудитория (в одинаковых колонках у всех записей
+/// списка — ТЗ п. 2.4), снизу название во всю ширину. Однострочная компоновка
+/// оставляла названию ~30 символов, и длинные дисциплины обрезались; здесь оно
+/// получает всю ширину при том же вертикальном размере.
+struct UpcomingLessonRow: View {
+    let lesson: WLesson
+    let palette: WidgetPalette
+    let density: WidgetDensity
+    /// Диапазоны шрифтов из таблицы ТЗ п. 2.2.
+    let typography: WidgetTypography
+    /// Показывать ли бейдж типа.
+    var showsType: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: density.lineSpacing) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
+                LessonTimeLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.rowTime(11...14),
+                    weight: .medium,
+                    color: palette.secondaryText
+                )
+                // Аудитория прижата к правому краю: у всех записей списка
+                // она в одной колонке (ТЗ п. 2.4).
+                Spacer(minLength: Space.s4)
+                ClassroomLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.rowRoom(11...15),
+                    weight: .semibold
+                )
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: Space.s4) {
+                Text(lesson.subject)
+                    .font(.system(size: typography.rowSubject(11...14), weight: .medium))
+                    .foregroundColor(palette.subjectText)
+                    .lineLimit(density.rowSubjectLines)
+                    .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
+                if showsType {
+                    LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
+                }
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(rowAccessibility)
-    }
-
-    private var rowAccessibility: String {
-        "\(lesson.start) до \(lesson.end), \(lesson.subject), аудитория \(lesson.roomDisplay)"
+        .accessibilityLabel(
+            "\(lesson.timeRangeAccessible), \(lesson.subject), \(lesson.roomDisplay)"
+        )
     }
 }
 
-/// Тонкий разделитель между смысловыми зонами и строками.
+// MARK: - Разделитель и заголовки
+
+/// Тонкий разделитель между самостоятельными блоками.
 struct WidgetDivider: View {
     let palette: WidgetPalette
 
@@ -242,5 +301,33 @@ struct WidgetDivider: View {
         Rectangle()
             .fill(palette.divider)
             .frame(height: 1)
+    }
+}
+
+/// Заголовок учебного дня или секции: `СЕГОДНЯ · СРЕДА`, `ДАЛЕЕ СЕГОДНЯ`.
+struct WidgetSectionTitle: View {
+    let text: String
+    let palette: WidgetPalette
+    let size: CGFloat
+    /// Заголовок дня — чуть заметнее служебной подписи секции.
+    var isDayHeader: Bool = false
+
+    var body: some View {
+        Text(text.uppercased())
+            .font(.system(size: size, weight: isDayHeader ? .semibold : .medium))
+            .foregroundColor(isDayHeader ? palette.secondaryText : palette.mutedText)
+            .tracking(0.3)
+            .lineLimit(1)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+// MARK: - Хелперы
+
+extension String {
+    /// Строка, в которой нет ничего кроме пробелов, — это отсутствие значения.
+    var nilIfBlank: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

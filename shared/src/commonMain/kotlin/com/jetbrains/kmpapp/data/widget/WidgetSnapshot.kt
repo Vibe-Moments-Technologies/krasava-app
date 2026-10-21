@@ -23,6 +23,12 @@ import kotlinx.serialization.json.Json
 
 @Serializable
 data class WidgetLesson(
+    /**
+     * Стабильный идентификатор пары из фида. Нужен виджету, чтобы различать
+     * две одинаковые пары подряд (ТЗ виджетов п. 6.9: объединять их по
+     * названию дисциплины запрещено) и для будущих deep links.
+     */
+    val id: String,
     val date: String,   // yyyy-MM-dd
     val bell: Int,
     val start: String,  // "09:00" (локальное время)
@@ -30,7 +36,14 @@ data class WidgetLesson(
     val subject: String,
     val type: String,   // короткий бейдж: ЛК/ПР/ЛАБ/ДР/ДОП
     val room: String,
-    val teacher: String
+    val teacher: String,
+    /**
+     * Учебные группы, участвующие в паре. Нужны виджету для индикатора
+     * совместного занятия («2 группы»): по ТЗ считать их количество из числа
+     * преподавателей или повторов пар запрещено — только по уникальным
+     * идентификаторам групп из фида.
+     */
+    val groups: List<String> = emptyList()
 )
 
 /** Одно расписание: цель (группа/преподаватель/аудитория) и её пары. */
@@ -92,6 +105,7 @@ object WidgetSnapshotBuilder {
     }
 
     private fun Lesson.toWidgetLesson() = WidgetLesson(
+        id = id,
         date = date.toString(),
         bell = bellNumber,
         start = startTime,
@@ -99,7 +113,8 @@ object WidgetSnapshotBuilder {
         subject = subject,
         type = lessonType.shortName,
         room = classrooms.joinToString(", "),
-        teacher = teachers.joinToString(", ")
+        teacher = teachers.joinToString(", "),
+        groups = groups
     )
 }
 

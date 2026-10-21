@@ -1,21 +1,18 @@
 import SwiftUI
 import WidgetKit
 
-// MARK: - Preview
+// MARK: - Preview (ТЗ п. 19)
 //
-// ТЗ п. 30: каждое представление проверяется на наборе состояний —
-// CURRENT, UPCOMING, SOON, FUTURE_DAY, NO_SCHEDULE, NO_TARGET, LONG_TITLE,
-// ONLY_ONE_LESSON, MANY_LESSONS, NO_ROOM, STALE.
+// Для каждого размера — все обязательные состояния: идёт занятие, перемена,
+// завтра, через несколько дней, одна пара, две, много, длинная дисциплина,
+// без аудитории, без преподавателя, без данных, устаревшие данные.
 //
-// Preview использует ТОТ ЖЕ движок и те же вью, что и настоящий виджет,
-// поэтому показывает фактическую компоновку, а не нарисованный макет.
-// В Xcode: открыть этот файл и включить Canvas (⌥⌘↩).
-//
-// Семейство передаётся параметром, а не через environment: ключ
-// `widgetFamily` доступен только для чтения, подменить его снаружи нельзя.
+// Preview использует те же вью и тот же движок, что настоящий виджет, поэтому
+// показывает фактическую компоновку, а не нарисованный макет. Размер
+// задаётся параметром familyOverride: ключ `widgetFamily` в environment
+// доступен только для чтения.
 
-/// Запись шкалы из фикстуры: дата берётся из сценария, чтобы подписи
-/// «СЕЙЧАС»/«ЗАВТРА» соответствовали выбранному моменту.
+/// Запись шкалы из фикстуры.
 private func entry(_ fixture: WidgetPreviewFixture) -> ScheduleEntry {
     ScheduleEntry(
         date: fixture.state.generatedAt,
@@ -25,24 +22,30 @@ private func entry(_ fixture: WidgetPreviewFixture) -> ScheduleEntry {
     )
 }
 
-/// Превью для одного размера на всех сценариях сразу.
+/// Галерея сценариев для одного размера.
 private struct FixtureGallery: View {
     let family: WidgetFamily
+    let fixtures: [WidgetPreviewFixture]
+
+    init(family: WidgetFamily, fixtures: [WidgetPreviewFixture] = WidgetPreviewFixtures.all) {
+        self.family = family
+        self.fixtures = fixtures
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(WidgetPreviewFixtures.all, id: \.name) { fixture in
-                    VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .trailing, spacing: Space.s12) {
+                ForEach(fixtures, id: \.name) { fixture in
+                    VStack(alignment: .leading, spacing: Space.s4) {
                         Text(fixture.name)
-                            .font(.caption2.bold())
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.secondary)
                         ScheduleWidgetEntryView(
                             entry: entry(fixture),
                             familyOverride: family
                         )
                         .frame(width: width, height: height)
-                        .clipShape(RoundedRectangle(cornerRadius: 22))
+                        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     }
                 }
             }
@@ -50,7 +53,8 @@ private struct FixtureGallery: View {
         }
     }
 
-    /// Приблизительные размеры семейств на iPhone — для читаемости превью.
+    /// Фактические размеры семейств на iPhone (ТЗ п. 19.2: проверять
+    /// в реальном масштабе, а не только увеличенным).
     private var width: CGFloat {
         family == .systemSmall ? 170 : 364
     }
@@ -63,25 +67,35 @@ private struct FixtureGallery: View {
     }
 }
 
-// MARK: - Галереи по размерам
+// MARK: - Все состояния по размерам
 
-#Preview("Small — все сценарии") {
+#Preview("Small — все состояния") {
     FixtureGallery(family: .systemSmall)
 }
 
-#Preview("Medium — все сценарии") {
+#Preview("Medium — все состояния") {
     FixtureGallery(family: .systemMedium)
 }
 
-#Preview("Large — все сценарии") {
+#Preview("Large — все состояния") {
     FixtureGallery(family: .systemLarge)
 }
 
-// MARK: - Темы (ТЗ п. 30, 14)
+// MARK: - Темы (ТЗ п. 19: Light, Dark)
 
-#Preview("Small — тёмная тема") {
+#Preview("Small — светлая тема") {
     FixtureGallery(family: .systemSmall)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Medium — светлая тема") {
+    FixtureGallery(family: .systemMedium)
+        .preferredColorScheme(.light)
+}
+
+#Preview("Large — светлая тема") {
+    FixtureGallery(family: .systemLarge)
+        .preferredColorScheme(.light)
 }
 
 #Preview("Medium — тёмная тема") {
@@ -94,39 +108,83 @@ private struct FixtureGallery: View {
         .preferredColorScheme(.dark)
 }
 
-// MARK: - Отдельные сценарии крупно
+// MARK: - Отдельные обязательные сценарии крупно
 
-#Preview("CURRENT — Large") {
-    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.current), familyOverride: .systemLarge)
-        .frame(width: 364, height: 382)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
+#Preview("Small — идёт занятие") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.current), familyOverride: .systemSmall)
+        .frame(width: 170, height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding()
 }
 
-#Preview("LONG_TITLE — Small") {
+#Preview("Small — длинная дисциплина") {
     ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.longTitle), familyOverride: .systemSmall)
         .frame(width: 170, height: 170)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding()
 }
 
-#Preview("NO_TARGET — Medium") {
-    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.noTarget), familyOverride: .systemMedium)
+#Preview("Small — завтра") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.tomorrow), familyOverride: .systemSmall)
+        .frame(width: 170, height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+#Preview("Medium — преподаватель и несколько групп") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.current), familyOverride: .systemMedium)
         .frame(width: 364, height: 170)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding()
 }
 
-#Preview("FUTURE_DAY — Small") {
-    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.futureDay), familyOverride: .systemSmall)
-        .frame(width: 170, height: 170)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
+#Preview("Medium — две следующие пары") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.twoLessons), familyOverride: .systemMedium)
+        .frame(width: 364, height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding()
 }
 
-#Preview("NO_ROOM — Small") {
-    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.noRoom), familyOverride: .systemSmall)
-        .frame(width: 170, height: 170)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
+#Preview("Medium — одна пара (Mode 0)") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.oneLesson), familyOverride: .systemMedium)
+        .frame(width: 364, height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+#Preview("Large — следующий учебный день") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.dayOver), familyOverride: .systemLarge)
+        .frame(width: 364, height: 382)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+#Preview("Large — много пар") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.manyLessons), familyOverride: .systemLarge)
+        .frame(width: 364, height: 382)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+#Preview("Large — нет аудитории") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.noRoom), familyOverride: .systemLarge)
+        .frame(width: 364, height: 382)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+#Preview("Large — нет данных") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.noSchedule), familyOverride: .systemLarge)
+        .frame(width: 364, height: 382)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+// MARK: - iPad (горизонтальная панель)
+
+#Preview("Extra Large — iPad") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.manyLessons), familyOverride: .systemExtraLarge)
+        .frame(width: 628, height: 382)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding()
 }

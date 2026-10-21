@@ -2,16 +2,16 @@ import SwiftUI
 import WidgetKit
 import AppIntents
 
-// MARK: - Таймлайн
+// MARK: - Таймлайн (ТЗ п. 12)
 //
-// По ТЗ (п. 21) запись содержит состояние, рассчитанное для её момента: система
-// показывает готовый снимок, не пересчитывая выбор пары. Переходы планируются
-// на значимых границах — начало и конец пары, полночь, — поэтому виджет
-// обновляется сам без таймеров и без перезагрузки каждую минуту.
+// Запись содержит состояние, рассчитанное для её момента: система показывает
+// готовый снимок и не пересчитывает выбор пары. Переходы планируются на
+// значимых границах — начало и конец пары, момент «СКОРО», полночь, — поэтому
+// виджет обновляется сам, без таймеров и ежеминутных перезагрузок.
 
 struct ScheduleEntry: TimelineEntry {
     let date: Date
-    /// Готовое состояние на момент `date`. nil, если данных нет.
+    /// Готовое состояние на момент `date`. nil, если данных нет вовсе.
     let state: WidgetPresentationState?
     /// Причина отсутствия данных (когда `state` == nil).
     let emptyReason: EmptyReason?
@@ -20,42 +20,47 @@ struct ScheduleEntry: TimelineEntry {
 
 // MARK: - Построение таймлайна
 
-/// Собирает записи на несколько дней вперёд (дополнение владельца: расписание
-/// предсказуемо, поэтому шкалу можно рассчитать заранее, а не просыпаться
-/// каждую минуту). Система может показать запись позже указанного времени —
-/// это допустимо, поэтому состояние считается для момента записи, а не «сейчас».
+/// Собирает записи на несколько дней вперёд.
+///
+/// Расписание предсказуемо, поэтому шкала рассчитывается заранее (ТЗ п. 12.3,
+/// 12.4) — это рекомендованный Apple подход. Система может показать запись
+/// позже указанного времени, поэтому состояние считается для момента записи,
+/// а не «сейчас».
 enum WidgetTimelineBuilder {
-    /// Сколько записей формируем за раз. Больше не нужно: виджет живёт
-    /// на домашнем экране, а при изменении расписания приложение само
-    /// попросит перезагрузку.
-    static let maxEntries = 40
+    /// Больше записей не нужно: виджет живёт на домашнем экране, а при
+    /// изменении расписания приложение само попросит перезагрузку.
+    static let maxEntries = 48
 
     static func entries(
         targetId: Int?,
         now: Date,
-        calendar: Calendar = Calendar(identifier: .gregorian)
+        calendar: Calendar = ScheduleClock.calendar()
     ) -> [ScheduleEntry] {
-        // Моменты, когда меняется смысл содержимого.
         var dates: [Date] = [now]
 
         switch WidgetData.load() {
         case .ok(let payload):
             let target = WidgetData.resolveTarget(in: payload, selectedId: targetId)
-                ?? payload.targets.first
             if let target {
                 for lesson in target.lessons {
-                    if let start = lesson.startDate(), start > now { dates.append(start) }
-                    if let end = lesson.endDate(), end > now { dates.append(end) }
+                    guard let start = lesson.startDate(), let end = lesson.endDate() else { continue }
+                    if start > now { dates.append(start) }
+                    if end > now { dates.append(end) }
+                    // Переход в статус «СКОРО» за порог до начала: подпись
+                    // меняется, значит нужна отдельная запись (ТЗ п. 12.3).
+                    let soon = start.addingTimeInterval(
+                        -Double(ScheduleSelectionEngine.soonThresholdMinutes) * 60
+                    )
+                    if soon > now { dates.append(soon) }
                 }
             }
-            _ = payload
         default:
             break
         }
 
-        // Полночь: меняется подпись дня («СЕГОДНЯ» → «ЗАВТРА» → дата) и,
-        // возможно, главная пара. Планируем на трое суток вперёд.
-        for offset in 1...3 {
+        // Полночь: меняется подпись дня («СЕГОДНЯ» → «ЗАВТРА» → дата)
+        // и, возможно, активная пара.
+        for offset in 1...4 {
             if let midnight = calendar.date(
                 byAdding: .day, value: offset,
                 to: calendar.startOfDay(for: now)
@@ -64,9 +69,19 @@ enum WidgetTimelineBuilder {
             }
         }
 
-        let unique = Array(Set(dates)).sorted().prefix(maxEntries)
+        // Близкие события объединяются: WidgetKit не любит записи вплотную
+        // друг к другу, а разница меньше минуты для виду несущественна.
+        let sorted = Array(Set(dates.map { $0.timeIntervalSince1970.rounded() }))
+            .sorted()
+            .map { Date(timeIntervalSince1970: $0) }
 
-        return unique.map { moment in
+        var result: [Date] = []
+        for moment in sorted {
+            if let last = result.last, moment.timeIntervalSince(last) < 30 { continue }
+            result.append(moment)
+        }
+
+        return result.prefix(maxEntries).map { moment in
             let (context, reason) = WidgetData.context(selectedId: targetId, now: moment)
             return ScheduleEntry(
                 date: moment,
@@ -95,7 +110,7 @@ struct ScheduleWidgetProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: KrasavaWidgetIntent, in context: Context) async -> ScheduleEntry {
-        let targetId = resolved(configuration)
+        let targetId = configuration.target?.id
         let now = Date()
         let (ctx, reason) = WidgetData.context(selectedId: targetId, now: now)
         return ScheduleEntry(
@@ -104,17 +119,10 @@ struct ScheduleWidgetProvider: AppIntentTimelineProvider {
     }
 
     func timeline(for configuration: KrasavaWidgetIntent, in context: Context) async -> Timeline<ScheduleEntry> {
-        let targetId = resolved(configuration)
+        let targetId = configuration.target?.id
         let entries = WidgetTimelineBuilder.entries(targetId: targetId, now: Date())
         // .atEnd: система вернётся за новой шкалой после последней записи.
         return Timeline(entries: entries, policy: .atEnd)
-    }
-
-    /// Явный выбор в настройках виджета. nil означает «не выбран»: виджет
-    /// берёт группу уведомлений (решение владельца — работает по умолчанию,
-    /// и при этом выбор остаётся возможным через «Изменить виджет»).
-    private func resolved(_ configuration: KrasavaWidgetIntent) -> Int? {
-        configuration.target?.id
     }
 }
 
@@ -183,54 +191,53 @@ struct ScheduleWidget: Widget {
         }
     }
 
-    /// Размеры виджета.
+    /// Поддерживаемые семейства.
     ///
-    /// Четвёртый размер из ТЗ — `systemExtraLargePortrait` — в SDK iOS 26
-    /// объявлен как `@available(iOS, unavailable)`: он существует только на
-    /// visionOS, на iPhone его нет. Вместо него регистрируется
-    /// `systemExtraLarge` — это iPad-размер (доступен с iOS 15), и по ТЗ
-    /// п. 11.6 для iPad предусмотрена отдельная горизонтальная компоновка.
-    /// На iPhone система просто не покажет его в галерее.
+    /// `systemExtraLargePortrait` в SDK iOS объявлен как
+    /// `@available(iOS, unavailable)` — на iPhone такого размера нет.
+    /// Регистрируется `systemExtraLarge` (iPad): для него по ТЗ п. 1.2
+    /// предусмотрена горизонтальная компоновка.
     static var families: [WidgetFamily] {
         [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
     }
 }
 
-// MARK: - Точка входа вью
+// MARK: - Режим рендеринга
 
-/// Значение режима рендеринга, приведённое к типу без привязки к версии iOS.
+/// Тонирует ли система виджет.
 ///
 /// `widgetRenderingMode` появился в iOS 16, а минимальная версия проекта —
-/// 15.3: читаем его под проверкой доступности, иначе считаем полным цветом.
+/// 15.3, поэтому читаем его под проверкой доступности через отдельный тип.
 @available(iOS 16.0, *)
 struct RenderingModeReader: View {
-    let content: (WidgetPaletteMode) -> AnyView
+    let content: (Bool) -> AnyView
 
     @Environment(\.widgetRenderingMode) private var renderingMode
 
     var body: some View {
-        content(mode)
+        content(isTinted)
     }
 
-    private var mode: WidgetPaletteMode {
-        // В SDK iOS 26 у WidgetRenderingMode больше вариантов, чем fullColor /
-        // accented / vibrant, и перечислять их по именам нельзя: набор растёт
-        // от версии к версии. Всё, что не полный цвет, считаем тонированием —
-        // это безопасный вариант: акценты станут монохромными, читаемость
-        // обеспечивают текстовые метки статуса.
-        if case .fullColor = renderingMode { return .fullColor }
-        return .tinted
+    private var isTinted: Bool {
+        // В SDK iOS 26 у WidgetRenderingMode больше вариантов, чем
+        // fullColor/accented/vibrant, и перечислять их по именам нельзя:
+        // набор растёт от версии к версии. Всё, что не полный цвет, считаем
+        // тонированием — это безопасно, смысл несут текстовые метки.
+        if case .fullColor = renderingMode { return false }
+        return true
     }
 }
 
+// MARK: - Точка входа вью
+
 /// Выбор представления по семейству. Вью получают уже готовое состояние
-/// (ТЗ п. 19) — никакой логики выбора пары здесь нет.
+/// (ТЗ п. 12.2) — никакой логики выбора пары здесь нет.
 struct ScheduleWidgetEntryView: View {
     @Environment(\.widgetFamily) var family
+    @Environment(\.colorScheme) var colorScheme
     let entry: ScheduleEntry
     /// Размер, заданный вручную для Preview. В реальном виджете не задаётся:
-    /// семейство приходит из environment (ключ только для чтения, подменить
-    /// его снаружи нельзя, поэтому параметр нужен именно для превью).
+    /// семейство приходит из environment (ключ только для чтения).
     var familyOverride: WidgetFamily?
 
     init(entry: ScheduleEntry, familyOverride: WidgetFamily? = nil) {
@@ -241,32 +248,37 @@ struct ScheduleWidgetEntryView: View {
     var body: some View {
         Group {
             if #available(iOS 16.0, *) {
-                // На iOS 16+ система может тонировать виджет: узнаём режим
-                // через отдельный тип, объявленный с проверкой доступности.
-                RenderingModeReader { mode in
-                    AnyView(content(palette: WidgetPalette(mode: mode)))
+                RenderingModeReader { isTinted in
+                    AnyView(content(palette: makePalette(isTinted: isTinted)))
                 }
             } else {
-                content(palette: WidgetPalette())
+                content(palette: makePalette(isTinted: false))
             }
         }
-        .widgetContainerBackground()
+    }
+
+    private func makePalette(isTinted: Bool) -> WidgetPalette {
+        WidgetPalette(colorScheme: colorScheme, isTinted: isTinted)
     }
 
     @ViewBuilder
     private func content(palette: WidgetPalette) -> some View {
-        if let state = entry.state {
-            view(for: state, palette: palette)
-        } else {
-            // Данных нет вовсе: показываем пустое состояние с причиной,
-            // а не пустой прямоугольник (ТЗ п. 27).
-            WidgetEmptyStateView(
-                reason: entry.emptyReason,
-                targetTitle: nil,
-                theme: WidgetTheme(),
-                palette: palette
-            )
+        Group {
+            if let state = entry.state {
+                view(for: state, palette: palette)
+            } else {
+                // Данных нет вовсе: показываем пустое состояние с причиной,
+                // а не пустой прямоугольник (ТЗ п. 10.4).
+                WidgetEmptyStateView(
+                    reason: entry.emptyReason,
+                    targetTitle: nil,
+                    palette: palette
+                )
+            }
         }
+        // Фон задаётся через containerBackground: рисовать поверх системного
+        // фона собственный прямоугольник со скруглением не нужно (ТЗ п. 15.1).
+        .widgetContainerBackground(palette: palette)
     }
 
     @ViewBuilder
@@ -277,7 +289,7 @@ struct ScheduleWidgetEntryView: View {
         case .systemLarge:
             LargeScheduleWidgetView(state: state, palette: palette)
         case .systemExtraLarge:
-            // iPad: горизонтальная панель (ТЗ п. 11.6). На iPhone этого
+            // iPad: горизонтальная панель (ТЗ п. 1.2). На iPhone этого
             // семейства нет, поэтому ветка срабатывает только на планшете.
             ExtraLargeScheduleWidgetView(state: state, palette: palette)
         default:
@@ -300,13 +312,11 @@ struct KrasavaWidgetBundle: WidgetBundle {
 extension View {
     /// `containerBackground` обязателен с iOS 17: без него система не даёт
     /// виджету фон, и в режимах тонирования содержимое теряет читаемость
-    /// (ТЗ п. 14). На 15–16 фон системный по умолчанию.
+    /// (ТЗ п. 15.1, 15.3). На 15–16 фон системный по умолчанию.
     @ViewBuilder
-    func widgetContainerBackground() -> some View {
+    func widgetContainerBackground(palette: WidgetPalette) -> some View {
         if #available(iOSApplicationExtension 17.0, *) {
-            self.containerBackground(for: .widget) {
-                Color(.systemBackground)
-            }
+            self.containerBackground(for: .widget) { palette.surfaceBackground }
         } else {
             self
         }
