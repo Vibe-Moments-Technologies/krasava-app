@@ -183,45 +183,80 @@ struct ScheduleWidget: Widget {
         }
     }
 
-    /// Четыре размера из ТЗ. `systemExtraLargePortrait` объявлено только в
-    /// SDK iOS 26+, поэтому на более старых SDK оно отсутствует — собираем
-    /// список условно, чтобы код компилировался и там.
+    /// Размеры виджета.
+    ///
+    /// Четвёртый размер из ТЗ — `systemExtraLargePortrait` — в SDK iOS 26
+    /// объявлен как `@available(iOS, unavailable)`: он существует только на
+    /// visionOS, на iPhone его нет. Вместо него регистрируется
+    /// `systemExtraLarge` — это iPad-размер (доступен с iOS 15), и по ТЗ
+    /// п. 11.6 для iPad предусмотрена отдельная горизонтальная компоновка.
+    /// На iPhone система просто не покажет его в галерее.
     static var families: [WidgetFamily] {
-        var result: [WidgetFamily] = [.systemSmall, .systemMedium, .systemLarge]
-        if #available(iOSApplicationExtension 26.0, *) {
-            result.append(.systemExtraLargePortrait)
-        }
-        return result
+        [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
     }
 }
 
 // MARK: - Точка входа вью
 
+/// Значение режима рендеринга, приведённое к типу без привязки к версии iOS.
+///
+/// `widgetRenderingMode` появился в iOS 16, а минимальная версия проекта —
+/// 15.3: читаем его под проверкой доступности, иначе считаем полным цветом.
+@available(iOS 16.0, *)
+struct RenderingModeReader: View {
+    let content: (WidgetPaletteMode) -> AnyView
+
+    @Environment(\.widgetRenderingMode) private var renderingMode
+
+    var body: some View {
+        content(mode)
+    }
+
+    private var mode: WidgetPaletteMode {
+        switch renderingMode {
+        // accented и vibrant — варианты тонирования системой.
+        case .accented, .vibrant: return .tinted
+        case .fullColor: return .fullColor
+        @unknown default: return .fullColor
+        }
+    }
+}
+
 /// Выбор представления по семейству. Вью получают уже готовое состояние
 /// (ТЗ п. 19) — никакой логики выбора пары здесь нет.
 struct ScheduleWidgetEntryView: View {
     @Environment(\.widgetFamily) var family
-    @Environment(\.widgetRenderingMode) var renderingMode
     let entry: ScheduleEntry
 
     var body: some View {
-        let palette = WidgetPalette(renderingMode: renderingMode)
-
         Group {
-            if let state = entry.state {
-                view(for: state, palette: palette)
+            if #available(iOS 16.0, *) {
+                // На iOS 16+ система может тонировать виджет: узнаём режим
+                // через отдельный тип, объявленный с проверкой доступности.
+                RenderingModeReader { mode in
+                    AnyView(content(palette: WidgetPalette(mode: mode)))
+                }
             } else {
-                // Данных нет вовсе: показываем пустое состояние с причиной,
-                // а не пустой прямоугольник (ТЗ п. 27).
-                WidgetEmptyStateView(
-                    reason: entry.emptyReason,
-                    targetTitle: nil,
-                    theme: WidgetTheme(),
-                    palette: palette
-                )
+                content(palette: WidgetPalette())
             }
         }
         .widgetContainerBackground()
+    }
+
+    @ViewBuilder
+    private func content(palette: WidgetPalette) -> some View {
+        if let state = entry.state {
+            view(for: state, palette: palette)
+        } else {
+            // Данных нет вовсе: показываем пустое состояние с причиной,
+            // а не пустой прямоугольник (ТЗ п. 27).
+            WidgetEmptyStateView(
+                reason: entry.emptyReason,
+                targetTitle: nil,
+                theme: WidgetTheme(),
+                palette: palette
+            )
+        }
     }
 
     @ViewBuilder
@@ -231,7 +266,9 @@ struct ScheduleWidgetEntryView: View {
             MediumScheduleWidgetView(state: state, palette: palette)
         case .systemLarge:
             LargeScheduleWidgetView(state: state, palette: palette)
-        case .systemExtraLargePortrait:
+        case .systemExtraLarge:
+            // iPad: горизонтальная панель (ТЗ п. 11.6). На iPhone этого
+            // семейства нет, поэтому ветка срабатывает только на планшете.
             ExtraLargeScheduleWidgetView(state: state, palette: palette)
         default:
             SmallScheduleWidgetView(state: state, palette: palette)

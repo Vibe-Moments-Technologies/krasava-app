@@ -130,8 +130,60 @@ struct ExtraLargeScheduleWidgetView: View {
     var body: some View {
         GeometryReader { geo in
             let theme = theme(for: geo.size.height)
-            content(theme: theme, height: geo.size.height)
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+            // ТЗ п. 11.6: iPad (`systemExtraLarge`) — горизонтальная компоновка,
+            // вертикальная панель — для узкого и высокого контейнера. Признак
+            // берётся по фактическому соотношению сторон, а не по семейству:
+            // один и тот же размер на разных экранах разный (ТЗ п. 25).
+            let isLandscape = geo.size.width > geo.size.height * 1.15
+            Group {
+                if isLandscape {
+                    landscapeContent(theme: theme, width: geo.size.width)
+                } else {
+                    content(theme: theme, height: geo.size.height)
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+        }
+    }
+
+    // MARK: Горизонтальная панель (iPad)
+
+    /// Три колонки: главная пара — остаток дня — следующий учебный день.
+    /// Колонки, для которых нет данных, не рисуются (ТЗ п. 11.2, 11.3).
+    @ViewBuilder
+    private func landscapeContent(theme: WidgetTheme, width: CGFloat) -> some View {
+        if let lesson = state.primaryLesson, let status = state.primaryStatus {
+            HStack(alignment: .top, spacing: theme.blockSpacing * 1.5) {
+                zoneA(lesson: lesson, status: status, theme: theme)
+                    // Главная зона получает половину ширины — она доминирует.
+                    .frame(width: width * 0.42, alignment: .topLeading)
+
+                if !state.upcomingLessons.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        WidgetDivider(palette: palette).frame(width: 1, height: .infinity)
+                    }
+                    zoneB(theme: theme, height: 320)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+
+                if !state.nextStudyDayLessons.isEmpty,
+                   let label = state.nextStudyDay.longLabel ?? state.nextStudyDay.label {
+                    VStack(alignment: .leading, spacing: 0) {
+                        WidgetDivider(palette: palette).frame(width: 1, height: .infinity)
+                    }
+                    zoneC(label: label, theme: theme, height: 320)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                }
+            }
+            .padding(theme.padding)
+        } else {
+            WidgetEmptyStateView(
+                reason: state.emptyReason,
+                targetTitle: state.targetTitle,
+                theme: theme,
+                palette: palette
+            )
+            .padding(theme.padding)
         }
     }
 

@@ -175,6 +175,16 @@ struct WidgetTheme {
 
 // MARK: - Цвета
 
+/// Режим рендеринга виджета в терминах, не зависящих от версии iOS.
+///
+/// `WidgetRenderingMode` доступен только с iOS 16, а минимальная версия
+/// проекта — 15.3, поэтому собственный тип: значение подставляется там, где
+/// системный API доступен, иначе остаётся `.fullColor`.
+enum WidgetPaletteMode {
+    case fullColor
+    case tinted
+}
+
 /// Палитра виджета.
 ///
 /// Отдельный тип, а не набор `.green`/`.secondary` по месту: цвета должны
@@ -183,19 +193,16 @@ struct WidgetTheme {
 /// монохромными, а смысл переносится на текст — поэтому вью дополнительно
 /// показывает словесный статус, а не полагается только на цвет.
 struct WidgetPalette {
-    let renderingMode: WidgetRenderingMode
+    let mode: WidgetPaletteMode
 
-    init(renderingMode: WidgetRenderingMode = .fullColor) {
-        self.renderingMode = renderingMode
+    init(mode: WidgetPaletteMode = .fullColor) {
+        self.mode = mode
     }
 
-    /// В тонированном/акцентном режиме цвет как указатель смысла ненадёжен.
+    /// В тонированном режиме цвет как указатель смысла ненадёжен.
     private var isTinted: Bool {
-        switch renderingMode {
-        case .fullColor: return false
-        case .accented, .vibrant: return true
-        @unknown default: return false
-        }
+        if case .tinted = mode { return true }
+        return false
     }
 
     var primary: Color { .primary }
