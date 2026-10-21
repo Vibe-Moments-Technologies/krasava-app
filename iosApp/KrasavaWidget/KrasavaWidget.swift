@@ -228,6 +228,15 @@ struct RenderingModeReader: View {
 struct ScheduleWidgetEntryView: View {
     @Environment(\.widgetFamily) var family
     let entry: ScheduleEntry
+    /// Размер, заданный вручную для Preview. В реальном виджете не задаётся:
+    /// семейство приходит из environment (ключ только для чтения, подменить
+    /// его снаружи нельзя, поэтому параметр нужен именно для превью).
+    var familyOverride: WidgetFamily?
+
+    init(entry: ScheduleEntry, familyOverride: WidgetFamily? = nil) {
+        self.entry = entry
+        self.familyOverride = familyOverride
+    }
 
     var body: some View {
         Group {
@@ -262,7 +271,7 @@ struct ScheduleWidgetEntryView: View {
 
     @ViewBuilder
     private func view(for state: WidgetPresentationState, palette: WidgetPalette) -> some View {
-        switch family {
+        switch familyOverride ?? family {
         case .systemMedium:
             MediumScheduleWidgetView(state: state, palette: palette)
         case .systemLarge:
