@@ -210,8 +210,6 @@ struct WidgetPalette {
     var muted: Color { isTinted ? .secondary : Color.gray }
 
     var divider: Color { Color.secondary.opacity(isTinted ? 0.25 : 0.18) }
-    /// Заливка второстепенных блоков (главная пара в Large/Extra).
-    var surfaceTint: Color { Color.secondary.opacity(isTinted ? 0.10 : 0.08) }
 
     /// Акцент идущей пары.
     var currentAccent: Color { isTinted ? .primary : .green }
@@ -234,16 +232,5 @@ struct WidgetPalette {
     /// Цвет текста статуса.
     func accent(for status: LessonStatus) -> Color {
         status.isCurrent ? currentAccent : upcomingAccent
-    }
-}
-
-// MARK: - Готовые модификаторы
-
-extension View {
-    /// Усадка длинных названий вместо многоточия: по ТЗ (п. 15) бездумный
-    /// `minimumScaleFactor(0.3)` запрещён, но 0.85 читается и спасает строку.
-    func adaptiveSubject() -> some View {
-        self.minimumScaleFactor(0.85)
-            .fixedSize(horizontal: false, vertical: true)
     }
 }

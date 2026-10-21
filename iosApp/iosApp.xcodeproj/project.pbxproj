@@ -28,6 +28,7 @@
 		BB0000000000000000000037 /* WidgetComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000038 /* WidgetComponents.swift */; };
 		BB0000000000000000000039 /* WidgetViewsSmallMedium.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000040 /* WidgetViewsSmallMedium.swift */; };
 		BB0000000000000000000071 /* WidgetViewsLarge.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000072 /* WidgetViewsLarge.swift */; };
+		BB0000000000000000000075 /* WidgetPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0000000000000000000074 /* WidgetPreviews.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,6 +81,7 @@
 		BB0000000000000000000038 /* WidgetComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetComponents.swift; sourceTree = "<group>"; };
 		BB0000000000000000000040 /* WidgetViewsSmallMedium.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetViewsSmallMedium.swift; sourceTree = "<group>"; };
 		BB0000000000000000000072 /* WidgetViewsLarge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetViewsLarge.swift; sourceTree = "<group>"; };
+		BB0000000000000000000074 /* WidgetPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetPreviews.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -140,6 +142,7 @@
 				BB0000000000000000000038 /* WidgetComponents.swift */,
 				BB0000000000000000000040 /* WidgetViewsSmallMedium.swift */,
 				BB0000000000000000000072 /* WidgetViewsLarge.swift */,
+				BB0000000000000000000074 /* WidgetPreviews.swift */,
 				BB0000000000000000000030 /* Logic */,
 				BB0000000000000000000002 /* Info.plist */,
 				BB0000000000000000000003 /* KrasavaWidget.entitlements */,
@@ -345,6 +348,7 @@
 				BB0000000000000000000037 /* WidgetComponents.swift in Sources */,
 				BB0000000000000000000039 /* WidgetViewsSmallMedium.swift in Sources */,
 				BB0000000000000000000071 /* WidgetViewsLarge.swift in Sources */,
+				BB0000000000000000000075 /* WidgetPreviews.swift in Sources */,
 				BB0000000000000000000014 /* AppGroupLocator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

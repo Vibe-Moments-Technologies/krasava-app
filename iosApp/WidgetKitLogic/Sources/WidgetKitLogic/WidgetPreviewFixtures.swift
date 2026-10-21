@@ -197,13 +197,4 @@ enum WidgetPreviewFixtures {
         current, upcoming, soon, futureDay, noSchedule, noTarget,
         longTitle, onlyOneLesson, manyLessons, noRoom, stale
     ]
-
-    /// Данные для placeholder: система рисует их, пока нет настоящего снапшота.
-    static var samplePayload: WPayload {
-        WPayload(
-            generatedAt: Int64(moment("2026-09-21 11:00").timeIntervalSince1970 * 1000),
-            defaultTargetId: 1,
-            targets: [target(busyDay("2026-09-21"))]
-        )
-    }
 }

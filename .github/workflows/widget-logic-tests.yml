@@ -1,9 +1,9 @@
 name: 🧪 Widget Logic Tests
 
 # Unit-тесты чистой логики виджета (движок выбора актуальной пары, разбор
-# аудитории, границы занятий). Исходники лежат в iosApp/KrasavaWidget/Logic
-# и подключены к SwiftPM-пакету iosApp/WidgetKitLogic — так XCTest видит те же
-# файлы, что компилирует расширение, без дублирования кода.
+# аудитории, границы занятий). Исходники лежат в
+# iosApp/WidgetKitLogic/Sources/WidgetKitLogic и подключены к таргету
+# расширения по абсолютному пути в pbxproj — один код, без дублирования.
 #
 # Запускается при изменениях логики виджетов; Swift недоступен на Windows,
 # поэтому проверка идёт на macOS-раннере.
@@ -12,11 +12,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'iosApp/KrasavaWidget/Logic/**'
       - 'iosApp/WidgetKitLogic/**'
   pull_request:
     paths:
-      - 'iosApp/KrasavaWidget/Logic/**'
       - 'iosApp/WidgetKitLogic/**'
   workflow_dispatch:
 
@@ -44,4 +42,7 @@ jobs:
         working-directory: iosApp/WidgetKitLogic
         run: |
           set -o pipefail
-          swift test --parallel 2>&1 | tail -60
+          # Вывод целиком, но с явным итогом: строка "Executed N tests"
+          # позволяет понять, что тесты действительно шли, а не пропустились.
+          swift test 2>&1 | tee /tmp/test.log | tail -40
+          grep -E "Executed [0-9]+ tests" /tmp/test.log | tail -1 || true

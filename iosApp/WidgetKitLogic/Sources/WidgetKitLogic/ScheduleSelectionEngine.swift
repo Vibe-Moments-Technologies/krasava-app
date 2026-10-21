@@ -47,8 +47,6 @@ struct WidgetPresentationState: Equatable {
     let nextStudyDay: DayContext
     /// Занятия ближайшего следующего учебного дня.
     let nextStudyDayLessons: [WLesson]
-    /// Есть ли ещё занятия помимо показанных (для подписи «Ещё N пар»).
-    let hasMoreLessons: Bool
     /// Заполнено, только если показывать нечего.
     let emptyReason: EmptyReason?
 
@@ -65,7 +63,6 @@ struct WidgetPresentationState: Equatable {
             upcomingLessons: [],
             nextStudyDay: .none,
             nextStudyDayLessons: [],
-            hasMoreLessons: false,
             emptyReason: reason
         )
     }
@@ -125,7 +122,6 @@ struct ScheduleSelectionEngine {
                 upcomingLessons: [],
                 nextStudyDay: .none,
                 nextStudyDayLessons: [],
-                hasMoreLessons: false,
                 emptyReason: .noLessons
             )
         }
@@ -157,7 +153,6 @@ struct ScheduleSelectionEngine {
                 upcomingLessons: [],
                 nextStudyDay: .none,
                 nextStudyDayLessons: [],
-                hasMoreLessons: false,
                 emptyReason: .noLessons
             )
         }
@@ -216,7 +211,6 @@ struct ScheduleSelectionEngine {
             upcomingLessons: upcomingSameDay,
             nextStudyDay: nextDay.map { context(for: $0, now: now) } ?? .none,
             nextStudyDayLessons: nextDayLessons,
-            hasMoreLessons: false,
             emptyReason: nil
         )
     }
