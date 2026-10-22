@@ -19,34 +19,37 @@ struct SubjectWithType: View {
     var showsType: Bool = true
 
     var body: some View {
-        if let type = showsType ? lesson.type.nilIfBlank : nil {
-            // Один Text: тип и название измеряются вместе, поэтому перенос
-            // строки не отрывает метку от начала дисциплины.
-            Text(styledType(type) + Text(" · ") + styledSubject)
-                .lineLimit(lines)
-                .minimumScaleFactor(0.85)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityLabel("Тип занятия \(type), \(lesson.subject)")
-        } else {
-            Text(lesson.subject)
-                .font(.system(size: size, weight: weight))
-                .foregroundColor(palette.subjectText)
-                .lineLimit(lines)
-                .minimumScaleFactor(0.85)
-                .fixedSize(horizontal: false, vertical: true)
-        }
+        content
+            .lineLimit(lines)
+            .minimumScaleFactor(0.85)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityLabel(accessibility)
     }
 
-    private func styledType(_ type: String) -> Text {
-        Text(type)
+    /// Тип и название складываются оператором `+` над `Text`: результат уже
+    /// `Text`, поэтому блок измеряется как целое и перенос строки не отрывает
+    /// метку от начала дисциплины.
+    private var content: Text {
+        guard showsType, let type = lesson.type.nilIfBlank else {
+            return styledSubject
+        }
+        return Text("\(type) · ")
             .font(.system(size: size - 1, weight: .bold))
             .foregroundColor(palette.typeColor(type))
+            + styledSubject
     }
 
     private var styledSubject: Text {
         Text(lesson.subject)
             .font(.system(size: size, weight: weight))
             .foregroundColor(palette.subjectText)
+    }
+
+    private var accessibility: String {
+        guard showsType, let type = lesson.type.nilIfBlank else {
+            return lesson.subject
+        }
+        return "Тип занятия \(type), \(lesson.subject)"
     }
 }
 
