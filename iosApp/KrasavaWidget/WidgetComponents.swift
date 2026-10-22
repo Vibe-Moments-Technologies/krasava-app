@@ -1,5 +1,55 @@
 import SwiftUI
 
+// MARK: - Тип занятия в строке названия
+
+/// Тип занятия перед названием дисциплины: `ПР · Базы данных`.
+///
+/// Просьба владельца: метка типа должна стоять перед названием одной строкой
+/// во всех виджетах, в том числе у неактивных пар. Отдельный бейдж в шапке
+/// (только у активной пары) оставляем для главной пары — там он работает как
+/// акцент, — а в списках тип идёт в начале названия, потому что справа уже
+/// занято аудиторией.
+struct SubjectWithType: View {
+    let lesson: WLesson
+    let palette: WidgetPalette
+    let size: CGFloat
+    var weight: Font.Weight = .medium
+    var lines: Int = 2
+    /// Показывать ли тип. Если типа нет в модели, он просто не выводится.
+    var showsType: Bool = true
+
+    var body: some View {
+        if let type = showsType ? lesson.type.nilIfBlank : nil {
+            // Один Text: тип и название измеряются вместе, поэтому перенос
+            // строки не отрывает метку от начала дисциплины.
+            Text(styledType(type) + Text(" · ") + styledSubject)
+                .lineLimit(lines)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityLabel("Тип занятия \(type), \(lesson.subject)")
+        } else {
+            Text(lesson.subject)
+                .font(.system(size: size, weight: weight))
+                .foregroundColor(palette.subjectText)
+                .lineLimit(lines)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func styledType(_ type: String) -> Text {
+        Text(type)
+            .font(.system(size: size - 1, weight: .bold))
+            .foregroundColor(palette.typeColor(type))
+    }
+
+    private var styledSubject: Text {
+        Text(lesson.subject)
+            .font(.system(size: size, weight: weight))
+            .foregroundColor(palette.subjectText)
+    }
+}
+
 // MARK: - Общие компоненты виджетов (ТЗ п. 8)
 //
 // Один набор деталей на все четыре размера: аудитория, время, название,
@@ -113,6 +163,37 @@ struct LessonTimeLabel: View {
     }
 }
 
+// MARK: - Прогресс пары
+
+/// Полоса прогресса идущей пары.
+///
+/// Показывается только когда пара действительно идёт (`progress != nil`):
+/// для будущей пары полоса была бы украшением без смысла. Толщина 3 pt —
+/// заметно, но не отнимает места у названия. Цвет акцента совпадает с меткой
+/// «СЕЙЧАС», поэтому состояние читается и в тонированном режиме, где цвет
+/// становится монохромным, — там работает сама длина полосы.
+struct LessonProgressBar: View {
+    let progress: Double
+    let palette: WidgetPalette
+    var height: CGFloat = 3
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(palette.divider.opacity(0.5))
+                Capsule()
+                    .fill(palette.activeAccent)
+                    .frame(width: max(height, geo.size.width * progress))
+            }
+        }
+        .frame(height: height)
+        .accessibilityElement()
+        .accessibilityLabel("Прошло \(Int(progress * 100)) процентов пары")
+        .accessibilityValue("\(Int(progress * 100))%")
+    }
+}
+
 // MARK: - Статус (ТЗ п. 8.3)
 
 /// Короткая цветовая метка статуса: `СЕЙЧАС`, `ДАЛЕЕ`, `СКОРО`.
@@ -125,15 +206,26 @@ struct LessonStatusLabel: View {
     let size: CGFloat
     /// Обратный отсчёт допустим только там, где есть место (Medium+).
     var allowCountdown: Bool = false
+    /// Скрывать ли «ДАЛЕЕ».
+    ///
+    /// В Large и Extra Large над активной парой уже стоит заголовок дня,
+    /// поэтому «ДАЛЕЕ» под ним ничего не добавляет — владелец попросил убрать
+    /// эту избыточную подпись. «СЕЙЧАС» и «ЧЕРЕЗ N МИН» остаются: они несут
+    /// новую информацию.
+    var hidesUpcoming: Bool = false
 
     var body: some View {
-        Text(allowCountdown ? status.countdownLabel : status.shortLabel)
-            .font(.system(size: size, weight: .semibold))
-            .foregroundColor(palette.activeAccent)
-            // Разрядка: короткий статус читается как маркер, а не как слово.
-            .tracking(0.4)
-            .lineLimit(1)
-            .accessibilityLabel(accessibility)
+        if hidesUpcoming, case .upcoming = status {
+            EmptyView()
+        } else {
+            Text(allowCountdown ? status.countdownLabel : status.shortLabel)
+                .font(.system(size: size, weight: .semibold))
+                .foregroundColor(palette.activeAccent)
+                // Разрядка: короткий статус читается как маркер, а не как слово.
+                .tracking(0.4)
+                .lineLimit(1)
+                .accessibilityLabel(accessibility)
+        }
     }
 
     private var accessibility: String {
@@ -145,11 +237,14 @@ struct LessonStatusLabel: View {
     }
 }
 
-// MARK: - Тип занятия (ТЗ п. 8.4)
+// MARK: - Тип занятия
 
 /// Компактный бейдж типа: `ПР`, `ЛК`, `ЛБ`.
 ///
-/// Мягкое цветовое выделение; неизвестные типы — нейтральное оформление.
+/// Больше нигде не выводится: по просьбе владельца тип стоит перед названием
+/// одной строкой во всех виджетах (`SubjectWithType`). Оставлен как готовый
+/// компонент на случай возврата акцентного бейджа в шапку — удалять рабочий
+/// элемент с accessibility-подписями ради «чистоты» не стоит.
 struct LessonTypeBadge: View {
     let lesson: WLesson
     let palette: WidgetPalette
@@ -238,17 +333,17 @@ struct MultiGroupIndicator: View {
 /// Компактная запись следующей пары.
 ///
 /// Две строки: сверху время и аудитория (в одинаковых колонках у всех записей
-/// списка — ТЗ п. 2.4), снизу название во всю ширину. Однострочная компоновка
-/// оставляла названию ~30 символов, и длинные дисциплины обрезались; здесь оно
-/// получает всю ширину при том же вертикальном размере.
+/// списка — ТЗ п. 2.4), снизу тип и название во всю ширину. Однострочная
+/// компоновка оставляла названию ~30 символов, и длинные дисциплины
+/// обрезались; здесь оно получает всю ширину при том же вертикальном размере.
 struct UpcomingLessonRow: View {
     let lesson: WLesson
     let palette: WidgetPalette
     let density: WidgetDensity
     /// Диапазоны шрифтов из таблицы ТЗ п. 2.2.
     let typography: WidgetTypography
-    /// Показывать ли бейдж типа.
-    var showsType: Bool = false
+    /// Показывать ли тип занятия перед названием.
+    var showsType: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
@@ -271,18 +366,16 @@ struct UpcomingLessonRow: View {
                 )
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: Space.s4) {
-                Text(lesson.subject)
-                    .font(.system(size: typography.rowSubject(11...14), weight: .medium))
-                    .foregroundColor(palette.subjectText)
-                    .lineLimit(density.rowSubjectLines)
-                    .minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .layoutPriority(1)
-                if showsType {
-                    LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
-                }
-            }
+            // Тип перед названием одной строкой (просьба владельца): в списках
+            // он должен быть у всех пар, а не только у активной.
+            SubjectWithType(
+                lesson: lesson,
+                palette: palette,
+                size: typography.rowSubject(11...14),
+                lines: density.rowSubjectLines,
+                showsType: showsType
+            )
+            .layoutPriority(1)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(

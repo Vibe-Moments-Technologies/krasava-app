@@ -471,4 +471,39 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertNil(lesson(id: "t", teacher: "   ").teacherDisplay)
         XCTAssertEqual(lesson(id: "t", teacher: "Иванов И. И.").teacherDisplay, "Иванов И. И.")
     }
+
+    // MARK: Прогресс пары
+
+    func testProgressIsNilForUpcomingLesson() {
+        // У будущей пары прогресса нет — полоса не должна рисоваться.
+        let s = state(twoDays, at: "2026-10-21 12:00")
+        XCTAssertNil(s.primaryProgress)
+    }
+
+    func testProgressIsCalculatedForCurrentLesson() {
+        // Пара 14:20–15:50 (90 минут), смотрим 15:05 — прошло 45 минут.
+        let s = state(twoDays, at: "2026-10-21 15:05")
+        XCTAssertEqual(s.primaryStatus, .current)
+        guard let progress = s.primaryProgress else {
+            XCTFail("у идущей пары должен быть прогресс")
+            return
+        }
+        XCTAssertEqual(progress, 0.5, accuracy: 0.01)
+    }
+
+    func testProgressAtStartIsNearZero() {
+        let s = state(twoDays, at: "2026-10-21 14:20")
+        XCTAssertEqual(s.primaryProgress ?? -1, 0, accuracy: 0.01)
+    }
+
+    func testProgressNearEndIsNearOne() {
+        let s = state(twoDays, at: "2026-10-21 15:49")
+        XCTAssertEqual(s.primaryProgress ?? -1, 0.99, accuracy: 0.02)
+    }
+
+    func testProgressIsNilWhenPrimaryIsTomorrow() {
+        // Активная пара — уже завтрашняя: полоса прогресса не имеет смысла.
+        let s = state(twoDays, at: "2026-10-21 18:00")
+        XCTAssertNil(s.primaryProgress)
+    }
 }

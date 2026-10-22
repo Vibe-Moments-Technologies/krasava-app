@@ -139,16 +139,16 @@ struct LargeScheduleWidgetView: View {
         typography: WidgetTypography
     ) -> some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
-            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
-                LessonStatusLabel(
-                    status: status,
-                    palette: palette,
-                    size: typography.status(11...12),
-                    allowCountdown: true
-                )
-                Spacer(minLength: Space.s4)
-                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
-            }
+            // «ДАЛЕЕ» под заголовком дня не выводится: он ничего не добавляет
+            // (просьба владельца). «СЕЙЧАС» и «ЧЕРЕЗ N МИН» остаются — они
+            // несут новую информацию.
+            LessonStatusLabel(
+                status: status,
+                palette: palette,
+                size: typography.status(11...12),
+                allowCountdown: true,
+                hidesUpcoming: true
+            )
 
             // Аудитория и время в одну строку. `ViewThatFits` недоступен на
             // iOS 15 (минимум проекта — 15.3), поэтому при нехватке ширины
@@ -172,14 +172,25 @@ struct LargeScheduleWidgetView: View {
             }
             .padding(.top, Space.s2)
 
-            Text(lesson.subject)
-                .font(.system(size: typography.subject(13...15), weight: .medium))
-                .foregroundColor(palette.subjectText)
-                .lineLimit(density.subjectLines)
-                .minimumScaleFactor(0.85)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, Space.s2)
-                .layoutPriority(1)
+            // Название с типом в начале строки.
+            //
+            // Бейдж в шапке дублировать не нужно: владелец попросил единый
+            // вид метки типа перед названием во всех виджетах, поэтому шапка
+            // главной пары в Large больше не выводит отдельный бейдж справа.
+            SubjectWithType(
+                lesson: lesson,
+                palette: palette,
+                size: typography.subject(13...15),
+                lines: density.subjectLines
+            )
+            .padding(.top, Space.s2)
+            .layoutPriority(1)
+
+            // Полоса прогресса идущей пары.
+            if let progress = state.primaryProgress {
+                LessonProgressBar(progress: progress, palette: palette, height: 4)
+                    .padding(.top, Space.s4)
+            }
 
             // Метаданные в одну строку: преподаватель и индикатор групп.
             // Место под отсутствующего преподавателя не резервируется.
@@ -406,16 +417,14 @@ struct ExtraLargeScheduleWidgetView: View {
                 isDayHeader: true
             )
 
-            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
-                LessonStatusLabel(
-                    status: status,
-                    palette: palette,
-                    size: typography.status(12...13),
-                    allowCountdown: true
-                )
-                Spacer(minLength: Space.s4)
-                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
-            }
+            // «ДАЛЕЕ» под заголовком дня не дублируется (просьба владельца).
+            LessonStatusLabel(
+                status: status,
+                palette: palette,
+                size: typography.status(12...13),
+                allowCountdown: true,
+                hidesUpcoming: true
+            )
             .padding(.top, Space.s4)
 
             ClassroomLabel(
@@ -433,13 +442,20 @@ struct ExtraLargeScheduleWidgetView: View {
                 weight: .semibold
             )
 
-            Text(lesson.subject)
-                .font(.system(size: typography.subject(14...16), weight: .medium))
-                .foregroundColor(palette.subjectText)
-                .lineLimit(density.subjectLines + 1)
-                .minimumScaleFactor(0.85)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, Space.s4)
+            // Название с типом перед ним — единый вид во всех виджетах.
+            SubjectWithType(
+                lesson: lesson,
+                palette: palette,
+                size: typography.subject(14...16),
+                lines: density.subjectLines + 1
+            )
+            .padding(.top, Space.s4)
+
+            // Полоса прогресса идущей пары.
+            if let progress = state.primaryProgress {
+                LessonProgressBar(progress: progress, palette: palette, height: 4)
+                    .padding(.top, Space.s6)
+            }
 
             // Метаданные зоны A: преподаватель и число групп.
             //

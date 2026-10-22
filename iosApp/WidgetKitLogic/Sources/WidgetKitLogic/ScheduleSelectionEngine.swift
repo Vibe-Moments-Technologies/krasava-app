@@ -53,6 +53,11 @@ struct WidgetPresentationState: Equatable {
     /// пара ближайшего учебного дня (ТЗ п. 1.1).
     let primaryLesson: WLesson?
     let primaryStatus: LessonStatus?
+    /// Прогресс идущей пары: 0 — только началась, 1 — заканчивается.
+    /// nil, если пара не идёт сейчас. Считается здесь, а не во вью: там нет
+    /// текущего времени, а состояние должно соответствовать дате записи
+    /// Timeline, а не моменту отрисовки.
+    let primaryProgress: Double?
     /// День активной пары.
     let primaryDay: DayContext
     /// Заголовок выбранного учебного дня: «СЕГОДНЯ · СРЕДА».
@@ -75,6 +80,7 @@ struct WidgetPresentationState: Equatable {
             targetTitle: nil,
             primaryLesson: nil,
             primaryStatus: nil,
+            primaryProgress: nil,
             primaryDay: .none,
             primaryDayLabel: nil,
             upcomingLessons: [],
@@ -143,6 +149,7 @@ struct ScheduleSelectionEngine {
                 targetTitle: target.title,
                 primaryLesson: nil,
                 primaryStatus: nil,
+                primaryProgress: nil,
                 primaryDay: .none,
                 primaryDayLabel: nil,
                 upcomingLessons: [],
@@ -167,6 +174,7 @@ struct ScheduleSelectionEngine {
                 targetTitle: target.title,
                 primaryLesson: nil,
                 primaryStatus: nil,
+                primaryProgress: nil,
                 primaryDay: .none,
                 primaryDayLabel: nil,
                 upcomingLessons: [],
@@ -199,6 +207,7 @@ struct ScheduleSelectionEngine {
             targetTitle: target.title,
             primaryLesson: primary,
             primaryStatus: status,
+            primaryProgress: progress(for: primary, now: now),
             primaryDay: dayContext,
             primaryDayLabel: isToday ? todayHeader(primaryDayStart) : dayContext.label,
             upcomingLessons: upcomingSameDay,
@@ -242,6 +251,21 @@ struct ScheduleSelectionEngine {
         return (0...Self.soonThresholdMinutes).contains(minutes)
             ? .soon(minutesUntil: minutes)
             : .upcoming
+    }
+
+    /// Прогресс идущей пары: от 0 (начало) до 1 (окончание).
+    ///
+    /// nil для всего, что не идёт прямо сейчас: для будущей пары полоса
+    /// прогресса бессмысленна, а пустая полоса занимала бы место у P0-данных.
+    /// Значение считается по текущему моменту из Timeline, поэтому в записи
+    /// шкалы оно соответствует своему времени, а не моменту отрисовки.
+    func progress(for lesson: WLesson, now: Date) -> Double? {
+        guard let s = lesson.startDate(timeZone: timeZone),
+              let e = lesson.endDate(timeZone: timeZone),
+              now >= s, now < e else { return nil }
+        let total = e.timeIntervalSince(s)
+        guard total > 0 else { return nil }
+        return min(1, max(0, now.timeIntervalSince(s) / total))
     }
 
     private func freshness(generatedAt: Date, now: Date, staleAfterHours: Int) -> DataFreshness {

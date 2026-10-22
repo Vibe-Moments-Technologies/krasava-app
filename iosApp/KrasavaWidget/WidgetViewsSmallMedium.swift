@@ -64,14 +64,21 @@ struct SmallScheduleWidgetView: View {
                 // берётся из плотности: на systemSmall после шапки, аудитории
                 // и времени остаётся ~55–60 pt, и туда помещается три строки
                 // при 13 pt. Ограничение в две строки оставляло место пустым.
-                Text(lesson.subject)
-                    .font(.system(size: typography.subject(11...13), weight: .medium))
-                    .foregroundColor(palette.subjectText)
-                    .lineLimit(subjectLines(density: density, typography: typography, height: height))
-                    .minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .layoutPriority(1)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                SubjectWithType(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.subject(11...13),
+                    lines: subjectLines(density: density, typography: typography, height: height)
+                )
+                .layoutPriority(1)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+                // Полоса прогресса идущей пары: 3 pt, только пока пара идёт.
+                // Для будущей пары прогресса нет — полосы не будет.
+                if let progress = state.primaryProgress {
+                    Spacer().frame(height: Space.s4)
+                    LessonProgressBar(progress: progress, palette: palette)
+                }
             }
         } else {
             WidgetEmptyStateView(
@@ -126,20 +133,15 @@ struct SmallScheduleWidgetView: View {
                 .minimumScaleFactor(0.75)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
-                // На Small обратного отсчёта нет: место дороже, точное время
-                // информативнее.
-                LessonStatusLabel(
-                    status: status,
-                    palette: palette,
-                    size: typography.status(10...11),
-                    allowCountdown: false
-                )
-                Spacer(minLength: Space.s4)
-                if density >= .compact {
-                    LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
-                }
-            }
+            // На сегодняшней паре остаётся только статус: тип идёт перед
+            // названием строкой (единый вид во всех виджетах, просьба
+            // владельца). Бейдж в шапке дублировал бы его в одном блоке.
+            LessonStatusLabel(
+                status: status,
+                palette: palette,
+                size: typography.status(10...11),
+                allowCountdown: false
+            )
         }
     }
 }
@@ -271,8 +273,11 @@ struct MediumScheduleWidgetView: View {
                         allowCountdown: true
                     )
                 }
-                Spacer(minLength: Space.s4)
-                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
+                // Бейдж типа здесь больше не выводится: тип идёт перед
+                // названием строкой (просьба владельца — единый вид во всех
+                // виджетах). Дублировать его в шапке значило бы показывать
+                // тип дважды в одном блоке.
+                Spacer(minLength: 0)
             }
 
             // Аудитория и время в одну строку: аудитория слева (главный
@@ -296,14 +301,16 @@ struct MediumScheduleWidgetView: View {
             }
             .padding(.top, Space.s4)
 
-            Text(lesson.subject)
-                .font(.system(size: typography.subject(11...13), weight: .medium))
-                .foregroundColor(palette.subjectText)
-                .lineLimit(density.subjectLines)
-                .minimumScaleFactor(0.85)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, Space.s2)
-                .layoutPriority(1)
+            // Название с типом в начале строки (просьба владельца: метка типа
+            // должна стоять везде перед названием).
+            SubjectWithType(
+                lesson: lesson,
+                palette: palette,
+                size: typography.subject(11...13),
+                lines: density.subjectLines
+            )
+            .padding(.top, Space.s2)
+            .layoutPriority(1)
 
             // Метаданные: преподаватель и индикатор групп.
             //
@@ -312,6 +319,12 @@ struct MediumScheduleWidgetView: View {
             // данные доходили до вью, но компоновка их выкидывала. Теперь
             // преподаватель показывается на любой плотности — строка дешёвая.
             metadata(lesson: lesson, density: density, typography: typography)
+
+            // Полоса прогресса идущей пары.
+            if let progress = state.primaryProgress {
+                Spacer().frame(height: Space.s6)
+                LessonProgressBar(progress: progress, palette: palette)
+            }
         }
     }
 
