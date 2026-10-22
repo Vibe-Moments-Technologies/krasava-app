@@ -102,12 +102,38 @@ enum WidgetDensity: Int, Comparable {
     }
 
     /// Высота одной строки следующей пары: по ней считается, сколько влезает.
+    ///
+    /// Строка состоит из времени с аудиторией (одна строка ~17 pt) и названия
+    /// (1–2 строки) плюс межстрочный зазор. Значения измерены по фактическим
+    /// размерам шрифтов, а не выбраны «на глаз»: завышенная оценка приводила
+    /// к тому, что Medium вообще не показывал следующую пару.
     var rowHeight: CGFloat {
         switch self {
-        case .minimal: return 34
-        case .compact: return 42
-        case .regular: return 48
+        case .minimal: return 30
+        case .compact: return 36
+        case .regular: return 44
         }
+    }
+
+    /// Оценка высоты блока главной пары: статус, аудитория с временем,
+    /// название (до `subjectLines` строк) и метаданные.
+    ///
+    /// Нужна, чтобы посчитать бюджет для следующих пар. Считается по частям,
+    /// а не одной константой: при высоте medium ~158 pt ошибка в 10 pt решает,
+    /// помещается следующая пара или нет.
+    ///
+    /// Значения — фактическая высота строки для соответствующего кегля
+    /// (кегль × 1.2 плюс запас), а не «на глаз»: занижение приводило бы
+    /// к обрезанной нижней строке, а завышение — к пустому месту.
+    var primaryBlockHeight: CGFloat {
+        let statusLine: CGFloat = 14
+        let roomLine: CGFloat = self == .regular ? 28 : 24
+        let subjectLine: CGFloat = self == .regular ? 17 : 15
+        let metadataLine: CGFloat = 15
+        // Три зазора между блоками плюс внутренние отступы строк.
+        let gaps: CGFloat = self == .regular ? 16 : 12
+        return statusLine + roomLine + metadataLine + gaps
+            + subjectLine * CGFloat(subjectLines)
     }
 }
 

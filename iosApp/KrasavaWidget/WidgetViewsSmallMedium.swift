@@ -19,13 +19,17 @@ struct SmallScheduleWidgetView: View {
         GeometryReader { geo in
             let density = WidgetDensity.forHeight(geo.size.height)
             let typography = WidgetTypography(density: density)
-            content(density: density, typography: typography)
+            content(density: density, typography: typography, height: geo.size.height)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
     }
 
     @ViewBuilder
-    private func content(density: WidgetDensity, typography: WidgetTypography) -> some View {
+    private func content(
+        density: WidgetDensity,
+        typography: WidgetTypography,
+        height: CGFloat
+    ) -> some View {
         if let lesson = state.primaryLesson, let status = state.primaryStatus {
             VStack(alignment: .leading, spacing: 0) {
                 header(lesson: lesson, status: status, density: density, typography: typography)
@@ -55,13 +59,15 @@ struct SmallScheduleWidgetView: View {
                 Spacer().frame(height: Space.s6)
 
                 // Пункт D: название занимает ВСЮ оставшуюся высоту.
-                // `layoutPriority` + `Spacer(minLength: 0)` после текста дают
-                // ровно это: сначала место забирают аудитория и время (P0),
-                // остаток получает дисциплина (P1) и только потом — пустота.
+                //
+                // Количество строк считается по фактическому остатку, а не
+                // берётся из плотности: на systemSmall после шапки, аудитории
+                // и времени остаётся ~55–60 pt, и туда помещается три строки
+                // при 13 pt. Ограничение в две строки оставляло место пустым.
                 Text(lesson.subject)
                     .font(.system(size: typography.subject(11...13), weight: .medium))
                     .foregroundColor(palette.subjectText)
-                    .lineLimit(density.subjectLines)
+                    .lineLimit(subjectLines(density: density, typography: typography, height: height))
                     .minimumScaleFactor(0.85)
                     .fixedSize(horizontal: false, vertical: true)
                     .layoutPriority(1)
@@ -75,6 +81,24 @@ struct SmallScheduleWidgetView: View {
                 compact: true
             )
         }
+    }
+
+    /// Сколько строк дать названию на Small.
+    ///
+    /// Считается по остатку высоты: шапка ~14, отступы 6+6+6, аудитория 26,
+    /// время 16. Всё, что осталось, делится на высоту строки названия.
+    /// Минимум две строки, максимум четыре — дальше текст становится плотным.
+    private func subjectLines(
+        density: WidgetDensity,
+        typography: WidgetTypography,
+        height: CGFloat
+    ) -> Int {
+        let chrome: CGFloat = 14 + Space.s6 * 3 + typography.room(20...26)
+            + typography.primaryTime(14...16)
+        let lineHeight = typography.subject(11...13) * 1.25
+        let available = max(0, height - chrome)
+        let fits = Int(available / lineHeight)
+        return min(4, max(2, fits))
     }
 
     /// Блок A.
@@ -193,15 +217,17 @@ struct MediumScheduleWidgetView: View {
     /// Первая следующая пара приоритетна: она показывается всегда, если есть.
     /// Вторая добавляется, только если после неё остаётся место — по ТЗ
     /// «лучше одна полная, чем две нечитаемые».
+    ///
+    /// Высота главной пары считается по фактическому содержимому
+    /// (`primaryBlockHeight`), а не грубой константой: при высоте medium
+    /// ~158 pt ошибка в 20 pt решала, показывать следующую пару или нет.
     private func upcomingRows(density: WidgetDensity, size: CGSize) -> Int {
         let available = state.upcomingLessons.count
         guard available > 0 else { return 0 }
 
-        // Главная пара занимает примерно 100–125 pt (шапка, аудитория+время,
-        // название 2 строки, метаданные) плюс разделитель с отступами.
-        let primaryHeight: CGFloat = density >= .regular ? 128 : 116
-        let chrome: CGFloat = Space.s8 * 2 + 1 + 16 // отступы, линия, «ДАЛЕЕ»
-        var budget = size.height - primaryHeight - chrome
+        // Отступы секции: 8 до разделителя, линия 1, 8 после, заголовок ~14.
+        let sectionChrome: CGFloat = Space.s8 * 2 + 1 + 14
+        var budget = size.height - density.primaryBlockHeight - sectionChrome
 
         var rows = 0
         while rows < min(available, 2) {
