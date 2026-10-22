@@ -48,10 +48,18 @@ enum WidgetDensity: Int, Comparable {
     }
 
     /// Показывать ли преподавателя — вторичные метаданные.
-    var showsTeacher: Bool { self >= .regular }
+    ///
+    /// Порог `.compact`, а не `.regular`: Medium имеет высоту ~158 pt и всегда
+    /// попадает в compact, из-за чего преподаватель (данные которого доходят
+    /// до вью) молча отбрасывался компоновкой. Строка метаданных дешёвая,
+    /// поэтому показываем её везде, кроме самого тесного Minimal.
+    var showsTeacher: Bool { self >= .compact }
+
+    /// Показывать ли подпись «N групп» словом или только числом.
+    var showsGroupWord: Bool { self >= .compact }
 
     /// Показывать ли индикатор нескольких групп.
-    var showsGroupIndicator: Bool { self >= .compact }
+    var showsGroupIndicator: Bool { self >= .minimal }
 
     /// Максимум строк названия главной дисциплины.
     var subjectLines: Int {

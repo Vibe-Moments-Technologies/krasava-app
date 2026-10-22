@@ -31,7 +31,7 @@ enum DataFreshness: Equatable {
 
 /// Учебный день в готовом виде: подпись и занятия.
 struct WidgetDay: Equatable {
-    /// Подпись для заголовка: «ПЯТНИЦА · 23 ОКТЯБРЯ».
+    /// Подпись для заголовка: «ПТ, 23 ОКТ».
     let label: String
     /// Занятия дня в хронологическом порядке.
     let lessons: [WLesson]
@@ -85,9 +85,12 @@ struct WidgetPresentationState: Equatable {
 
     var isEmpty: Bool { primaryLesson == nil }
 
-    /// Полный заголовок дня для шапок Large/Extra Large.
+    /// Заголовок дня для шапок Large/Extra Large.
+    ///
+    /// Сегодня — «СЕГОДНЯ · СРЕДА», будущий день — компактная дата
+    /// «ПТ, 23 ОКТ»: единый формат для всех размеров и всех будущих дней.
     var headerTitle: String {
-        primaryDayLabel ?? primaryDay.fullLabel ?? primaryDay.shortLabel ?? "СЕГОДНЯ"
+        primaryDayLabel ?? primaryDay.label ?? "СЕГОДНЯ"
     }
 }
 
@@ -197,7 +200,7 @@ struct ScheduleSelectionEngine {
             primaryLesson: primary,
             primaryStatus: status,
             primaryDay: dayContext,
-            primaryDayLabel: isToday ? todayHeader(primaryDayStart) : dayContext.fullLabel,
+            primaryDayLabel: isToday ? todayHeader(primaryDayStart) : dayContext.label,
             upcomingLessons: upcomingSameDay,
             nextDays: futureDays,
             emptyReason: nil
@@ -270,7 +273,7 @@ struct ScheduleSelectionEngine {
                 calendar.isDate(self.dayStart($0), inSameDayAs: startOfDay)
             }
             return WidgetDay(
-                label: weekdayDateLabel(startOfDay),
+                label: compactDateLabel(startOfDay),
                 lessons: dayLessons,
                 date: dateString(startOfDay)
             )
@@ -278,6 +281,10 @@ struct ScheduleSelectionEngine {
     }
 
     /// Контекст дня относительно `now`.
+    ///
+    /// Подпись единая для всех будущих дней — `ПТ, 23 ОКТ`. «Завтра/послезавтра»
+    /// отдельными словами не выводятся: ТЗ требует конкретную дату, а не
+    /// словесную метку, и дублировать её в двух формах нельзя.
     func context(for day: Date, now: Date) -> DayContext {
         let today = calendar.startOfDay(for: now)
         let diff = calendar.dateComponents([.day], from: today, to: day).day ?? 0
@@ -285,46 +292,58 @@ struct ScheduleSelectionEngine {
         case 0:
             return .today
         case 1:
-            return .tomorrow(full: weekdayDateLabel(day))
+            return .tomorrow(label: compactDateLabel(day))
         case 2:
-            return .dayAfterTomorrow(full: weekdayDateLabel(day))
+            return .dayAfterTomorrow(label: compactDateLabel(day))
         default:
-            return .date(full: weekdayDateLabel(day))
+            return .date(label: compactDateLabel(day))
         }
     }
 
-    // MARK: Форматирование дат (ТЗ п. 11.4)
+    // MARK: Форматирование дат
 
-    /// Полные названия месяцев в родительном падеже — как в макетах
-    /// («23 ОКТЯБРЯ»). Русская локаль через DateFormatter даёт другие формы.
-    private static let months = [
-        "ЯНВАРЯ", "ФЕВРАЛЯ", "МАРТА", "АПРЕЛЯ", "МАЯ", "ИЮНЯ",
-        "ИЮЛЯ", "АВГУСТА", "СЕНТЯБРЯ", "ОКТЯБРЯ", "НОЯБРЯ", "ДЕКАБРЯ"
-    ]
+    /// Форматтеры создаются один раз: `DateFormatter` дорог в создании,
+    /// а виджет строит десятки подписей за один проход Timeline.
+    private static let compactFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ru_RU")
+        f.timeZone = ScheduleClock.timeZone
+        // «Пт, 23 окт» — регистр поднимаем сами, чтобы не зависеть от того,
+        // как локаль отдаёт сокращения в разных версиях iOS.
+        f.dateFormat = "E, d MMM"
+        return f
+    }()
 
-    /// Полные названия дней недели.
-    private static let weekdays = [
-        "ВОСКРЕСЕНЬЕ", "ПОНЕДЕЛЬНИК", "ВТОРНИК", "СРЕДА",
-        "ЧЕТВЕРГ", "ПЯТНИЦА", "СУББОТА"
-    ]
+    private static let weekdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ru_RU")
+        f.timeZone = ScheduleClock.timeZone
+        f.dateFormat = "EEEE"
+        return f
+    }()
 
-    /// «ПЯТНИЦА · 23 ОКТЯБРЯ» — подпись учебного дня.
+    /// `ПТ, 23 ОКТ` — единый компактный формат будущего учебного дня.
     ///
-    /// Формат собирается вручную: DateFormatter с русской локалью даёт
-    /// «пятница, 23 октября» — строчными и с запятой, а макет требует
-    /// заглавных и разделителя «·».
-    func weekdayDateLabel(_ day: Date) -> String {
-        let comps = calendar.dateComponents([.day, .month, .weekday], from: day)
-        let weekday = Self.weekdays[max(0, min(6, (comps.weekday ?? 1) - 1))]
-        let month = Self.months[max(0, min(11, (comps.month ?? 1) - 1))]
-        return "\(weekday) · \(comps.day ?? 1) \(month)"
+    /// Собирается через `DateFormatter` с русской локалью и зоной расписания,
+    /// затем приводится к верхнему регистру и очищается от точки после
+    /// сокращения месяца («окт.» → «ОКТ»).
+    func compactDateLabel(_ day: Date) -> String {
+        let raw = Self.compactFormatter.string(from: day)
+        var text = raw.uppercased()
+        // Русская локаль в части версий iOS отдаёт «ОКТ.» с точкой.
+        while text.contains(".,") { text = text.replacingOccurrences(of: ".,", with: ",") }
+        if text.hasSuffix(".") { text.removeLast() }
+        return text
     }
 
-    /// «СЕГОДНЯ · СРЕДА» — заголовок для сегодняшнего дня.
+    /// `СРЕДА` — полное название дня недели для заголовка сегодняшнего дня.
+    func weekdayName(_ day: Date) -> String {
+        Self.weekdayFormatter.string(from: day).uppercased()
+    }
+
+    /// `СЕГОДНЯ · СРЕДА` — заголовок для сегодняшнего дня.
     func todayHeader(_ day: Date) -> String {
-        let comps = calendar.dateComponents([.weekday], from: day)
-        let weekday = Self.weekdays[max(0, min(6, (comps.weekday ?? 1) - 1))]
-        return "СЕГОДНЯ · \(weekday)"
+        "СЕГОДНЯ · \(weekdayName(day))"
     }
 
     /// Дата в формате снапшота «yyyy-MM-dd».

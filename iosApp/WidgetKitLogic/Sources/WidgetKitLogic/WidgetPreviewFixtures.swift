@@ -181,6 +181,21 @@ enum WidgetPreviewFixtures {
         state: state([primaryPair(scenarioDate)], at: "2026-10-21 15:00")
     )
 
+    /// Активная пара с преподавателем и индикатором двух групп, следующих нет.
+    /// Обязательный сценарий проверки Medium (преподаватель + группы).
+    static let teacherAndGroups = WidgetPreviewFixture(
+        name: "TEACHER_GROUPS",
+        targetId: 1,
+        state: state([primaryPair(scenarioDate)], at: "2026-10-21 15:00")
+    )
+
+    /// Активная пара и одна следующая — должна читаться без сжатия.
+    static let primaryPlusOne = WidgetPreviewFixture(
+        name: "PRIMARY_PLUS_ONE",
+        targetId: 1,
+        state: state([primaryPair(scenarioDate), nextPair(scenarioDate)], at: "2026-10-21 15:00")
+    )
+
     /// Две пары: Mode 1.
     static let twoLessons = WidgetPreviewFixture(
         name: "TWO_LESSONS",
@@ -265,7 +280,7 @@ enum WidgetPreviewFixtures {
     /// Все сценарии — для перебора в Preview.
     static let all: [WidgetPreviewFixture] = [
         current, breakBetween, tomorrow, laterDay, dayOver,
-        oneLesson, twoLessons, manyLessons, longTitle,
-        noRoom, noTeacher, noSchedule, noTarget, stale
+        oneLesson, teacherAndGroups, primaryPlusOne, twoLessons, manyLessons,
+        longTitle, noRoom, noTeacher, noSchedule, noTarget, stale
     ]
 }

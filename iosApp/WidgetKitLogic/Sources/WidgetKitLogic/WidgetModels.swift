@@ -132,36 +132,25 @@ enum LessonStatus: Equatable {
 
 /// День, к которому относится активная пара.
 ///
-/// Хранит короткую метку и полную подпись: на Small нужна короткая
-/// («ЗАВТРА»), на Medium и крупнее — полная с датой и днём недели
-/// («ПЯТНИЦА · 23 ОКТЯБРЯ»), как в макетах. Требование «дата всегда понятна»
-/// выполняется в обоих случаях.
+/// Формат подписи единый для всех размеров и всех будущих дней:
+/// `ПТ, 23 ОКТ`. Сегодня дата не подписывается — вместо неё статус
+/// (`СЕЙЧАС`/`ДАЛЕЕ`), потому что дублировать дату запрещено.
 enum DayContext: Equatable {
     case today
-    /// Завтра.
-    case tomorrow(full: String)
+    /// Завтра: та же компактная подпись, что и у остальных дней.
+    case tomorrow(label: String)
     /// Послезавтра.
-    case dayAfterTomorrow(full: String)
+    case dayAfterTomorrow(label: String)
     /// Дальше.
-    case date(full: String)
+    case date(label: String)
     case none
 
-    /// Короткая метка для тесных размеров.
-    var shortLabel: String? {
+    /// Подпись с датой: `ПТ, 23 ОКТ`. nil — пара сегодня.
+    var label: String? {
         switch self {
         case .today, .none: return nil
-        case .tomorrow: return "ЗАВТРА"
-        case .dayAfterTomorrow: return "ПОСЛЕЗАВТРА"
-        case .date(let full): return full
-        }
-    }
-
-    /// Полная подпись с датой и днём недели.
-    var fullLabel: String? {
-        switch self {
-        case .today, .none: return nil
-        case .tomorrow(let full), .dayAfterTomorrow(let full): return full
-        case .date(let full): return full
+        case .tomorrow(let label), .dayAfterTomorrow(let label), .date(let label):
+            return label
         }
     }
 

@@ -131,14 +131,28 @@ private struct FixtureGallery: View {
         .padding()
 }
 
-#Preview("Medium — преподаватель и несколько групп") {
-    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.current), familyOverride: .systemMedium)
+#Preview("Medium 1 — преподаватель и две группы") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.teacherAndGroups), familyOverride: .systemMedium)
         .frame(width: 364, height: 170)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .padding()
 }
 
-#Preview("Medium — две следующие пары") {
+#Preview("Medium 2 — активная и одна следующая") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.primaryPlusOne), familyOverride: .systemMedium)
+        .frame(width: 364, height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+#Preview("Medium 3 — активная и две следующие") {
+    ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.manyLessons), familyOverride: .systemMedium)
+        .frame(width: 364, height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .padding()
+}
+
+#Preview("Medium — две следующие пары (компактно)") {
     ScheduleWidgetEntryView(entry: entry(WidgetPreviewFixtures.twoLessons), familyOverride: .systemMedium)
         .frame(width: 364, height: 170)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))

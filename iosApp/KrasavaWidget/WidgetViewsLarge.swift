@@ -183,12 +183,23 @@ struct LargeScheduleWidgetView: View {
 
             // Метаданные в одну строку: преподаватель и индикатор групп.
             // Место под отсутствующего преподавателя не резервируется.
-            let hasTeacher = lesson.teacherDisplay != nil && density.showsTeacher
-            let hasGroups = lesson.isShared && density.showsGroupIndicator
+            //
+            // Условие `density.showsTeacher` здесь не применяется: данные
+            // преподавателя доходят до вью (проверено по всей цепочке), и в
+            // Large при высоте ~354 pt плотность всегда regular, так что
+            // ограничение ничего не отсекало бы. Оставляем его только для
+            // групп, чтобы не ломать приоритет скрытия из ТЗ п. 5.6.
+            let hasTeacher = lesson.teacherDisplay != nil
+            let hasGroups = lesson.isShared
             if hasTeacher || hasGroups {
-                HStack(spacing: Space.s8) {
+                HStack(spacing: Space.s6) {
                     if hasTeacher {
                         TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
+                    }
+                    if hasTeacher && hasGroups {
+                        Text("·")
+                            .font(.system(size: typography.teacher))
+                            .foregroundColor(palette.mutedText)
                     }
                     if hasGroups {
                         MultiGroupIndicator(
@@ -387,7 +398,7 @@ struct ExtraLargeScheduleWidgetView: View {
         typography: WidgetTypography
     ) -> some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
-            // Заголовок даты: «СРЕДА · 21 ОКТЯБРЯ» или «СЕГОДНЯ · СРЕДА».
+            // Заголовок даты: «СЕГОДНЯ · СРЕДА» или «ПТ, 23 ОКТ».
             WidgetSectionTitle(
                 text: state.headerTitle,
                 palette: palette,
@@ -430,16 +441,37 @@ struct ExtraLargeScheduleWidgetView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, Space.s4)
 
-            if density.showsTeacher, let _ = lesson.teacherDisplay {
+            // Метаданные зоны A: преподаватель и число групп.
+            //
+            // Тот же принцип, что в Large: данные доходят до вью, поэтому
+            // ограничение плотности не применяется — при высоте панели
+            // плотность всегда regular.
+            if let _ = lesson.teacherDisplay, lesson.isShared {
+                HStack(spacing: Space.s6) {
+                    TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
+                    Text("·")
+                        .font(.system(size: typography.teacher))
+                        .foregroundColor(palette.mutedText)
+                    MultiGroupIndicator(
+                        lesson: lesson,
+                        palette: palette,
+                        size: typography.teacher,
+                        showWord: true
+                    )
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, Space.s2)
+            } else if let _ = lesson.teacherDisplay {
                 TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
-            }
-            if density.showsGroupIndicator, lesson.isShared {
+                    .padding(.top, Space.s2)
+            } else if lesson.isShared {
                 MultiGroupIndicator(
                     lesson: lesson,
                     palette: palette,
                     size: typography.teacher,
                     showWord: true
                 )
+                .padding(.top, Space.s2)
             }
         }
     }

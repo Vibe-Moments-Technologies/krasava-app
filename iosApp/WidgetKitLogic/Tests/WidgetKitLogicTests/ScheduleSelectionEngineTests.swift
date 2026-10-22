@@ -138,17 +138,16 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         // 22 октября занятий нет, поэтому активной становится пара 23 октября.
         let s = state(twoDays, at: "2026-10-21 18:00")
         XCTAssertEqual(s.primaryLesson?.id, "b1")
-        XCTAssertEqual(s.primaryDay, .dayAfterTomorrow(full: "ПЯТНИЦА · 23 ОКТЯБРЯ"))
-        XCTAssertEqual(s.primaryDay.shortLabel, "ПОСЛЕЗАВТРА")
-        XCTAssertEqual(s.primaryDay.fullLabel, "ПЯТНИЦА · 23 ОКТЯБРЯ")
+        XCTAssertEqual(s.primaryDay, .dayAfterTomorrow(label: "ПТ, 23 ОКТ"))
+        XCTAssertEqual(s.primaryDay.label, "ПТ, 23 ОКТ")
     }
 
     func testDayWithoutLessonsMovesToTomorrow() {
         // 22 октября смотрим на 23-е — это завтра.
         let s = state(twoDays, at: "2026-10-22 10:00")
         XCTAssertEqual(s.primaryLesson?.id, "b1")
-        XCTAssertEqual(s.primaryDay, .tomorrow(full: "ПЯТНИЦА · 23 ОКТЯБРЯ"))
-        XCTAssertEqual(s.primaryDay.shortLabel, "ЗАВТРА")
+        XCTAssertEqual(s.primaryDay, .tomorrow(label: "ПТ, 23 ОКТ"))
+        XCTAssertEqual(s.primaryDay.label, "ПТ, 23 ОКТ")
     }
 
     // MARK: 8–9. Несколько пустых дней и выходные
@@ -161,7 +160,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ]
         let s = state(lessons, at: "2026-10-21 18:00")
         XCTAssertEqual(s.primaryLesson?.id, "tue")
-        XCTAssertEqual(s.primaryDay.fullLabel, "ВТОРНИК · 27 ОКТЯБРЯ")
+        XCTAssertEqual(s.primaryDay.label, "ВТ, 27 ОКТ")
     }
 
     func testMondayAfterWeekendIsPicked() {
@@ -171,7 +170,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ]
         let s = state(lessons, at: "2026-10-24 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "mon")
-        XCTAssertEqual(s.primaryDay.fullLabel, "ПОНЕДЕЛЬНИК · 26 ОКТЯБРЯ")
+        XCTAssertEqual(s.primaryDay.label, "ПН, 26 ОКТ")
     }
 
     // MARK: 10–11. Переход через месяц и год
@@ -183,7 +182,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ]
         let s = state(lessons, at: "2026-10-31 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "nov")
-        XCTAssertEqual(s.primaryDay.fullLabel, "ПОНЕДЕЛЬНИК · 2 НОЯБРЯ")
+        XCTAssertEqual(s.primaryDay.label, "ПН, 2 НОЯ")
     }
 
     func testYearBoundary() {
@@ -193,7 +192,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ]
         let s = state(lessons, at: "2026-12-31 12:00")
         XCTAssertEqual(s.primaryLesson?.id, "jan")
-        XCTAssertEqual(s.primaryDay.fullLabel, "ПОНЕДЕЛЬНИК · 11 ЯНВАРЯ")
+        XCTAssertEqual(s.primaryDay.label, "ПН, 11 ЯНВ")
     }
 
     // MARK: 12. Разные часовые зоны (ТЗ п. 10.1)
@@ -377,7 +376,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
     func testNextDaysAreFilledSkippingEmptyDates() {
         let s = state(twoDays, at: "2026-10-21 15:00")
         XCTAssertEqual(s.nextDays.count, 1)
-        XCTAssertEqual(s.nextDays.first?.label, "ПЯТНИЦА · 23 ОКТЯБРЯ")
+        XCTAssertEqual(s.nextDays.first?.label, "ПТ, 23 ОКТ")
         XCTAssertEqual(s.nextDays.first?.lessons.count, 2)
         XCTAssertEqual(s.nextDays.first?.date, "2026-10-23")
     }
@@ -388,7 +387,7 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         ]
         let s = state(lessons, at: "2026-10-21 15:00")
         XCTAssertEqual(s.nextDays.count, 2)
-        XCTAssertEqual(s.nextDays[1].label, "ВТОРНИК · 27 ОКТЯБРЯ")
+        XCTAssertEqual(s.nextDays[1].label, "ВТ, 27 ОКТ")
     }
 
     func testNoNextDaysWhenNothingAhead() {

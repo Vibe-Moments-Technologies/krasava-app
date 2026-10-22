@@ -6,10 +6,10 @@ import SwiftUI
 // списков дней и информационных блоков за пределами главной пары.
 //
 // Структура строго в таком порядке (ТЗ п. 4.2):
-//   A. Header (статус + бейдж типа)
+//   A. Header (статус или дата + бейдж типа)
 //   B. Classroom (основной визуальный акцент, 20–26 pt)
 //   C. LessonTime (одной строкой, 14–16 pt)
-//   D. Subject (максимально полно, 2–3 строки)
+//   D. Subject (максимально полно, свободная высота)
 
 struct SmallScheduleWidgetView: View {
     let state: WidgetPresentationState
@@ -54,8 +54,10 @@ struct SmallScheduleWidgetView: View {
 
                 Spacer().frame(height: Space.s6)
 
-                // Пункт D: название максимально полно. Единственный элемент,
-                // которому разрешено занять остаток высоты (ТЗ п. 4.4).
+                // Пункт D: название занимает ВСЮ оставшуюся высоту.
+                // `layoutPriority` + `Spacer(minLength: 0)` после текста дают
+                // ровно это: сначала место забирают аудитория и время (P0),
+                // остаток получает дисциплина (P1) и только потом — пустота.
                 Text(lesson.subject)
                     .font(.system(size: typography.subject(11...13), weight: .medium))
                     .foregroundColor(palette.subjectText)
@@ -63,10 +65,7 @@ struct SmallScheduleWidgetView: View {
                     .minimumScaleFactor(0.85)
                     .fixedSize(horizontal: false, vertical: true)
                     .layoutPriority(1)
-
-                // Композиция прижата кверху: больших Spacer'ов нет, небольшое
-                // естественное пустое пространство снизу допустимо (п. 4.4).
-                Spacer(minLength: 0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         } else {
             WidgetEmptyStateView(
@@ -78,9 +77,13 @@ struct SmallScheduleWidgetView: View {
         }
     }
 
-    /// Блок A. Слева статус, справа компактный тип. Если активная пара не
-    /// сегодня, вместо бейджа показывается дата: ТЗ п. 4.2 требует контекст
-    /// даты и запрещает дублировать его внизу.
+    /// Блок A.
+    ///
+    /// Для пары другого дня показывается ТОЛЬКО дата (`ПТ, 23 ОКТ`) — без
+    /// статуса «ДАЛЕЕ»: оба элемента в узкой шапке не помещаются, а дата
+    /// информативнее (ТЗ разд. 1: «предпочтительно один заголовок, без
+    /// дополнительной подписи ДАЛЕЕ»).
+    /// Для сегодняшней пары — статус и бейдж типа.
     @ViewBuilder
     private func header(
         lesson: WLesson,
@@ -88,39 +91,55 @@ struct SmallScheduleWidgetView: View {
         density: WidgetDensity,
         typography: WidgetTypography
     ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
-            // На Small обратного отсчёта нет: место дороже, точное время
-            // информативнее (дополнение владельца).
-            LessonStatusLabel(
-                status: status,
-                palette: palette,
-                size: typography.status(10...11),
-                allowCountdown: false
-            )
-
-            Spacer(minLength: Space.s4)
-
-            if state.primaryDay.isFuture, let dayLabel = state.primaryDay.fullLabel {
-                Text(dayLabel)
-                    .font(.system(size: typography.caption, weight: .semibold))
-                    .foregroundColor(palette.mutedText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            } else if density >= .compact {
-                LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
+        if state.primaryDay.isFuture, let dayLabel = state.primaryDay.label {
+            // Усадка вместо обрезки: «ПОСЛЕЗАВТРА» больше не выводится,
+            // но длина строки всё равно контролируется (дефект из ТЗ п. 4.7).
+            Text(dayLabel)
+                .font(.system(size: typography.status(10...11), weight: .semibold))
+                .foregroundColor(palette.activeAccent)
+                .tracking(0.4)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
+                // На Small обратного отсчёта нет: место дороже, точное время
+                // информативнее.
+                LessonStatusLabel(
+                    status: status,
+                    palette: palette,
+                    size: typography.status(10...11),
+                    allowCountdown: false
+                )
+                Spacer(minLength: Space.s4)
+                if density >= .compact {
+                    LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
+                }
             }
         }
     }
 }
 
-// MARK: - Medium: активная + 1–2 следующие (ТЗ п. 5)
+// MARK: - Medium: активная сверху, следующие снизу (ТЗ п. 5)
 //
-// Компоновка по ТЗ п. 5.2: горизонтальное разделение. Слева активная пара
-// (55–60% ширины), справа следующие занятия (40–45%) под общим заголовком
-// «ДАЛЕЕ». Между зонами тонкий разделитель.
+// Компоновка ПЕРЕРАБОТАНА по замечанию владельца: горизонтальные зоны давали
+// правой колонке слишком мало ширины (аудитория усекалась), а снизу оставалось
+// много пустого места. Вертикальная раскладка решает оба дефекта:
 //
-// Количество следующих пар выбирается по фактическому месту (ТЗ п. 5.3):
-// Mode 0 — только активная, Mode 1 — одна следующая, Mode 2 — две.
+//   ┌─────────────────────────────────────┐
+//   │ СЕЙЧАС                          ПР  │  ← шапка активной пары
+//   │ 265 (С-20)          14:20–15:50     │  ← аудитория и время
+//   │ Моделирование информационно-…       │  ← название (2–3 строки)
+//   │ Иванов И. И.  👥 2 группы           │  ← метаданные
+//   │ ────────────────────────────────────│
+//   │ ДАЛЕЕ                               │
+//   │ 16:20–17:50           341 (С-20)    │  ← следующая пара
+//   │ Моделирование ИАС                   │
+//   └─────────────────────────────────────┘
+//
+// Ширина у всех блоков полная, поэтому аудитория не может усечься до «258…»,
+// а высота используется целиком: главная пара занимает столько, сколько нужно
+// её содержимому, остаток уходит следующей.
 
 struct MediumScheduleWidgetView: View {
     let state: WidgetPresentationState
@@ -143,26 +162,22 @@ struct MediumScheduleWidgetView: View {
     ) -> some View {
         if let lesson = state.primaryLesson, let status = state.primaryStatus {
             let rows = upcomingRows(density: density, size: size)
-            if rows == 0 {
-                // Mode 0: других занятий дня нет — главный блок на всю ширину.
+            VStack(alignment: .leading, spacing: 0) {
                 primary(lesson: lesson, status: status, density: density, typography: typography)
-            } else {
-                HStack(alignment: .top, spacing: Space.s10) {
-                    primary(lesson: lesson, status: status, density: density, typography: typography)
-                        // Левая зона 55–60%: главная пара доминирует.
-                        .frame(width: primaryWidth(of: size, rows: rows), alignment: .topLeading)
 
+                if rows > 0 {
+                    Spacer().frame(height: Space.s8)
                     WidgetDivider(palette: palette)
-                        .frame(width: 1)
-                        .frame(maxHeight: .infinity)
+                    Spacer().frame(height: Space.s8)
 
                     upcoming(
                         lessons: Array(state.upcomingLessons.prefix(rows)),
                         density: density,
                         typography: typography
                     )
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
+
+                Spacer(minLength: 0)
             }
         } else {
             WidgetEmptyStateView(
@@ -173,26 +188,32 @@ struct MediumScheduleWidgetView: View {
         }
     }
 
-    /// Сколько следующих пар влезает. Считается по фактическому размеру,
-    /// а не выводится «на удачу» (ТЗ п. 5.3).
+    /// Сколько следующих пар реально помещается.
+    ///
+    /// Первая следующая пара приоритетна: она показывается всегда, если есть.
+    /// Вторая добавляется, только если после неё остаётся место — по ТЗ
+    /// «лучше одна полная, чем две нечитаемые».
     private func upcomingRows(density: WidgetDensity, size: CGSize) -> Int {
         let available = state.upcomingLessons.count
         guard available > 0 else { return 0 }
-        // Заголовок «ДАЛЕЕ» ≈ 16 pt, запись ≈ rowHeight.
-        let budget = size.height - Space.s16 - 16
-        let fits = Int(budget / density.rowHeight)
-        // Максимум две (ТЗ п. 5.3). Если две не помещаются без ухудшения
-        // основных данных — одна.
-        return max(0, min(min(fits, 2), available))
+
+        // Главная пара занимает примерно 100–125 pt (шапка, аудитория+время,
+        // название 2 строки, метаданные) плюс разделитель с отступами.
+        let primaryHeight: CGFloat = density >= .regular ? 128 : 116
+        let chrome: CGFloat = Space.s8 * 2 + 1 + 16 // отступы, линия, «ДАЛЕЕ»
+        var budget = size.height - primaryHeight - chrome
+
+        var rows = 0
+        while rows < min(available, 2) {
+            let cost = density.rowHeight + (rows > 0 ? Space.s6 : 0)
+            if budget < cost { break }
+            budget -= cost
+            rows += 1
+        }
+        return rows
     }
 
-    /// Левая зона: 58% при двух следующих парах, 55% при одной — правая зона
-    /// должна уметь сокращаться (ТЗ п. 9.2).
-    private func primaryWidth(of size: CGSize, rows: Int) -> CGFloat {
-        size.width * (rows >= 2 ? 0.58 : 0.55)
-    }
-
-    // MARK: Левая зона
+    // MARK: Главная пара
 
     @ViewBuilder
     private func primary(
@@ -202,34 +223,52 @@ struct MediumScheduleWidgetView: View {
         typography: WidgetTypography
     ) -> some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
-            // Статус и тип. На Medium отсчёт уместен: место есть, и он
-            // не отнимает у P0-данных (дополнение владельца).
+            // Статус или дата + тип занятия.
             HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
-                LessonStatusLabel(
-                    status: status,
-                    palette: palette,
-                    size: typography.status(10...11),
-                    allowCountdown: true
-                )
+                if state.primaryDay.isFuture, let dayLabel = state.primaryDay.label {
+                    // Пара не сегодня: дата важнее статуса, но статус при
+                    // наличии места дополняет её (ТЗ разд. 1: в Medium
+                    // сочетание допускается).
+                    Text(dayLabel)
+                        .font(.system(size: typography.status(10...11), weight: .semibold))
+                        .foregroundColor(palette.activeAccent)
+                        .tracking(0.4)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                } else {
+                    // На Medium отсчёт уместен: место есть, и он не отнимает
+                    // у P0-данных.
+                    LessonStatusLabel(
+                        status: status,
+                        palette: palette,
+                        size: typography.status(10...11),
+                        allowCountdown: true
+                    )
+                }
                 Spacer(minLength: Space.s4)
                 LessonTypeBadge(lesson: lesson, palette: palette, size: typography.badge)
             }
 
-            // Аудитория — главный акцент левой зоны.
-            ClassroomLabel(
-                lesson: lesson,
-                palette: palette,
-                size: typography.room(16...20),
-                weight: .bold
-            )
+            // Аудитория и время в одну строку: аудитория слева (главный
+            // акцент), время прижато вправо. Полная ширина виджета — поэтому
+            // «258а (С-20)» помещается целиком.
+            HStack(alignment: .firstTextBaseline, spacing: Space.s8) {
+                ClassroomLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.room(16...20),
+                    weight: .bold
+                )
+                .layoutPriority(2)
+                Spacer(minLength: Space.s4)
+                LessonTimeLabel(
+                    lesson: lesson,
+                    palette: palette,
+                    size: typography.primaryTime(12...15),
+                    weight: .semibold
+                )
+            }
             .padding(.top, Space.s4)
-
-            LessonTimeLabel(
-                lesson: lesson,
-                palette: palette,
-                size: typography.primaryTime(12...15),
-                weight: .semibold
-            )
 
             Text(lesson.subject)
                 .font(.system(size: typography.subject(11...13), weight: .medium))
@@ -240,23 +279,51 @@ struct MediumScheduleWidgetView: View {
                 .padding(.top, Space.s2)
                 .layoutPriority(1)
 
-            // Вторичные метаданные: преподаватель и число групп. Скрываются
-            // первыми при нехватке места (ТЗ п. 5.6).
-            if density.showsTeacher {
-                TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
-            }
-            if density.showsGroupIndicator {
-                MultiGroupIndicator(
-                    lesson: lesson,
-                    palette: palette,
-                    size: typography.teacher - 1,
-                    showWord: density >= .regular
-                )
-            }
+            // Метаданные: преподаватель и индикатор групп.
+            //
+            // Раньше преподаватель скрывался на Medium, потому что плотность
+            // там compact, а `showsTeacher` требовала regular. Это была ошибка:
+            // данные доходили до вью, но компоновка их выкидывала. Теперь
+            // преподаватель показывается на любой плотности — строка дешёвая.
+            metadata(lesson: lesson, density: density, typography: typography)
         }
     }
 
-    // MARK: Правая зона
+    /// Компактная строка метаданных: `Иванов И. И. · 👥 2 группы`.
+    @ViewBuilder
+    private func metadata(
+        lesson: WLesson,
+        density: WidgetDensity,
+        typography: WidgetTypography
+    ) -> some View {
+        let hasTeacher = lesson.teacherDisplay != nil
+        let hasGroups = lesson.isShared
+
+        if hasTeacher || hasGroups {
+            HStack(spacing: Space.s6) {
+                if hasTeacher {
+                    TeacherLabel(lesson: lesson, palette: palette, size: typography.teacher)
+                }
+                if hasTeacher && hasGroups {
+                    Text("·")
+                        .font(.system(size: typography.teacher))
+                        .foregroundColor(palette.mutedText)
+                }
+                if hasGroups {
+                    MultiGroupIndicator(
+                        lesson: lesson,
+                        palette: palette,
+                        size: typography.teacher - 1,
+                        showWord: true
+                    )
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.top, Space.s2)
+        }
+    }
+
+    // MARK: Следующие занятия
 
     @ViewBuilder
     private func upcoming(
@@ -265,7 +332,7 @@ struct MediumScheduleWidgetView: View {
         typography: WidgetTypography
     ) -> some View {
         VStack(alignment: .leading, spacing: density.rowSpacing) {
-            // Общий заголовок один раз, а не перед каждой записью (ТЗ п. 5.2).
+            // Общий заголовок один раз, а не перед каждой записью.
             WidgetSectionTitle(
                 text: "ДАЛЕЕ",
                 palette: palette,
