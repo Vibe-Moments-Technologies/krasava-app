@@ -304,13 +304,27 @@ struct ScheduleSelectionEngine {
 
     /// Форматтеры создаются один раз: `DateFormatter` дорог в создании,
     /// а виджет строит десятки подписей за один проход Timeline.
-    private static let compactFormatter: DateFormatter = {
+    private static let weekdayShortFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "ru_RU")
         f.timeZone = ScheduleClock.timeZone
-        // «Пт, 23 окт» — регистр поднимаем сами, чтобы не зависеть от того,
-        // как локаль отдаёт сокращения в разных версиях iOS.
-        f.dateFormat = "E, d MMM"
+        f.dateFormat = "E"
+        return f
+    }()
+
+    private static let dayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ru_RU")
+        f.timeZone = ScheduleClock.timeZone
+        f.dateFormat = "d"
+        return f
+    }()
+
+    private static let monthShortFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "ru_RU")
+        f.timeZone = ScheduleClock.timeZone
+        f.dateFormat = "MMM"
         return f
     }()
 
@@ -324,16 +338,26 @@ struct ScheduleSelectionEngine {
 
     /// `ПТ, 23 ОКТ` — единый компактный формат будущего учебного дня.
     ///
-    /// Собирается через `DateFormatter` с русской локалью и зоной расписания,
-    /// затем приводится к верхнему регистру и очищается от точки после
-    /// сокращения месяца («окт.» → «ОКТ»).
+    /// Собирается из трёх `DateFormatter` с русской локалью и зоной расписания.
+    /// Месяц приводится к трём буквам: CLDR отдаёт «окт.», «нояб.», «сент.» —
+    /// разной длины и с точкой, а ТЗ требует единого стиля `ПН, 26 ОКТ`.
+    /// Обрезка до трёх символов даёт ровно `янв, фев, мар, апр, май, июн, июл,
+    /// авг, сен, окт, ноя, дек` — без таблиц строк в коде.
     func compactDateLabel(_ day: Date) -> String {
-        let raw = Self.compactFormatter.string(from: day)
-        var text = raw.uppercased()
-        // Русская локаль в части версий iOS отдаёт «ОКТ.» с точкой.
-        while text.contains(".,") { text = text.replacingOccurrences(of: ".,", with: ",") }
-        if text.hasSuffix(".") { text.removeLast() }
-        return text
+        let weekday = Self.weekdayShortFormatter.string(from: day)
+        let number = Self.dayFormatter.string(from: day)
+        let month = Self.monthShortFormatter.string(from: day)
+        return "\(weekday), \(number) \(shortMonth(month))".uppercased()
+    }
+
+    /// Три буквы месяца без точки. CLDR для русского даёт от трёх до четырёх
+    /// букв («май» / «нояб.»), поэтому длина нормализуется.
+    private func shortMonth(_ raw: String) -> String {
+        let trimmed = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ".", with: "")
+        guard trimmed.count > 3 else { return trimmed }
+        return String(trimmed.prefix(3))
     }
 
     /// `СРЕДА` — полное название дня недели для заголовка сегодняшнего дня.
