@@ -58,12 +58,10 @@ struct SmallScheduleWidgetView: View {
 
                 Spacer().frame(height: Space.s6)
 
-                // Пункт D: название занимает ВСЮ оставшуюся высоту.
-                //
-                // Количество строк считается по фактическому остатку, а не
-                // берётся из плотности: на systemSmall после шапки, аудитории
-                // и времени остаётся ~55–60 pt, и туда помещается три строки
-                // при 13 pt. Ограничение в две строки оставляло место пустым.
+                // Пункт D: название занимает оставшуюся высоту, но не жадно:
+                // `maxHeight: .infinity` здесь съедал место полосы прогресса,
+                // и она не отображалась. Теперь остаток забирает Spacer, а
+                // прогресс прижат к низу — как просил владелец.
                 SubjectWithType(
                     lesson: lesson,
                     palette: palette,
@@ -71,10 +69,11 @@ struct SmallScheduleWidgetView: View {
                     lines: subjectLines(density: density, typography: typography, height: height)
                 )
                 .layoutPriority(1)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-                // Полоса прогресса идущей пары: 3 pt, только пока пара идёт.
-                // Для будущей пары прогресса нет — полосы не будет.
+                Spacer(minLength: 0)
+
+                // Полоса прогресса идущей пары внизу: 3 pt, только пока пара
+                // идёт. Для будущей пары прогресса нет — полосы не будет.
                 if let progress = state.primaryProgress {
                     Spacer().frame(height: Space.s4)
                     LessonProgressBar(progress: progress, palette: palette)
@@ -93,15 +92,17 @@ struct SmallScheduleWidgetView: View {
     /// Сколько строк дать названию на Small.
     ///
     /// Считается по остатку высоты: шапка ~14, отступы 6+6+6, аудитория 26,
-    /// время 16. Всё, что осталось, делится на высоту строки названия.
-    /// Минимум две строки, максимум четыре — дальше текст становится плотным.
+    /// время 16, полоса прогресса 7 (когда пара идёт). Всё, что осталось,
+    /// делится на высоту строки названия. Минимум две строки, максимум
+    /// четыре — дальше текст становится плотным.
     private func subjectLines(
         density: WidgetDensity,
         typography: WidgetTypography,
         height: CGFloat
     ) -> Int {
+        let progressSpace: CGFloat = state.primaryProgress != nil ? 7 : 0
         let chrome: CGFloat = 14 + Space.s6 * 3 + typography.room(20...26)
-            + typography.primaryTime(14...16)
+            + typography.primaryTime(14...16) + progressSpace
         let lineHeight = typography.subject(11...13) * 1.25
         let available = max(0, height - chrome)
         let fits = Int(available / lineHeight)
@@ -114,7 +115,8 @@ struct SmallScheduleWidgetView: View {
     /// статуса «ДАЛЕЕ»: оба элемента в узкой шапке не помещаются, а дата
     /// информативнее (ТЗ разд. 1: «предпочтительно один заголовок, без
     /// дополнительной подписи ДАЛЕЕ»).
-    /// Для сегодняшней пары — статус и бейдж типа.
+    /// Для сегодняшней пары — статус. Справа в обоих случаях — кнопка
+    /// обновления значком: на Small места на надпись нет (просьба владельца).
     @ViewBuilder
     private func header(
         lesson: WLesson,
@@ -122,26 +124,31 @@ struct SmallScheduleWidgetView: View {
         density: WidgetDensity,
         typography: WidgetTypography
     ) -> some View {
-        if state.primaryDay.isFuture, let dayLabel = state.primaryDay.label {
-            // Усадка вместо обрезки: «ПОСЛЕЗАВТРА» больше не выводится,
-            // но длина строки всё равно контролируется (дефект из ТЗ п. 4.7).
-            Text(dayLabel)
-                .font(.system(size: typography.status(10...11), weight: .semibold))
-                .foregroundColor(palette.activeAccent)
-                .tracking(0.4)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        } else {
-            // На сегодняшней паре остаётся только статус: тип идёт перед
-            // названием строкой (единый вид во всех виджетах, просьба
-            // владельца). Бейдж в шапке дублировал бы его в одном блоке.
-            LessonStatusLabel(
-                status: status,
-                palette: palette,
-                size: typography.status(10...11),
-                allowCountdown: false
-            )
+        HStack(alignment: .firstTextBaseline, spacing: Space.s4) {
+            if state.primaryDay.isFuture, let dayLabel = state.primaryDay.label {
+                // Усадка вместо обрезки: «ПОСЛЕЗАВТРА» больше не выводится,
+                // но длина строки всё равно контролируется (дефект из ТЗ п. 4.7).
+                Text(dayLabel)
+                    .font(.system(size: typography.status(10...11), weight: .semibold))
+                    .foregroundColor(palette.activeAccent)
+                    .tracking(0.4)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            } else {
+                // На сегодняшней паре остаётся только статус: тип идёт перед
+                // названием строкой (единый вид во всех виджетах, просьба
+                // владельца). Бейдж в шапке дублировал бы его в одном блоке.
+                LessonStatusLabel(
+                    status: status,
+                    palette: palette,
+                    size: typography.status(10...11),
+                    allowCountdown: false
+                )
+            }
+
+            Spacer(minLength: Space.s4)
+
+            WidgetRefreshButton(palette: palette, showsTitle: false)
         }
     }
 }
@@ -189,9 +196,19 @@ struct MediumScheduleWidgetView: View {
         if let lesson = state.primaryLesson, let status = state.primaryStatus {
             let rows = upcomingRows(density: density, size: size)
             VStack(alignment: .leading, spacing: 0) {
-                primary(lesson: lesson, status: status, density: density, typography: typography)
+                primary(
+                    lesson: lesson,
+                    status: status,
+                    density: density,
+                    typography: typography,
+                    showsMetadata: rows == 0,
+                    subjectLines: rows == 0 ? 3 : 2
+                )
 
                 if rows > 0 {
+                    // Разделитель без отдельного заголовка секции: на Medium
+                    // заголовок «ДАЛЕЕ» съедает строку, нужную второй паре.
+                    // Подпись идёт инлайном в первой строке следующей пары.
                     Spacer().frame(height: Space.s8)
                     WidgetDivider(palette: palette)
                     Spacer().frame(height: Space.s8)
@@ -216,20 +233,20 @@ struct MediumScheduleWidgetView: View {
 
     /// Сколько следующих пар реально помещается.
     ///
-    /// Первая следующая пара приоритетна: она показывается всегда, если есть.
-    /// Вторая добавляется, только если после неё остаётся место — по ТЗ
-    /// «лучше одна полная, чем две нечитаемые».
-    ///
-    /// Высота главной пары считается по фактическому содержимому
-    /// (`primaryBlockHeight`), а не грубой константой: при высоте medium
-    /// ~158 pt ошибка в 20 pt решала, показывать следующую пару или нет.
+    /// Владелец просил уместить активную и следующую: бюджет считается от
+    /// фактической высоты контента (~123 pt на iPhone) с учётом полосы
+    /// прогресса, которая стоит в главной паре. Первая следующая пара
+    /// приоритетна; вторая добавляется только если после неё остаётся место.
     private func upcomingRows(density: WidgetDensity, size: CGSize) -> Int {
         let available = state.upcomingLessons.count
         guard available > 0 else { return 0 }
 
-        // Отступы секции: 8 до разделителя, линия 1, 8 после, заголовок ~14.
-        let sectionChrome: CGFloat = Space.s8 * 2 + 1 + 14
-        var budget = size.height - density.primaryBlockHeight - sectionChrome
+        // Главная пара + полоса прогресса (7 pt), когда пара идёт.
+        let primaryHeight = density.primaryBlockHeight
+            + (state.primaryProgress != nil ? 7 : 0)
+        // Разделитель с отступами; заголовок секции в Medium инлайный.
+        let sectionChrome: CGFloat = Space.s8 * 2 + 1
+        var budget = size.height - primaryHeight - sectionChrome
 
         var rows = 0
         while rows < min(available, 2) {
@@ -248,15 +265,16 @@ struct MediumScheduleWidgetView: View {
         lesson: WLesson,
         status: LessonStatus,
         density: WidgetDensity,
-        typography: WidgetTypography
+        typography: WidgetTypography,
+        showsMetadata: Bool,
+        subjectLines: Int
     ) -> some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
-            // Статус или дата + тип занятия.
+            // Строка 1: статус или дата слева, кнопка обновления справа —
+            // то самое пустое место вверху, о котором просил владелец.
             HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
                 if state.primaryDay.isFuture, let dayLabel = state.primaryDay.label {
-                    // Пара не сегодня: дата важнее статуса, но статус при
-                    // наличии места дополняет её (ТЗ разд. 1: в Medium
-                    // сочетание допускается).
+                    // Пара не сегодня: дата важнее статуса (ТЗ разд. 1).
                     Text(dayLabel)
                         .font(.system(size: typography.status(10...11), weight: .semibold))
                         .foregroundColor(palette.activeAccent)
@@ -273,11 +291,10 @@ struct MediumScheduleWidgetView: View {
                         allowCountdown: true
                     )
                 }
-                // Бейдж типа здесь больше не выводится: тип идёт перед
-                // названием строкой (просьба владельца — единый вид во всех
-                // виджетах). Дублировать его в шапке значило бы показывать
-                // тип дважды в одном блоке.
-                Spacer(minLength: 0)
+
+                Spacer(minLength: Space.s4)
+
+                WidgetRefreshButton(palette: palette, showsTitle: true)
             }
 
             // Аудитория и время в одну строку: аудитория слева (главный
@@ -299,30 +316,28 @@ struct MediumScheduleWidgetView: View {
                     weight: .semibold
                 )
             }
-            .padding(.top, Space.s4)
+            .padding(.top, Space.s2)
 
-            // Название с типом в начале строки (просьба владельца: метка типа
-            // должна стоять везде перед названием).
+            // Название с типом в начале строки.
             SubjectWithType(
                 lesson: lesson,
                 palette: palette,
                 size: typography.subject(11...13),
-                lines: density.subjectLines
+                lines: subjectLines
             )
             .padding(.top, Space.s2)
             .layoutPriority(1)
 
-            // Метаданные: преподаватель и индикатор групп.
-            //
-            // Раньше преподаватель скрывался на Medium, потому что плотность
-            // там compact, а `showsTeacher` требовала regular. Это была ошибка:
-            // данные доходили до вью, но компоновка их выкидывала. Теперь
-            // преподаватель показывается на любой плотности — строка дешёвая.
-            metadata(lesson: lesson, density: density, typography: typography)
+            // Метаданные: преподаватель и индикатор групп. Показываются, когда
+            // следующей пары нет и место свободно: две пары важнее
+            // преподавателя (приоритет скрытия из ТЗ п. 5.6).
+            if showsMetadata {
+                metadata(lesson: lesson, density: density, typography: typography)
+            }
 
             // Полоса прогресса идущей пары.
             if let progress = state.primaryProgress {
-                Spacer().frame(height: Space.s6)
+                Spacer().frame(height: Space.s4)
                 LessonProgressBar(progress: progress, palette: palette)
             }
         }
@@ -370,14 +385,10 @@ struct MediumScheduleWidgetView: View {
         density: WidgetDensity,
         typography: WidgetTypography
     ) -> some View {
+        // Заголовок секции не выводится отдельной строкой: на Medium он
+        // съедает высоту, нужную второй паре. Подпись «ДАЛЕЕ» идёт инлайном
+        // в первой строке первой следующей пары.
         VStack(alignment: .leading, spacing: density.rowSpacing) {
-            // Общий заголовок один раз, а не перед каждой записью.
-            WidgetSectionTitle(
-                text: "ДАЛЕЕ",
-                palette: palette,
-                size: typography.caption
-            )
-
             ForEach(Array(lessons.enumerated()), id: \.element.id) { index, lesson in
                 if index > 0 {
                     WidgetDivider(palette: palette)
@@ -386,7 +397,8 @@ struct MediumScheduleWidgetView: View {
                     lesson: lesson,
                     palette: palette,
                     density: density,
-                    typography: typography
+                    typography: typography,
+                    inlineLabel: index == 0 ? "ДАЛЕЕ" : nil
                 )
             }
         }

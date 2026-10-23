@@ -76,3 +76,33 @@ struct KrasavaWidgetIntent: WidgetConfigurationIntent {
     @Parameter(title: "Группа")
     var target: WidgetTargetEntity?
 }
+
+// MARK: - Кнопка «Обновить»
+
+/// Пересчёт виджета по нажатию кнопки внутри него.
+///
+/// Что реально делает: перечитывает снапшот из общего контейнера и строит
+/// новый Timeline от текущего момента. Поэтому статус («СЕЙЧАС»/«ДАЛЕЕ») и
+/// полоса прогресса становятся актуальными без запуска приложения — именно
+/// этого просил владелец, заметив, что прогресс обновлялся только при
+/// открытии приложения.
+///
+/// Чего не делает: не ходит в сеть за новым расписанием. Расширение виджета
+/// сознательно не тянет данные из интернета (память, время, батарея);
+/// расписание обновляет приложение, а кнопка пересчитывает то, что уже
+/// сохранено. Это честно отражено в названии и описании.
+@available(iOS 17.0, *)
+struct RefreshWidgetIntent: AppIntent {
+    static var title: LocalizedStringResource = "Обновить виджет"
+    static var description: IntentDescription = IntentDescription(
+        "Пересчитать виджет из сохранённого расписания: статус и прогресс пары станут актуальными."
+    )
+
+    /// Не показывать в приложении «Команды»: это служебное действие виджета.
+    static var isDiscoverable: Bool = false
+
+    func perform() async throws -> some IntentResult {
+        WidgetCenter.shared.reloadTimelines(ofKind: "KrasavaWidget")
+        return .result()
+    }
+}

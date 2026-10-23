@@ -42,6 +42,9 @@ struct LargeScheduleWidgetView: View {
                             .foregroundColor(palette.mutedText)
                             .lineLimit(1)
                     }
+                    // Кнопка обновления — в пустом месте справа вверху,
+                    // как просил владелец.
+                    WidgetRefreshButton(palette: palette, showsTitle: true)
                 }
 
                 Spacer().frame(height: Space.s8)
@@ -72,8 +75,7 @@ struct LargeScheduleWidgetView: View {
                             lesson: item,
                             palette: palette,
                             density: density,
-                            typography: typography,
-                            showsType: density >= .regular
+                            typography: typography
                         )
                     }
                     if state.upcomingLessons.count > rows {
@@ -410,12 +412,18 @@ struct ExtraLargeScheduleWidgetView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
             // Заголовок даты: «СЕГОДНЯ · СРЕДА» или «ПТ, 23 ОКТ».
-            WidgetSectionTitle(
-                text: state.headerTitle,
-                palette: palette,
-                size: typography.caption,
-                isDayHeader: true
-            )
+            // Кнопка обновления — справа в том же ряду: верхнее правое
+            // пустое место, как просил владелец.
+            HStack(spacing: Space.s6) {
+                WidgetSectionTitle(
+                    text: state.headerTitle,
+                    palette: palette,
+                    size: typography.caption,
+                    isDayHeader: true
+                )
+                Spacer(minLength: 0)
+                WidgetRefreshButton(palette: palette, showsTitle: true)
+            }
 
             // «ДАЛЕЕ» под заголовком дня не дублируется (просьба владельца).
             LessonStatusLabel(
@@ -512,8 +520,7 @@ struct ExtraLargeScheduleWidgetView: View {
                     lesson: item,
                     palette: palette,
                     density: density,
-                    typography: typography,
-                    showsType: density >= .regular
+                    typography: typography
                 )
             }
         }

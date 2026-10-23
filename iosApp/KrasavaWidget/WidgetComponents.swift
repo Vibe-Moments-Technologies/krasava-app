@@ -345,12 +345,20 @@ struct UpcomingLessonRow: View {
     let density: WidgetDensity
     /// Диапазоны шрифтов из таблицы ТЗ п. 2.2.
     let typography: WidgetTypography
-    /// Показывать ли тип занятия перед названием.
-    var showsType: Bool = true
+    /// Подпись перед временем первой строки: «ДАЛЕЕ» в Medium, где отдельный
+    /// заголовок секции не помещается по высоте. nil — без подписи.
+    var inlineLabel: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
             HStack(alignment: .firstTextBaseline, spacing: Space.s6) {
+                if let inlineLabel {
+                    Text(inlineLabel)
+                        .font(.system(size: typography.rowTime(11...14) - 1, weight: .semibold))
+                        .foregroundColor(palette.mutedText)
+                        .tracking(0.3)
+                        .lineLimit(1)
+                }
                 LessonTimeLabel(
                     lesson: lesson,
                     palette: palette,
@@ -369,14 +377,14 @@ struct UpcomingLessonRow: View {
                 )
             }
 
-            // Тип перед названием одной строкой (просьба владельца): в списках
-            // он должен быть у всех пар, а не только у активной.
+            // Тип перед названием одной строкой — всегда и во всех виджетах
+            // (просьба владельца). Раньше метка зависела от плотности и
+            // пропадала у первых следующих пар, поэтому условие убрано.
             SubjectWithType(
                 lesson: lesson,
                 palette: palette,
                 size: typography.rowSubject(11...14),
-                lines: density.rowSubjectLines,
-                showsType: showsType
+                lines: density.rowSubjectLines
             )
             .layoutPriority(1)
         }
@@ -384,6 +392,40 @@ struct UpcomingLessonRow: View {
         .accessibilityLabel(
             "\(lesson.timeRangeAccessible), \(lesson.subject), \(lesson.roomDisplay)"
         )
+    }
+}
+
+// MARK: - Кнопка обновления
+
+/// Кнопка принудительного пересчёта виджета.
+///
+/// Интерактивные виджеты появились в iOS 17, поэтому на 15–16 кнопка не
+/// рисуется вовсе: мёртвая кнопка хуже, чем её отсутствие. Действие
+/// пересобирает Timeline из сохранённого расписания — статус и полоса
+/// прогресса становятся актуальными без запуска приложения.
+struct WidgetRefreshButton: View {
+    let palette: WidgetPalette
+    /// С надписью «Обновить» (Medium и крупнее) или только значок (Small).
+    var showsTitle: Bool = true
+
+    var body: some View {
+        if #available(iOS 17.0, *) {
+            Button(intent: RefreshWidgetIntent()) {
+                if showsTitle {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.clockwise")
+                        Text("Обновить")
+                    }
+                    .font(.system(size: 10, weight: .medium))
+                } else {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(palette.mutedText)
+            .accessibilityLabel("Обновить виджет")
+        }
     }
 }
 

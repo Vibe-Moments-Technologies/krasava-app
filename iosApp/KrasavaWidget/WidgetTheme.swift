@@ -40,10 +40,16 @@ enum WidgetDensity: Int, Comparable {
         a.rawValue < b.rawValue
     }
 
-    /// Порог по высоте контейнера в точках.
+    /// Порог по высоте КОНТЕНТА виджета в точках.
+    ///
+    /// Значения подобраны по фактическому размеру содержимого после системных
+    /// полей, а не по габариту виджета: small и medium дают ~126 pt, large
+    /// ~313 pt, extra large ~330 pt. Прежний порог 320 для regular ронял large
+    /// в compact, из-за чего списки теряли метки типа, а medium попадал в
+    /// minimal и терял преподавателя.
     static func forHeight(_ height: CGFloat) -> WidgetDensity {
-        if height < 150 { return .minimal }
-        if height < 320 { return .compact }
+        if height < 120 { return .minimal }
+        if height < 240 { return .compact }
         return .regular
     }
 
@@ -109,31 +115,25 @@ enum WidgetDensity: Int, Comparable {
     /// к тому, что Medium вообще не показывал следующую пару.
     var rowHeight: CGFloat {
         switch self {
-        case .minimal: return 30
-        case .compact: return 36
-        case .regular: return 44
+        case .minimal: return 26
+        case .compact: return 30
+        case .regular: return 48
         }
     }
 
-    /// Оценка высоты блока главной пары: статус, аудитория с временем,
-    /// название (до `subjectLines` строк) и метаданные.
+    /// Оценка высоты блока главной пары без метаданных и прогресса: статус,
+    /// аудитория с временем и название в `subjectLines` строк.
     ///
-    /// Нужна, чтобы посчитать бюджет для следующих пар. Считается по частям,
-    /// а не одной константой: при высоте medium ~158 pt ошибка в 10 pt решает,
-    /// помещается следующая пара или нет.
-    ///
-    /// Значения — фактическая высота строки для соответствующего кегля
-    /// (кегль × 1.2 плюс запас), а не «на глаз»: занижение приводило бы
-    /// к обрезанной нижней строке, а завышение — к пустому месту.
+    /// Метаданные и прогресс в бюджет не входят: они добавляются только когда
+    /// осталось место (см. представления), поэтому не могут вытеснить
+    /// следующую пару. При высоте контента medium ~123 pt ошибка в 10 pt
+    /// решает, помещается вторая пара или нет.
     var primaryBlockHeight: CGFloat {
-        let statusLine: CGFloat = 14
-        let roomLine: CGFloat = self == .regular ? 28 : 24
-        let subjectLine: CGFloat = self == .regular ? 17 : 15
-        let metadataLine: CGFloat = 15
-        // Три зазора между блоками плюс внутренние отступы строк.
-        let gaps: CGFloat = self == .regular ? 16 : 12
-        return statusLine + roomLine + metadataLine + gaps
-            + subjectLine * CGFloat(subjectLines)
+        switch self {
+        case .minimal: return 52
+        case .compact: return 69
+        case .regular: return 112
+        }
     }
 }
 

@@ -27,9 +27,15 @@ struct ScheduleEntry: TimelineEntry {
 /// позже указанного времени, поэтому состояние считается для момента записи,
 /// а не «сейчас».
 enum WidgetTimelineBuilder {
-    /// Больше записей не нужно: виджет живёт на домашнем экране, а при
-    /// изменении расписания приложение само попросит перезагрузку.
-    static let maxEntries = 48
+    /// Записей хватает с запасом: границы пар, шаги прогресса и четыре
+    /// полуночи. При изменении расписания приложение само попросит
+    /// перезагрузку, поэтому больше не нужно.
+    static let maxEntries = 64
+
+    /// Шаг полосы прогресса: каждые 15 минут идущей пары. Полоса рисуется из
+    /// состояния записи, поэтому без промежуточных точек она стояла бы на
+    /// месте до конца пары — владелец это и заметил.
+    static let progressStepMinutes = 15
 
     static func entries(
         targetId: Int?,
@@ -52,6 +58,23 @@ enum WidgetTimelineBuilder {
                         -Double(ScheduleSelectionEngine.soonThresholdMinutes) * 60
                     )
                     if soon > now { dates.append(soon) }
+
+                    // Шаги прогресса: для пар, которые идут или начнутся
+                    // в ближайшие 12 часов, добавляем точку каждые 15 минут
+                    // внутри окна пары. Полоса двигается сама, без кнопки
+                    // и без запуска приложения. Шаги выровнены по сетке,
+                    // чтобы записи не дрейфовали от перезагрузки к перезагрузке.
+                    guard end > now,
+                          start < now.addingTimeInterval(12 * 3600) else { continue }
+                    let step = Double(Self.progressStepMinutes) * 60
+                    var moment = max(now, start)
+                    // Выравнивание на сетку шагов от начала пары.
+                    let elapsed = moment.timeIntervalSince(start)
+                    moment = moment.addingTimeInterval(step - elapsed.truncatingRemainder(dividingBy: step))
+                    while moment < end {
+                        dates.append(moment)
+                        moment = moment.addingTimeInterval(step)
+                    }
                 }
             }
         default:
