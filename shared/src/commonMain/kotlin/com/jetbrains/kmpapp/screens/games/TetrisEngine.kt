@@ -122,6 +122,67 @@ enum class TetrisStatus {
     GAME_OVER
 }
 
+/**
+ * Вариант расположения экранных кнопок управления Тетрисом.
+ */
+enum class TetrisControlVariant(
+    val id: Int,
+    val title: String,
+    val description: String
+) {
+    TYPE_1(
+        id = 1,
+        title = "Управление 1",
+        description = "Ряд 1: Влево, Вправо, Hold, Поворот\nРяд 2: Вниз, Сброс"
+    ),
+    TYPE_2(
+        id = 2,
+        title = "Управление 2",
+        description = "Ряд 1: Влево, Вращать, Вправо\nРяд 2: Ниже, Hold, Упасть"
+    );
+
+    companion object {
+        fun fromId(id: Int?): TetrisControlVariant = entries.firstOrNull { it.id == id } ?: TYPE_1
+    }
+}
+
+/**
+ * Сложность игры в Тетрис, определяющая темп нарастания скорости падения блоков.
+ */
+enum class TetrisDifficulty(
+    val id: String,
+    val title: String,
+    val description: String,
+    val linesPerLevel: Int,
+    val speedStepMs: Long
+) {
+    EASY(
+        id = "easy",
+        title = "Легкая",
+        description = "Стандартное плавное ускорение (уровень повышается каждые 10 линий)",
+        linesPerLevel = 10,
+        speedStepMs = 65L
+    ),
+    MEDIUM(
+        id = "medium",
+        title = "Средняя",
+        description = "Умеренно быстрое ускорение (уровень повышается каждые 6 линий)",
+        linesPerLevel = 6,
+        speedStepMs = 85L
+    ),
+    HARD(
+        id = "hard",
+        title = "Сложная",
+        description = "Быстрое ускорение (уровень повышается каждые 3 линии)",
+        linesPerLevel = 3,
+        speedStepMs = 110L
+    );
+
+    companion object {
+        fun fromId(id: String?): TetrisDifficulty = entries.firstOrNull { it.id == id } ?: EASY
+    }
+}
+
 /** Полный снимок состояния игры в Тетрис. */
 data class TetrisState(
     val board: TetrisBoard = TetrisBoard(),
@@ -283,7 +344,8 @@ object TetrisEngine {
     fun softDrop(
         state: TetrisState,
         queue: MutableList<TetrominoType>,
-        random: Random = Random.Default
+        random: Random = Random.Default,
+        difficulty: TetrisDifficulty = TetrisDifficulty.EASY
     ): Pair<TetrisState, Boolean> {
         val piece = state.currentPiece ?: return Pair(state, false)
         if (state.status != TetrisStatus.PLAYING) return Pair(state, false)
@@ -300,7 +362,7 @@ object TetrisEngine {
             )
         } else {
             // Фигура достигла дна/препятствия — фиксируем её
-            val locked = lockPiece(state, queue, random)
+            val locked = lockPiece(state, queue, random, difficulty)
             return Pair(locked, true)
         }
     }
@@ -309,7 +371,8 @@ object TetrisEngine {
     fun gravityTick(
         state: TetrisState,
         queue: MutableList<TetrominoType>,
-        random: Random = Random.Default
+        random: Random = Random.Default,
+        difficulty: TetrisDifficulty = TetrisDifficulty.EASY
     ): TetrisState {
         val piece = state.currentPiece ?: return state
         if (state.status != TetrisStatus.PLAYING) return state
@@ -321,7 +384,7 @@ object TetrisEngine {
                 ghostY = calculateGhostY(state.board, moved)
             )
         } else {
-            return lockPiece(state, queue, random)
+            return lockPiece(state, queue, random, difficulty)
         }
     }
 
@@ -332,7 +395,8 @@ object TetrisEngine {
     fun hardDrop(
         state: TetrisState,
         queue: MutableList<TetrominoType>,
-        random: Random = Random.Default
+        random: Random = Random.Default,
+        difficulty: TetrisDifficulty = TetrisDifficulty.EASY
     ): TetrisState {
         val piece = state.currentPiece ?: return state
         if (state.status != TetrisStatus.PLAYING) return state
@@ -344,7 +408,7 @@ object TetrisEngine {
             currentPiece = droppedPiece,
             score = state.score + dropDistance * 2
         )
-        return lockPiece(stateWithDropped, queue, random)
+        return lockPiece(stateWithDropped, queue, random, difficulty)
     }
 
     /**
@@ -406,7 +470,8 @@ object TetrisEngine {
     fun lockPiece(
         state: TetrisState,
         queue: MutableList<TetrominoType>,
-        random: Random = Random.Default
+        random: Random = Random.Default,
+        difficulty: TetrisDifficulty = TetrisDifficulty.EASY
     ): TetrisState {
         val piece = state.currentPiece ?: return state
 
@@ -443,7 +508,7 @@ object TetrisEngine {
         }
 
         val totalLines = state.lines + clearedCount
-        val newLevel = 1 + totalLines / 10
+        val newLevel = 1 + totalLines / difficulty.linesPerLevel
         val totalScore = state.score + lineScore
 
         // 4. Добор очереди фигур
@@ -472,9 +537,12 @@ object TetrisEngine {
     }
 
     /**
-     * Скорость падения (в миллисекундах) в зависимости от уровня.
+     * Скорость падения (в миллисекундах) в зависимости от уровня и выбранной сложности.
      */
-    fun gravityIntervalMs(level: Int): Long {
-        return max(90L, 750L - (level - 1) * 65L)
+    fun gravityIntervalMs(
+        level: Int,
+        difficulty: TetrisDifficulty = TetrisDifficulty.EASY
+    ): Long {
+        return max(80L, 750L - (level - 1) * difficulty.speedStepMs)
     }
 }

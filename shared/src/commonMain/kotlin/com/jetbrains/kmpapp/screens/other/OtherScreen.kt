@@ -120,7 +120,8 @@ fun OtherScreen(
                         onOpenScheduleProgress = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_PROGRESS) },
                         onOpenScheduleCalendar = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_CALENDAR) },
                         onOpenServiceSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_NOTES_SETTINGS) },
-                        onOpenSaperSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SAPER_SETTINGS) }
+                        onOpenSaperSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SAPER_SETTINGS) },
+                        onOpenTetrisSettings = { viewModel.navigateToSubScreen(OtherSubScreen.TETRIS_SETTINGS) }
                     )
                 }
                 OtherSubScreen.DATA_AND_CACHE -> {
@@ -149,6 +150,9 @@ fun OtherScreen(
                 }
                 OtherSubScreen.SAPER_SETTINGS -> {
                     SaperSettingsScreen(viewModel = gamesViewModel, onBack = back)
+                }
+                OtherSubScreen.TETRIS_SETTINGS -> {
+                    TetrisSettingsScreen(viewModel = gamesViewModel, onBack = back)
                 }
                 OtherSubScreen.RESOURCES -> {
                     ResourcesScreen(onBack = back)

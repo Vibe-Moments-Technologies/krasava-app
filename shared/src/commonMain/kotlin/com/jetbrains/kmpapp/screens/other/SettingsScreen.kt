@@ -79,6 +79,7 @@ fun SettingsScreen(
     onOpenScheduleCalendar: () -> Unit = {},
     onOpenServiceSettings: () -> Unit = {},
     onOpenSaperSettings: () -> Unit = {},
+    onOpenTetrisSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -375,7 +376,7 @@ fun SettingsScreen(
                 )
             }
 
-            // Section: Games — настройки «Сапера»
+            // Section: Games — настройки «Сапера» и «Тетриса»
             SettingsSectionCard(
                 title = "Игры",
                 icon = Icons.Default.Bolt
@@ -384,6 +385,15 @@ fun SettingsScreen(
                     title = "Сапер",
                     subtitle = "Ориентация доски, предупреждение о мелких клетках",
                     onClick = onOpenSaperSettings
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+                SettingsNavigationRow(
+                    title = "Тетрис",
+                    subtitle = "Вариант управления, сложность и скорость падения",
+                    onClick = onOpenTetrisSettings
                 )
             }
 

@@ -225,4 +225,61 @@ class TetrisEngineTest {
         assertEquals(initialY + 1, droppedState.currentPiece!!.y)
         assertEquals(initialScore + 1, droppedState.score)
     }
+
+    @Test
+    fun tetrisControlVariantFromIdDefaultsToType1() {
+        assertEquals(TetrisControlVariant.TYPE_1, TetrisControlVariant.fromId(null))
+        assertEquals(TetrisControlVariant.TYPE_1, TetrisControlVariant.fromId(1))
+        assertEquals(TetrisControlVariant.TYPE_2, TetrisControlVariant.fromId(2))
+        assertEquals(TetrisControlVariant.TYPE_1, TetrisControlVariant.fromId(999))
+    }
+
+    @Test
+    fun tetrisDifficultyFromIdDefaultsToEasy() {
+        assertEquals(TetrisDifficulty.EASY, TetrisDifficulty.fromId(null))
+        assertEquals(TetrisDifficulty.EASY, TetrisDifficulty.fromId("easy"))
+        assertEquals(TetrisDifficulty.MEDIUM, TetrisDifficulty.fromId("medium"))
+        assertEquals(TetrisDifficulty.HARD, TetrisDifficulty.fromId("hard"))
+        assertEquals(TetrisDifficulty.EASY, TetrisDifficulty.fromId("unknown"))
+    }
+
+    @Test
+    fun difficultyAffectsSpeedAcceleration() {
+        val easyLvl5 = TetrisEngine.gravityIntervalMs(5, TetrisDifficulty.EASY)
+        val medLvl5 = TetrisEngine.gravityIntervalMs(5, TetrisDifficulty.MEDIUM)
+        val hardLvl5 = TetrisEngine.gravityIntervalMs(5, TetrisDifficulty.HARD)
+
+        // Hard should drop faster (smaller interval) than Medium, and Medium faster than Easy
+        assertTrue(easyLvl5 > medLvl5, "Medium speed interval ($medLvl5) must be faster than Easy ($easyLvl5)")
+        assertTrue(medLvl5 > hardLvl5, "Hard speed interval ($hardLvl5) must be faster than Medium ($medLvl5)")
+    }
+
+    @Test
+    fun difficultyAffectsLinesPerLevelProgression() {
+        // Prepare board with row 19 full except x=0
+        val grid = TetrisBoard.emptyGrid().map { it.toMutableList() }.toMutableList()
+        for (x in 1 until TetrisEngine.BOARD_WIDTH) {
+            grid[19][x] = TetrominoType.I
+        }
+        val board = TetrisBoard(grid)
+        val piece = ActivePiece(TetrominoType.I, x = 0, y = 18, rotation = 0)
+
+        // For EASY (10 lines per level): 5 lines + 1 cleared line = 6 lines -> level 1 + 6/10 = 1
+        val stateEasy = TetrisState(board = board, currentPiece = piece, lines = 5, level = 1, status = TetrisStatus.PLAYING)
+        val lockedEasy = TetrisEngine.lockPiece(stateEasy, mutableListOf(TetrominoType.O), Random(1), TetrisDifficulty.EASY)
+        assertEquals(6, lockedEasy.lines)
+        assertEquals(1, lockedEasy.level)
+
+        // For MEDIUM (6 lines per level): 5 lines + 1 cleared line = 6 lines -> level 1 + 6/6 = 2
+        val stateMed = TetrisState(board = board, currentPiece = piece, lines = 5, level = 1, status = TetrisStatus.PLAYING)
+        val lockedMed = TetrisEngine.lockPiece(stateMed, mutableListOf(TetrominoType.O), Random(1), TetrisDifficulty.MEDIUM)
+        assertEquals(6, lockedMed.lines)
+        assertEquals(2, lockedMed.level)
+
+        // For HARD (3 lines per level): 5 lines + 1 cleared line = 6 lines -> level 1 + 6/3 = 3
+        val stateHard = TetrisState(board = board, currentPiece = piece, lines = 5, level = 1, status = TetrisStatus.PLAYING)
+        val lockedHard = TetrisEngine.lockPiece(stateHard, mutableListOf(TetrominoType.O), Random(1), TetrisDifficulty.HARD)
+        assertEquals(6, lockedHard.lines)
+        assertEquals(3, lockedHard.level)
+    }
 }
