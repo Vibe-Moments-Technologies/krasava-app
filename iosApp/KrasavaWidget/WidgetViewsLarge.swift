@@ -54,6 +54,9 @@ struct LargeScheduleWidgetView: View {
                 primary(lesson: lesson, status: status, density: density, typography: typography)
 
                 // Раздел следующих занятий — только если они есть.
+                // Число строк считаем один раз: оно нужно и разделу будущего
+                // дня, чтобы знать занятое место.
+                let shownUpcoming = upcomingRows(density: density, size: size, typography: typography)
                 if !state.upcomingLessons.isEmpty {
                     Spacer().frame(height: Space.s10)
                     WidgetDivider(palette: palette)
@@ -66,8 +69,7 @@ struct LargeScheduleWidgetView: View {
                     )
                     Spacer().frame(height: Space.s6)
 
-                    let rows = upcomingRows(density: density, size: size, typography: typography)
-                    ForEach(Array(state.upcomingLessons.prefix(rows).enumerated()), id: \.element.id) { index, item in
+                    ForEach(Array(state.upcomingLessons.prefix(shownUpcoming).enumerated()), id: \.element.id) { index, item in
                         if index > 0 {
                             Spacer().frame(height: density.rowSpacing)
                         }
@@ -78,9 +80,9 @@ struct LargeScheduleWidgetView: View {
                             typography: typography
                         )
                     }
-                    if state.upcomingLessons.count > rows {
+                    if state.upcomingLessons.count > shownUpcoming {
                         Spacer().frame(height: Space.s4)
-                        Text("Ещё \(state.upcomingLessons.count - rows)")
+                        Text("Ещё \(state.upcomingLessons.count - shownUpcoming)")
                             .font(.system(size: typography.caption))
                             .foregroundColor(palette.mutedText)
                     }
@@ -90,7 +92,7 @@ struct LargeScheduleWidgetView: View {
                 // только при достаточной высоте для заголовка и хотя бы одной
                 // полноценной записи. Одинокий заголовок не выводится.
                 if let nextDay = state.nextDays.first,
-                   let rows = nextDayRows(nextDay, density: density, size: size, typography: typography),
+                   let rows = nextDayRows(nextDay, density: density, size: size, upcomingShown: shownUpcoming),
                    rows > 0 {
                     Spacer().frame(height: Space.s10)
                     WidgetDivider(palette: palette)
@@ -233,9 +235,13 @@ struct LargeScheduleWidgetView: View {
 
     /// Сколько записей выбранного дня влезает.
     ///
-    /// Алгоритм: из доступной высоты вычитается главная секция (её высота
-    /// зависит от плотности), затем каждая запись добавляется, пока хватает
-    /// места. Показываются только полностью помещающиеся записи.
+    /// Алгоритм: из доступной высоты вычитается шапка и главная секция,
+    /// затем каждая запись добавляется, пока хватает места. Показываются
+    /// только полностью помещающиеся записи (ТЗ п. 6.7, 9.4).
+    ///
+    /// Приоритет — занятия текущего дня: следующий учебный день добавляется
+    /// только в остаток после них (ТЗ п. 6.7: не жертвовать сегодняшними
+    /// парами ради будущего дня).
     private func upcomingRows(
         density: WidgetDensity,
         size: CGSize,
@@ -244,12 +250,7 @@ struct LargeScheduleWidgetView: View {
         let available = state.upcomingLessons.count
         guard available > 0 else { return 0 }
 
-        // Главная секция: статус + аудитория + название (до 3 строк) + метаданные.
-        let primaryHeight: CGFloat = density >= .regular ? 132 : 112
-        // Резерв под раздел будущего дня: заголовок + одна запись.
-        let nextDayReserve = state.nextDays.isEmpty ? 0 : (density.rowHeight + 28)
-
-        var budget = size.height - primaryHeight - nextDayReserve - 60
+        var budget = size.height - headerHeight - primaryHeight(density) - sectionChrome
         var rows = 0
         while rows < available {
             let cost = density.rowHeight + (rows > 0 ? density.rowSpacing : 0)
@@ -268,23 +269,42 @@ struct LargeScheduleWidgetView: View {
         _ day: WidgetDay,
         density: WidgetDensity,
         size: CGSize,
-        typography: WidgetTypography
+        upcomingShown: Int
     ) -> Int? {
-        let primaryHeight: CGFloat = density >= .regular ? 132 : 112
-        // Заголовок + разделители + отступы раздела.
-        let sectionChrome: CGFloat = 56
-        let usedByUpcoming = CGFloat(state.upcomingLessons.count) * density.rowHeight
+        // Место, уже занятое шапкой, главной парой и списком текущего дня.
+        var used = headerHeight + primaryHeight(density)
+        if upcomingShown > 0 {
+            used += sectionChrome + rowsCost(upcomingShown, density: density)
+        }
 
-        var budget = size.height - primaryHeight - sectionChrome - usedByUpcoming - 28
+        var budget = size.height - used - sectionChrome
         guard budget >= density.rowHeight else { return nil }
 
         var rows = 0
         for _ in day.lessons {
-            if budget < density.rowHeight { break }
-            budget -= density.rowHeight
+            let cost = density.rowHeight + (rows > 0 ? density.rowSpacing : 0)
+            if budget < cost { break }
+            budget -= cost
             rows += 1
         }
         return rows > 0 ? rows : nil
+    }
+
+    /// Высота строки заголовка дня с отступом до главной пары.
+    private var headerHeight: CGFloat { Space.s8 + 14 }
+
+    /// Высота главной пары: статус, аудитория с временем, название
+    /// (до трёх строк в regular), метаданные и полоса прогресса.
+    private func primaryHeight(_ density: WidgetDensity) -> CGFloat {
+        density >= .regular ? 128 : 96
+    }
+
+    /// Раздел списка: отступы, разделитель, заголовок секции и зазор до строк.
+    private var sectionChrome: CGFloat { Space.s10 * 2 + 1 + 14 + Space.s6 }
+
+    /// Высота `count` строк списка с межстрочными зазорами.
+    private func rowsCost(_ count: Int, density: WidgetDensity) -> CGFloat {
+        CGFloat(count) * density.rowHeight + CGFloat(max(0, count - 1)) * density.rowSpacing
     }
 }
 
