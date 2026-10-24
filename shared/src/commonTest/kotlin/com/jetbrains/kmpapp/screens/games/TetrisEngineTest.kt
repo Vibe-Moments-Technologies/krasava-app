@@ -181,10 +181,14 @@ class TetrisEngineTest {
 
     @Test
     fun gameOverTriggersWhenSpawnCollides() {
-        // Fill top rows completely
+        // Заполняем верхние ряды ТАК, чтобы они не были полными: полностью
+        // заполненный ряд очищается при любом lockPiece (стандартное
+        // правило), и искусственно «полные» ряды в фикстуре исчезли бы до
+        // проверки спауна. Оставляем колонку 0 пустой — ряды не завершены,
+        // но клетки спауна O (колонки 4–5) заняты.
         val grid = List(TetrisEngine.BOARD_HEIGHT) { y ->
             if (y <= 2) {
-                List(TetrisEngine.BOARD_WIDTH) { TetrominoType.O }
+                List(TetrisEngine.BOARD_WIDTH) { x -> if (x == 0) null else TetrominoType.O }
             } else {
                 List(TetrisEngine.BOARD_WIDTH) { null }
             }

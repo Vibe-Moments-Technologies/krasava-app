@@ -326,6 +326,12 @@ class MinesweeperEngineTest {
                     val guess = target[random.nextInt(target.size)]
                     board = MinesweeperEngine.reveal(board, guess.x, guess.y)
                 }
+                // Вскрытая мина — конец партии: дальше выводы бота
+                // некорректны, потому что вскрытые мины не считаются ни
+                // флагами, ни неизвестными, и правило «осталось == неизвестных»
+                // начало бы ставить флаги на чистые клетки. Движок при этом
+                // работает правильно — ошибка была в цикле бота.
+                if (board.cells.any { it.isRevealed && it.isMine }) break
             }
             val wrongFlags = board.cells.filter { it.isFlagged && (it.y * width + it.x) !in mineSet }
             assertTrue(wrongFlags.isEmpty(), "Флаг на чистой клетке, seed $seed")
