@@ -148,11 +148,10 @@ jobs:
 
       - name: 🛠️ Set Xcode Version
         run: |
-          # Требуется Xcode 26: семейство виджетов systemExtraLargePortrait
-          # (Extra Large для iPhone) объявлено только в SDK iOS 26+.
-          # Фолбэков нет намеренно — на старом SDK код виджета не компилируется,
-          # поэтому честнее упасть здесь с понятным сообщением, чем выпустить
-          # сборку без четвёртого виджета.
+          # Требуется Xcode 26: только в этом SDK собраны все API, которые
+          # использует виджет (widgetRenderingMode и семейства размеров).
+          # Фолбэков нет намеренно: честнее упасть здесь с понятным
+          # сообщением, чем выпустить сборку на устаревшем SDK.
           FOUND=""
           for V in 26.6 26.5 26.4 26.3; do
             if [ -d "/Applications/Xcode_${V}.app" ]; then
@@ -168,6 +167,15 @@ jobs:
           fi
           xcodebuild -version
           xcrun --sdk iphoneos --show-sdk-version
+
+      - name: 🧪 Shared commonTest (iOS simulator)
+        run: |
+          # commonTest модуля shared подключён только к iOS-таргетам: на ubuntu
+          # :shared:allTests даёт NO-SOURCE, и тесты (DateUtils, парсер iCal,
+          # движки игр, компаратор версий) не выполнялись в CI вовсе.
+          # macOS-раннер прогоняет их на симуляторе. Ставим ДО сборки приложения,
+          # чтобы падение тестов не ждало двадцатиминутную сборку.
+          ./gradlew :shared:iosSimulatorArm64Test --stacktrace
 
       - name: 🔨 Build iOS App (no codesign)
         run: |
