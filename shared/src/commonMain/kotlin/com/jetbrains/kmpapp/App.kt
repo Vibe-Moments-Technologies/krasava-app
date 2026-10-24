@@ -52,6 +52,7 @@ import com.jetbrains.kmpapp.theme.ErrorColors
 import com.jetbrains.kmpapp.theme.ErrorScanlines
 import com.jetbrains.kmpapp.theme.ErrorTypography
 import com.jetbrains.kmpapp.theme.HalloweenDarkColors
+import com.jetbrains.kmpapp.theme.KawaiiColors
 import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
@@ -142,6 +143,9 @@ fun App() {
     } else {
         when (themeOverlay) {
             ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
+            // Кавай — светлая моно-палитра: бело-розовая концепция в тёмных
+            // тонах перестаёт быть собой, поэтому тёмного варианта нет.
+            ThemeOverlay.KAWAII -> KawaiiColors
             ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
             ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
             // Перекрыт проверкой halloweenActive выше; ветка нужна для

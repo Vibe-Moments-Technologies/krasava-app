@@ -147,9 +147,11 @@ class ScheduleRepository(
 
     val themeOverlay: StateFlow<ThemeOverlay> = storage.themeOverlay
     val isSakuraTheme: StateFlow<Boolean> = storage.isSakuraTheme
+    val isKawaiiTheme: StateFlow<Boolean> = storage.isKawaiiTheme
     val isCyberpunkTheme: StateFlow<Boolean> = storage.isCyberpunkTheme
     val isMatrixTheme: StateFlow<Boolean> = storage.isMatrixTheme
     val isHalloweenTheme: StateFlow<Boolean> = storage.isHalloweenTheme
+    val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
     val cheatsAgreed: StateFlow<Boolean?> = storage.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = storage.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = storage.diagnosticsEnabled
@@ -251,8 +253,17 @@ class ScheduleRepository(
         storage.setSakuraThemeExclusive(enabled)
     }
 
+    fun setKawaiiTheme(enabled: Boolean) {
+        storage.setKawaiiThemeExclusive(enabled)
+    }
+
     fun setCyberpunkTheme(enabled: Boolean) {
         storage.setCyberpunkTheme(enabled)
+    }
+
+    /** Матрица потеряна: выключить и убрать из списка найденных тем. */
+    fun revokeMatrixUnlock() {
+        storage.revokeMatrixUnlock()
     }
 
     val currentLessons: StateFlow<List<Lesson>> = combine(

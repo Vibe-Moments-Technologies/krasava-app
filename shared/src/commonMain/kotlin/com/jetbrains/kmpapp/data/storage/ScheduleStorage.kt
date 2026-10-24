@@ -82,12 +82,27 @@ class ScheduleStorage(
 
     val isSakuraTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.SAKURA }
         .stateIn(scope, SharingStarted.Eagerly, false)
+    val isKawaiiTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.KAWAII }
+        .stateIn(scope, SharingStarted.Eagerly, false)
     val isCyberpunkTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.CYBERPUNK }
         .stateIn(scope, SharingStarted.Eagerly, false)
     val isMatrixTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.MATRIX }
         .stateIn(scope, SharingStarted.Eagerly, false)
     val isHalloweenTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.HALLOWEEN }
         .stateIn(scope, SharingStarted.Eagerly, false)
+
+    /**
+     * Темы, найденные пользователем и поэтому доступные в списке
+     * «Тематические темы». Сакура там всегда (доступна по умолчанию),
+     * Хэллоуин — сезонный и управляется отдельно, поэтому в множестве
+     * живут только квестовые: Кавай, Киберпанк, Матрица.
+     *
+     * Разблокировка сохраняется навсегда: повторно проходить квест не нужно.
+     * Исключение — Матрица: при её потере (нарушение договора о читах)
+     * тема исчезает и из списка.
+     */
+    private val _unlockedThemes = MutableStateFlow(setOf<ThemeOverlay>())
+    val unlockedThemes: StateFlow<Set<ThemeOverlay>> = _unlockedThemes.asStateFlow()
     private val _cheatsAgreed = MutableStateFlow<Boolean?>(null)
     val cheatsAgreed: StateFlow<Boolean?> = _cheatsAgreed.asStateFlow()
     private val _cheatsBlocked = MutableStateFlow(false)
@@ -150,6 +165,7 @@ class ScheduleStorage(
         _autoScrollToCurrentLesson.value = loadBooleanFlag(KEY_AUTO_SCROLL_CURRENT_LESSON, true)
         _showAbbreviatedNames.value = loadBooleanFlag(KEY_SHOW_ABBREVIATED_NAMES, false)
         _themeOverlay.value = loadThemeOverlay()
+        _unlockedThemes.value = loadUnlockedThemes()
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
         _diagnosticsEnabled.value = loadBooleanFlag(KEY_DIAGNOSTICS_ENABLED, false)
@@ -408,6 +424,7 @@ class ScheduleStorage(
             try {
                 platformStorage.saveString(KEY_THEME_OVERLAY, overlay.name)
                 platformStorage.saveString(KEY_SAKURA_THEME, (overlay == ThemeOverlay.SAKURA).toString())
+                platformStorage.saveString(KEY_KAWAII_THEME, (overlay == ThemeOverlay.KAWAII).toString())
                 platformStorage.saveString(KEY_CYBERPUNK_THEME, (overlay == ThemeOverlay.CYBERPUNK).toString())
                 platformStorage.saveString(KEY_MATRIX_THEME, (overlay == ThemeOverlay.MATRIX).toString())
                 platformStorage.saveString(KEY_HALLOWEEN_THEME, (overlay == ThemeOverlay.HALLOWEEN).toString())
@@ -418,10 +435,14 @@ class ScheduleStorage(
     }
 
     fun setCyberpunkTheme(enabled: Boolean) {
+        // Активация = разблокировка: тема появляется в списке «Тематические
+        // темы», чтобы квест не приходилось проходить повторно.
+        if (enabled) setThemeUnlocked(ThemeOverlay.CYBERPUNK, true)
         setThemeOverlay(if (enabled) ThemeOverlay.CYBERPUNK else ThemeOverlay.NONE)
     }
 
     fun setMatrixTheme(enabled: Boolean) {
+        if (enabled) setThemeUnlocked(ThemeOverlay.MATRIX, true)
         setThemeOverlay(if (enabled) ThemeOverlay.MATRIX else ThemeOverlay.NONE)
     }
 
@@ -429,6 +450,81 @@ class ScheduleStorage(
      *  тумблер — для проверки вне сезона. */
     fun setHalloweenTheme(enabled: Boolean) {
         setThemeOverlay(if (enabled) ThemeOverlay.HALLOWEEN else ThemeOverlay.NONE)
+    }
+
+    fun setSakuraThemeExclusive(enabled: Boolean) {
+        setThemeOverlay(if (enabled) ThemeOverlay.SAKURA else ThemeOverlay.NONE)
+    }
+
+    fun setKawaiiThemeExclusive(enabled: Boolean) {
+        if (enabled) setThemeUnlocked(ThemeOverlay.KAWAII, true)
+        setThemeOverlay(if (enabled) ThemeOverlay.KAWAII else ThemeOverlay.NONE)
+    }
+
+    /**
+     * Разблокировка квестовой темы: добавляет или убирает её из списка
+     * «Тематические темы». Сакура и Хэллоуин в списке не живут (первая
+     * доступна всегда, второй — сезонный), поэтому их ключей нет.
+     */
+    fun setThemeUnlocked(overlay: ThemeOverlay, unlocked: Boolean) {
+        val key = unlockKey(overlay) ?: return
+        val current = _unlockedThemes.value
+        _unlockedThemes.value = if (unlocked) current + overlay else current - overlay
+        scope.launch {
+            try {
+                platformStorage.saveString(key, unlocked.toString())
+            } catch (e: Exception) {
+                println("Failed to persist theme unlock: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Потеря Матрицы: тема выключается и исчезает из списка найденных.
+     * Вызывается при нарушении договора о читах — второго шанса нет,
+     * поэтому разблокировка снимается навсегда.
+     */
+    fun revokeMatrixUnlock() {
+        setMatrixThemeOff()
+        setThemeUnlocked(ThemeOverlay.MATRIX, false)
+    }
+
+    /** Выключить Матрицу, не трогая разблокировку (для обычных тумблеров). */
+    private fun setMatrixThemeOff() {
+        setThemeOverlay(ThemeOverlay.NONE)
+    }
+
+    private fun unlockKey(overlay: ThemeOverlay): String? = when (overlay) {
+        ThemeOverlay.KAWAII -> KEY_UNLOCKED_KAWAII
+        ThemeOverlay.CYBERPUNK -> KEY_UNLOCKED_CYBERPUNK
+        ThemeOverlay.MATRIX -> KEY_UNLOCKED_MATRIX
+        else -> null
+    }
+
+    /**
+     * Найденные темы: сохранённые флаги разблокировок плюс сидирование из
+     * легаси-ключей активности. Сид нужен пользователям, которые нашли тему
+     * до введения списка: у них флаг активности равен true, и терять
+     * найденное из-за обновления несправедливо.
+     */
+    private fun loadUnlockedThemes(): Set<ThemeOverlay> {
+        val set = mutableSetOf<ThemeOverlay>()
+        if (loadBooleanFlag(KEY_UNLOCKED_KAWAII, false) ||
+            platformStorage.getString(KEY_KAWAII_THEME)?.toBooleanStrictOrNull() == true
+        ) {
+            set += ThemeOverlay.KAWAII
+        }
+        if (loadBooleanFlag(KEY_UNLOCKED_CYBERPUNK, false) ||
+            platformStorage.getString(KEY_CYBERPUNK_THEME)?.toBooleanStrictOrNull() == true
+        ) {
+            set += ThemeOverlay.CYBERPUNK
+        }
+        if (loadBooleanFlag(KEY_UNLOCKED_MATRIX, false) ||
+            platformStorage.getString(KEY_MATRIX_THEME)?.toBooleanStrictOrNull() == true
+        ) {
+            set += ThemeOverlay.MATRIX
+        }
+        return set
     }
 
     fun setCheatsAgreed(agreed: Boolean?) {
@@ -503,21 +599,24 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, ask.toString()) }
     }
 
-    fun setSakuraThemeExclusive(enabled: Boolean) {
-        setThemeOverlay(if (enabled) ThemeOverlay.SAKURA else ThemeOverlay.NONE)
-    }
-
     private fun loadThemeOverlay(): ThemeOverlay {
         val stored = platformStorage.getString(KEY_THEME_OVERLAY)
             ?.let { runCatching { ThemeOverlay.valueOf(it) }.getOrNull() }
         if (stored != null) return stored
-        return when {
+        val legacy = when {
             platformStorage.getString(KEY_MATRIX_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.MATRIX
             platformStorage.getString(KEY_HALLOWEEN_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.HALLOWEEN
             platformStorage.getString(KEY_CYBERPUNK_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.CYBERPUNK
+            platformStorage.getString(KEY_KAWAII_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.KAWAII
             platformStorage.getString(KEY_SAKURA_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.SAKURA
-            else -> ThemeOverlay.NONE
+            else -> null
         }
+        if (legacy != null) return legacy
+        // Свежая установка: ни одного тематического ключа нет вообще.
+        // Розовая тема теперь включена сразу (решение владельца), поэтому
+        // дефолт — Сакура. Если ключи есть, один из возвратов выше уже
+        // сработал: осознанный выбор пользователя уважается.
+        return ThemeOverlay.SAKURA
     }
 
     fun setDockTabs(tabs: List<AppTab>) {
@@ -712,7 +811,8 @@ class ScheduleStorage(
         _themeMode.value = ThemeMode.SYSTEM
         _dockTabs.value = DEFAULT_DOCK_TABS
         _dockHidden.value = false
-        _themeOverlay.value = ThemeOverlay.NONE
+        // Дефолт после сброса — розовая тема включена (решение владельца).
+        setThemeOverlay(ThemeOverlay.SAKURA)
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
         _diagnosticsEnabled.value = diagnosticsEnabledBefore
@@ -816,10 +916,15 @@ class ScheduleStorage(
         private const val KEY_DOCK_TABS = "krasava_dock_tabs_order"
         private const val KEY_DOCK_HIDDEN = "krasava_dock_hidden"
         private const val KEY_SAKURA_THEME = "krasava_sakura_theme_secret"
+        private const val KEY_KAWAII_THEME = "krasava_kawaii_theme_secret"
         private const val KEY_CYBERPUNK_THEME = "krasava_cyberpunk_theme_secret"
         private const val KEY_MATRIX_THEME = "krasava_matrix_theme_secret"
         private const val KEY_HALLOWEEN_THEME = "krasava_halloween_theme_secret"
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
+        // Разблокировки квестовых тем для списка «Тематические темы».
+        private const val KEY_UNLOCKED_KAWAII = "krasava_unlocked_kawaii"
+        private const val KEY_UNLOCKED_CYBERPUNK = "krasava_unlocked_cyberpunk"
+        private const val KEY_UNLOCKED_MATRIX = "krasava_unlocked_matrix"
         private const val KEY_CHEATS_AGREED = "krasava_cheats_agreed"
         private const val KEY_CHEATS_BLOCKED = "krasava_cheats_blocked"
         private const val KEY_DIAGNOSTICS_ENABLED = "krasava_diagnostics_enabled"

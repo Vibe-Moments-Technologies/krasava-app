@@ -120,7 +120,8 @@ fun OtherScreen(
                         onOpenScheduleProgress = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_PROGRESS) },
                         onOpenScheduleCalendar = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_CALENDAR) },
                         onOpenServiceSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_NOTES_SETTINGS) },
-                        onOpenSaperSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SAPER_SETTINGS) }
+                        onOpenSaperSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SAPER_SETTINGS) },
+                        onOpenThemedThemes = { viewModel.navigateToSubScreen(OtherSubScreen.THEMED_THEMES) }
                     )
                 }
                 OtherSubScreen.DATA_AND_CACHE -> {
@@ -143,6 +144,9 @@ fun OtherScreen(
                 }
                 OtherSubScreen.SCHEDULE_CALENDAR -> {
                     ScheduleCalendarSettingsScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.THEMED_THEMES -> {
+                    ThemedThemesScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.SERVICE_NOTES_SETTINGS -> {
                     ServiceNotesSettingsScreen(viewModel = viewModel, onBack = back)

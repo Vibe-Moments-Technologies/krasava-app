@@ -43,6 +43,8 @@ enum class OtherSubScreen(val depth: Int) {
     SCHEDULE_DISPLAY(2),
     SCHEDULE_PROGRESS(2),
     SCHEDULE_CALENDAR(2),
+    // Тематические темы: найденные квестами надстройки тем
+    THEMED_THEMES(2),
     // Параметры сервисов
     SERVICE_NOTES_SETTINGS(2),
     // Настройки игр: «Сапер»
@@ -73,6 +75,7 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SCHEDULE_DISPLAY to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_PROGRESS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_CALENDAR to OtherSubScreen.SETTINGS,
+    OtherSubScreen.THEMED_THEMES to OtherSubScreen.SETTINGS,
     OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SAPER_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
@@ -134,9 +137,12 @@ class OtherViewModel(
     val themeMode: StateFlow<ThemeMode> = repository.themeMode
     val themeOverlay: StateFlow<ThemeOverlay> = repository.themeOverlay
     val isSakuraTheme: StateFlow<Boolean> = repository.isSakuraTheme
+    val isKawaiiTheme: StateFlow<Boolean> = repository.isKawaiiTheme
     val isCyberpunkTheme: StateFlow<Boolean> = repository.isCyberpunkTheme
     val isMatrixTheme: StateFlow<Boolean> = repository.isMatrixTheme
     val isHalloweenTheme: StateFlow<Boolean> = repository.isHalloweenTheme
+    /** Темы, найденные квестами: только они плюс Сакура видны в списке. */
+    val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = repository.diagnosticsEnabled
@@ -188,12 +194,19 @@ class OtherViewModel(
         repository.setSakuraTheme(enabled)
     }
 
+    fun setKawaiiTheme(enabled: Boolean) {
+        repository.setKawaiiTheme(enabled)
+    }
+
     fun setCyberpunkTheme(enabled: Boolean) {
         repository.setCyberpunkTheme(enabled)
     }
 
     fun setMatrixTheme(enabled: Boolean) = repository.setMatrixTheme(enabled)
     fun setHalloweenTheme(enabled: Boolean) = repository.setHalloweenTheme(enabled)
+
+    /** Матрица потеряна: выключается и исчезает из списка найденных тем. */
+    fun revokeMatrixUnlock() = repository.revokeMatrixUnlock()
     fun setCheatsAgreed(agreed: Boolean?) = repository.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = repository.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = repository.setDiagnosticsEnabled(enabled)
