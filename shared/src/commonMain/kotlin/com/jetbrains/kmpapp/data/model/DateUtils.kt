@@ -32,6 +32,21 @@ object DateUtils {
         return (0..6).map { monday.plus(DatePeriod(days = it)) }
     }
 
+    /**
+     * Попадает ли дата в сезон хэллоуинской темы: за 3 дня до 31 октября
+     * и через 3 дня после, включительно с обеих сторон (28 октября — 3 ноября).
+     *
+     * Границы считаем через [DatePeriod], а не арифметикой дней месяца:
+     * окно переходит через границу месяцев (октябрь → ноябрь), и ручный
+     * подсчёт «31 + 3» дал бы несуществующее «34 октября».
+     */
+    fun isHalloweenSeason(date: LocalDate): Boolean {
+        val holiday = LocalDate(date.year, Month.OCTOBER, 31)
+        val seasonStart = holiday.minus(DatePeriod(days = 3))
+        val seasonEnd = holiday.plus(DatePeriod(days = 3))
+        return date in seasonStart..seasonEnd
+    }
+
     fun getWeekInfo(date: LocalDate): SemesterWeekInfo {
         // Источник истины — маркеры недель из iCal-фида; расчёт ниже — фолбэк,
         // пока фид не загружен или не покрывает дату.

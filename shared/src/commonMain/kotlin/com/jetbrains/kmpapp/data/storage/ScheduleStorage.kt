@@ -425,7 +425,8 @@ class ScheduleStorage(
         setThemeOverlay(if (enabled) ThemeOverlay.MATRIX else ThemeOverlay.NONE)
     }
 
-    /** Хэллоуинская тема: 31 октября включается сама, тумблер — для проверки. */
+    /** Хэллоуинская тема: в сезон (28 октября — 3 ноября) включается сама,
+     *  тумблер — для проверки вне сезона. */
     fun setHalloweenTheme(enabled: Boolean) {
         setThemeOverlay(if (enabled) ThemeOverlay.HALLOWEEN else ThemeOverlay.NONE)
     }

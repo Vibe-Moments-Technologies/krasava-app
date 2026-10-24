@@ -25,7 +25,6 @@ import androidx.compose.ui.graphics.Color
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.ThemeMode
-import kotlinx.datetime.Month
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
@@ -128,12 +127,13 @@ fun App() {
     }
 
     // Хэллоуин: автоматическая, только тёмная, перекрывает любую другую тему
-    // (включая Error) ровно 31 октября по локальной дате устройства.
+    // (включая Error). Сезон — за 3 дня до 31 октября и через 3 дня после,
+    // то есть 28 октября — 3 ноября включительно, по локальной дате устройства.
     // Тумблер в разделе «Отладка → Эксперименты → Темы» включает её вручную —
-    // чтобы проверить оформление заранее.
+    // чтобы проверить оформление вне сезона.
     val today = DateUtils.today()
     val halloweenActive =
-        (today.month == Month.OCTOBER && today.day == 31) || themeOverlay == ThemeOverlay.HALLOWEEN
+        DateUtils.isHalloweenSeason(today) || themeOverlay == ThemeOverlay.HALLOWEEN
 
     val colors = if (halloweenActive) {
         HalloweenDarkColors

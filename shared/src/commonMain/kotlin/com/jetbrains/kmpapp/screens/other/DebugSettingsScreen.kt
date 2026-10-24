@@ -259,8 +259,9 @@ fun DebugSettingsScreen(
                 Spacer(Modifier.height(4.dp))
 
                 // Раскрываемый раздел «Темы»: пока одна тема — хэллоуинская.
-                // Тумблер нужен, чтобы проверить праздничное оформление до
-                // 31 октября (сама тема включается по дате автоматически).
+                // Тумблер нужен, чтобы проверить праздничное оформление вне
+                // сезона (сама тема включается по дате автоматически:
+                // 28 октября — 3 ноября).
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -293,7 +294,8 @@ fun DebugSettingsScreen(
                             )
                             Spacer(Modifier.height(2.dp))
                             GlitchText(
-                                text = "Тыквы, паутина и кровавый глитч. 31 октября включается сама.",
+                                text = "Тыквы, паутина и кровавый глитч. " +
+                                    "С 28 октября по 3 ноября включается сама.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
