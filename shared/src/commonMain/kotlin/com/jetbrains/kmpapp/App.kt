@@ -141,8 +141,9 @@ fun App() {
     } else {
         when (themeOverlay) {
             ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
-            // Кавай — холодная лаванда/мята с розовым акцентом, намеренно не
-            // похожая на тёплую розовую Сакуру. Есть оба варианта.
+            // Кавай — пастель из трёх акцентов (голубой, розовый, золотой) на
+            // кремово-сиреневых поверхностях; намеренно не похожа ни на
+            // тёплую розовую Сакуру, ни на жёлто-циановый Киберпанк.
             ThemeOverlay.KAWAII -> if (isDark) KawaiiDarkColors else KawaiiLightColors
             ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
             ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
