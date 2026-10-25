@@ -7,11 +7,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -40,14 +39,17 @@ import com.jetbrains.kmpapp.theme.ThemeOverlay
  * Подстраница «Тематические темы»: тумблеры найденных тем-надстроек.
  *
  * Состав списка честный и простой:
- * - Сакура — всегда: розовая тема доступна по умолчанию и включена сразу,
- *   искать её больше не нужно;
+ * - Сакура — всегда: розовая тема доступна по умолчанию и включена сразу;
  * - Кавай, Киберпанк, Матрица — только после того, как пользователь нашёл
  *   их квестами. Разблокировка сохраняется, повторно проходить квест не
- *   нужно; потерянная Матрица исчезает из списка навсегда.
+ *   нужно; потерянная Матрица исчезает из списка навсегда;
+ * - Хэллоуин — сезонная строка: появляется, пока действует её правило
+ *   (сезон 28 октября — 3 ноября или включение вручную), чтобы её можно было
+ *   выключить из обычного меню. Когда сезон кончается, строка исчезает сама.
  *
- * Хэллоуинской темы здесь нет: она сезонная (28 октября — 3 ноября) и
- * управляется собственной логикой плюс тумблером в отладке.
+ * Строка — только название и тумблер: подписи расписывали то, что и так
+ * понятно из названия темы, а вместе с иконками выдавливали тумблер за
+ * границу экрана на узких устройствах.
  *
  * Темы взаимно исключают друг друга: включение одной выключает остальные —
  * это свойство оверлея, а не списка.
@@ -64,7 +66,15 @@ fun ThemedThemesScreen(
     val isKawaii by viewModel.isKawaiiTheme.collectAsState()
     val isCyberpunk by viewModel.isCyberpunkTheme.collectAsState()
     val isMatrix by viewModel.isMatrixTheme.collectAsState()
+    val isHalloween by viewModel.isHalloweenActive.collectAsState()
+    val halloweenVisible by viewModel.isHalloweenRowVisible.collectAsState()
     val unlocked by viewModel.unlockedThemes.collectAsState()
+
+    // Сезонная тема перекрывает оформление, но не стирает выбранную базу:
+    // после 3 ноября Сакура вернётся сама. Поэтому в списке «включённой»
+    // считается только та тема, которая реально рисует приложение — иначе
+    // в сезон два тумблера выглядели бы включёнными одновременно.
+    fun acting(selected: Boolean): Boolean = selected && !isHalloween
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -106,12 +116,10 @@ fun ThemedThemesScreen(
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
                     ThemeRow(
-                        emoji = "🌸",
                         title = "Сакура",
-                        subtitle = "Пастельно-розовая. Доступна всегда, без поисков",
-                        checked = isSakura,
+                        checked = acting(isSakura),
                         onCheckedChange = viewModel::setSakuraTheme
                     )
 
@@ -120,39 +128,40 @@ fun ThemedThemesScreen(
                     // не прыгал при разблокировках.
                     val questRows = listOfNotNull(
                         if (ThemeOverlay.KAWAII in unlocked) ThemeRowData(
-                            emoji = "🎀",
                             title = "Кавай",
-                            subtitle = "Анимешная и милая, в бело-розовых тонах",
-                            checked = isKawaii,
+                            checked = acting(isKawaii),
                             onCheckedChange = viewModel::setKawaiiTheme
                         ) else null,
                         if (ThemeOverlay.CYBERPUNK in unlocked) ThemeRowData(
-                            emoji = "⚡",
                             title = "Киберпанк",
-                            subtitle = "Неон и маджента. Найдена через CP77",
-                            checked = isCyberpunk,
+                            checked = acting(isCyberpunk),
                             onCheckedChange = viewModel::setCyberpunkTheme
                         ) else null,
                         if (ThemeOverlay.MATRIX in unlocked) ThemeRowData(
-                            emoji = "💊",
                             title = "Матрица",
-                            subtitle = "Зелёный терминал. Договор о читах в силе",
-                            checked = isMatrix,
+                            checked = acting(isMatrix),
                             onCheckedChange = viewModel::setMatrixTheme
                         ) else null
                     )
 
                     for (row in questRows) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                        )
+                        ThemeRowDivider()
                         ThemeRow(
-                            emoji = row.emoji,
                             title = row.title,
-                            subtitle = row.subtitle,
                             checked = row.checked,
                             onCheckedChange = row.onCheckedChange
+                        )
+                    }
+
+                    // Сезонная строка живёт по правилу темы, а не по
+                    // разблокировке: пока сезон идёт, её видно и можно гасить;
+                    // сезон кончился — строка исчезает вместе с темой.
+                    if (halloweenVisible) {
+                        ThemeRowDivider()
+                        ThemeRow(
+                            title = "Хэллоуин",
+                            checked = isHalloween,
+                            onCheckedChange = viewModel::setHalloweenTheme
                         )
                     }
                 }
@@ -171,43 +180,44 @@ fun ThemedThemesScreen(
 }
 
 private class ThemeRowData(
-    val emoji: String,
     val title: String,
-    val subtitle: String,
     val checked: Boolean,
     val onCheckedChange: (Boolean) -> Unit
 )
 
 @Composable
+private fun ThemeRowDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 4.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    )
+}
+
+/**
+ * Строка темы: название слева, тумблер справа.
+ *
+ * Название занимает `weight(1f)` в том же Row, что и тумблер, — раньше оно
+ * лежало во вложенном Row и получало неограниченную ширину, из-за чего
+ * длинные подписи выталкивали тумблер за экран.
+ */
+@Composable
 private fun ThemeRow(
-    emoji: String,
     title: String,
-    subtitle: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = emoji, style = MaterialTheme.typography.titleMedium)
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                GlitchText(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                GlitchText(
-                    text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+        GlitchText(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f)
+        )
         Spacer(modifier = Modifier.width(12.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }

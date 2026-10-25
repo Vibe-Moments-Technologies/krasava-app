@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.data.storage
 import com.jetbrains.kmpapp.data.analytics.AppDiagnostics
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
+import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
@@ -11,10 +12,14 @@ import com.jetbrains.kmpapp.theme.ThemeOverlay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -103,6 +108,65 @@ class ScheduleStorage(
      */
     private val _unlockedThemes = MutableStateFlow(setOf<ThemeOverlay>())
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = _unlockedThemes.asStateFlow()
+
+    /**
+     * Год сезона, от которого пользователь отказался вручную.
+     *
+     * Хэллоуин включается автоматически 28 октября — 3 ноября, и одного
+     * выключения оверлея мало: правило включило бы его снова при следующей
+     * рекомпозиции. Поэтому «выключить» = запомнить отказ на текущий сезон.
+     * Смена года сбрасывает отказ естественным образом, отдельной чистки не
+     * нужно.
+     */
+    private val _halloweenDismissedYear = MutableStateFlow<Int?>(null)
+
+    /**
+     * Текущая дата как поток: сезонные правила должны переключаться сами,
+     * даже если приложение не закрывали на ночь. Тик раз в 15 минут —
+     * компромисс между точностью границы сезона и лишними пересчётами;
+     * [kotlinx.coroutines.flow.distinctUntilChanged] гасит повторы, так что
+     * дальше уходит только реальная смена суток.
+     */
+    private val todayFlow: StateFlow<kotlinx.datetime.LocalDate> =
+        flow {
+            while (true) {
+                emit(DateUtils.today())
+                delay(15 * 60 * 1000L)
+            }
+        }
+            .distinctUntilChanged()
+            .stateIn(scope, SharingStarted.Eagerly, DateUtils.today())
+
+    /**
+     * Показывать/включать ли Хэллоуин прямо сейчас (оформление приложения).
+     *
+     * Сезон (28 октября — 3 ноября) включает тему сам, ручное включение вне
+     * сезона — тоже. Отказ текущего сезона перебивает только автоматику:
+     * осознанно включённый тумблер сильнее отказа (он и снимает отказ).
+     */
+    val isHalloweenActive: StateFlow<Boolean> =
+        combine(themeOverlay, _halloweenDismissedYear, todayFlow) { overlay, dismissedYear, today ->
+            when {
+                overlay == ThemeOverlay.HALLOWEEN -> true
+                DateUtils.isHalloweenSeason(today) && dismissedYear != today.year -> true
+                else -> false
+            }
+        }.stateIn(scope, SharingStarted.Eagerly, false)
+
+    /**
+     * Есть ли строка Хэллоуина в «Тематических темах».
+     *
+     * Шире [isHalloweenActive] намеренно: пока сезон идёт, строка остаётся,
+     * даже если тему уже выключили — иначе выключить было бы можно, а вернуть
+     * обратно нельзя. Сезон кончился — правило гасит и тему, и строку, как и
+     * просил владелец. Ручное включение вне сезона тоже держит строку
+     * видимой, чтобы её было чем выключить.
+     */
+    val isHalloweenRowVisible: StateFlow<Boolean> =
+        combine(themeOverlay, todayFlow) { overlay, today ->
+            overlay == ThemeOverlay.HALLOWEEN || DateUtils.isHalloweenSeason(today)
+        }.stateIn(scope, SharingStarted.Eagerly, false)
+
     private val _cheatsAgreed = MutableStateFlow<Boolean?>(null)
     val cheatsAgreed: StateFlow<Boolean?> = _cheatsAgreed.asStateFlow()
     private val _cheatsBlocked = MutableStateFlow(false)
@@ -166,6 +230,8 @@ class ScheduleStorage(
         _showAbbreviatedNames.value = loadBooleanFlag(KEY_SHOW_ABBREVIATED_NAMES, false)
         _themeOverlay.value = loadThemeOverlay()
         _unlockedThemes.value = loadUnlockedThemes()
+        _halloweenDismissedYear.value =
+            platformStorage.getString(KEY_HALLOWEEN_DISMISSED_YEAR)?.toIntOrNull()
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
         _diagnosticsEnabled.value = loadBooleanFlag(KEY_DIAGNOSTICS_ENABLED, false)
@@ -419,7 +485,24 @@ class ScheduleStorage(
     }
 
     fun setThemeOverlay(overlay: ThemeOverlay) {
+        applyThemeOverlay(overlay, dismissSeason = true)
+    }
+
+    /**
+     * @param dismissSeason явный выбор другой темы в сезон означает
+     *   «мне не нужен Хэллоуин»: иначе сезонное правило перекрыло бы оверлей
+     *   и тумблер Сакуры/Кавая в эти дни был бы мёртвым. Сброс настроек —
+     *   исключение: он возвращает дефолт, а не выражает выбор пользователя,
+     *   поэтому отказ там не пишется (см. [resetAllData]).
+     */
+    private fun applyThemeOverlay(overlay: ThemeOverlay, dismissSeason: Boolean) {
         _themeOverlay.value = overlay
+        if (dismissSeason &&
+            overlay != ThemeOverlay.HALLOWEEN &&
+            DateUtils.isHalloweenSeason(DateUtils.today())
+        ) {
+            dismissHalloweenSeason()
+        }
         scope.launch {
             try {
                 platformStorage.saveString(KEY_THEME_OVERLAY, overlay.name)
@@ -447,9 +530,45 @@ class ScheduleStorage(
     }
 
     /** Хэллоуинская тема: в сезон (28 октября — 3 ноября) включается сама,
-     *  тумблер — для проверки вне сезона. */
+     *  тумблер — для проверки вне сезона.
+     *
+     *  Выключение внутри сезона запоминается как отказ от сезона: иначе
+     *  автоматическое правило включило бы тему обратно на следующей
+     *  рекомпозиции. Вне сезона отказ не пишется — иначе выключенный летом
+     *  «на пробу» тумблер тихо отменил бы осенний показ. */
     fun setHalloweenTheme(enabled: Boolean) {
-        setThemeOverlay(if (enabled) ThemeOverlay.HALLOWEEN else ThemeOverlay.NONE)
+        if (enabled) {
+            clearHalloweenSeasonDismissal()
+            applyThemeOverlay(ThemeOverlay.HALLOWEEN, dismissSeason = false)
+        } else {
+            applyThemeOverlay(ThemeOverlay.NONE, dismissSeason = false)
+            if (DateUtils.isHalloweenSeason(DateUtils.today())) dismissHalloweenSeason()
+        }
+    }
+
+    /** «Больше не надо в этом сезоне»: запоминаем год, правило его уважает. */
+    fun dismissHalloweenSeason() {
+        val year = DateUtils.today().year
+        _halloweenDismissedYear.value = year
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_HALLOWEEN_DISMISSED_YEAR, year.toString())
+            } catch (e: Exception) {
+                println("Failed to persist halloween dismissal: ${e.message}")
+            }
+        }
+    }
+
+    /** Отказ отменён: тема снова включается по правилу (и сразу, если сезон). */
+    fun clearHalloweenSeasonDismissal() {
+        _halloweenDismissedYear.value = null
+        scope.launch {
+            try {
+                platformStorage.remove(KEY_HALLOWEEN_DISMISSED_YEAR)
+            } catch (e: Exception) {
+                println("Failed to clear halloween dismissal: ${e.message}")
+            }
+        }
     }
 
     fun setSakuraThemeExclusive(enabled: Boolean) {
@@ -812,7 +931,10 @@ class ScheduleStorage(
         _dockTabs.value = DEFAULT_DOCK_TABS
         _dockHidden.value = false
         // Дефолт после сброса — розовая тема включена (решение владельца).
-        setThemeOverlay(ThemeOverlay.SAKURA)
+        // Отказ от сезона тоже стирается: сброс возвращает заводское
+        // поведение, а не фиксирует прошлое решение пользователя.
+        applyThemeOverlay(ThemeOverlay.SAKURA, dismissSeason = false)
+        _halloweenDismissedYear.value = null
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
         _diagnosticsEnabled.value = diagnosticsEnabledBefore
@@ -920,6 +1042,7 @@ class ScheduleStorage(
         private const val KEY_CYBERPUNK_THEME = "krasava_cyberpunk_theme_secret"
         private const val KEY_MATRIX_THEME = "krasava_matrix_theme_secret"
         private const val KEY_HALLOWEEN_THEME = "krasava_halloween_theme_secret"
+        private const val KEY_HALLOWEEN_DISMISSED_YEAR = "krasava_halloween_dismissed_year"
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
         // Разблокировки квестовых тем для списка «Тематические темы».
         private const val KEY_UNLOCKED_KAWAII = "krasava_unlocked_kawaii"

@@ -151,6 +151,10 @@ class ScheduleRepository(
     val isCyberpunkTheme: StateFlow<Boolean> = storage.isCyberpunkTheme
     val isMatrixTheme: StateFlow<Boolean> = storage.isMatrixTheme
     val isHalloweenTheme: StateFlow<Boolean> = storage.isHalloweenTheme
+    /** Хэллоуин сейчас активен: сезон без отказа или ручное включение. */
+    val isHalloweenActive: StateFlow<Boolean> = storage.isHalloweenActive
+    /** Строка Хэллоуина видна в списке тем: сезон идёт или тема включена. */
+    val isHalloweenRowVisible: StateFlow<Boolean> = storage.isHalloweenRowVisible
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
     val cheatsAgreed: StateFlow<Boolean?> = storage.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = storage.cheatsBlocked
@@ -239,6 +243,8 @@ class ScheduleRepository(
     fun setThemeOverlay(overlay: ThemeOverlay) = storage.setThemeOverlay(overlay)
     fun setMatrixTheme(enabled: Boolean) = storage.setMatrixTheme(enabled)
     fun setHalloweenTheme(enabled: Boolean) = storage.setHalloweenTheme(enabled)
+    fun dismissHalloweenSeason() = storage.dismissHalloweenSeason()
+    fun clearHalloweenSeasonDismissal() = storage.clearHalloweenSeasonDismissal()
     fun setCheatsAgreed(agreed: Boolean?) = storage.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = storage.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = storage.setDiagnosticsEnabled(enabled)

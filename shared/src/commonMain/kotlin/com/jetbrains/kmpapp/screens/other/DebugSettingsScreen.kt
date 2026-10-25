@@ -67,7 +67,10 @@ fun DebugSettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var testEventSent by remember { mutableStateOf(false) }
     var themesExpanded by remember { mutableStateOf(false) }
-    val isHalloweenTheme by viewModel.isHalloweenTheme.collectAsState()
+    // Не сырой флаг оверлея: в сезон тема включена автоматически, хотя
+    // сохранённого оверлея HALLOWEEN может и не быть. Тумблер должен
+    // показывать факт, иначе он выглядит выключенным при включённой теме.
+    val isHalloweenTheme by viewModel.isHalloweenActive.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshStorageStats()
@@ -295,7 +298,8 @@ fun DebugSettingsScreen(
                             Spacer(Modifier.height(2.dp))
                             GlitchText(
                                 text = "Тыквы, паутина и кровавый глитч. " +
-                                    "С 28 октября по 3 ноября включается сама.",
+                                    "С 28 октября по 3 ноября включается сама. " +
+                                    "Выключение в сезон запоминается до его конца.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

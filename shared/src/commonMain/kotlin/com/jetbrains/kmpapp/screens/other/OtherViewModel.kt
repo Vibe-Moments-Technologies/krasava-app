@@ -141,6 +141,14 @@ class OtherViewModel(
     val isCyberpunkTheme: StateFlow<Boolean> = repository.isCyberpunkTheme
     val isMatrixTheme: StateFlow<Boolean> = repository.isMatrixTheme
     val isHalloweenTheme: StateFlow<Boolean> = repository.isHalloweenTheme
+    /**
+     * Хэллоуин действует прямо сейчас: сезон без отказа или включён вручную.
+     * Пока это true, строка есть в «Тематических темах» — иначе сезонную тему
+     * нельзя было бы выключить. Как только правило её гасит, строка исчезает.
+     */
+    val isHalloweenActive: StateFlow<Boolean> = repository.isHalloweenActive
+    /** Строка Хэллоуина в списке тем: сезон идёт или тема включена вручную. */
+    val isHalloweenRowVisible: StateFlow<Boolean> = repository.isHalloweenRowVisible
     /** Темы, найденные квестами: только они плюс Сакура видны в списке. */
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed

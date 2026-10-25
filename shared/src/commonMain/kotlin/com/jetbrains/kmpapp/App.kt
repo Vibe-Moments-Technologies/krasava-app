@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.jetbrains.kmpapp.data.ScheduleRepository
-import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
@@ -52,7 +51,8 @@ import com.jetbrains.kmpapp.theme.ErrorColors
 import com.jetbrains.kmpapp.theme.ErrorScanlines
 import com.jetbrains.kmpapp.theme.ErrorTypography
 import com.jetbrains.kmpapp.theme.HalloweenDarkColors
-import com.jetbrains.kmpapp.theme.KawaiiColors
+import com.jetbrains.kmpapp.theme.KawaiiDarkColors
+import com.jetbrains.kmpapp.theme.KawaiiLightColors
 import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
@@ -130,11 +130,9 @@ fun App() {
     // Хэллоуин: автоматическая, только тёмная, перекрывает любую другую тему
     // (включая Error). Сезон — за 3 дня до 31 октября и через 3 дня после,
     // то есть 28 октября — 3 ноября включительно, по локальной дате устройства.
-    // Тумблер в разделе «Отладка → Эксперименты → Темы» включает её вручную —
-    // чтобы проверить оформление вне сезона.
-    val today = DateUtils.today()
-    val halloweenActive =
-        DateUtils.isHalloweenSeason(today) || themeOverlay == ThemeOverlay.HALLOWEEN
+    // Правила живут в хранилище, чтобы тумблер в списке тем и оформление
+    // считались одинаково: сезон + отсутствие отказа либо ручное включение.
+    val halloweenActive by repository.isHalloweenActive.collectAsState()
 
     val colors = if (halloweenActive) {
         HalloweenDarkColors
@@ -143,9 +141,9 @@ fun App() {
     } else {
         when (themeOverlay) {
             ThemeOverlay.SAKURA -> if (isDark) SakuraDarkColors else SakuraLightColors
-            // Кавай — светлая моно-палитра: бело-розовая концепция в тёмных
-            // тонах перестаёт быть собой, поэтому тёмного варианта нет.
-            ThemeOverlay.KAWAII -> KawaiiColors
+            // Кавай — холодная лаванда/мята с розовым акцентом, намеренно не
+            // похожая на тёплую розовую Сакуру. Есть оба варианта.
+            ThemeOverlay.KAWAII -> if (isDark) KawaiiDarkColors else KawaiiLightColors
             ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
             ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
             // Перекрыт проверкой halloweenActive выше; ветка нужна для
