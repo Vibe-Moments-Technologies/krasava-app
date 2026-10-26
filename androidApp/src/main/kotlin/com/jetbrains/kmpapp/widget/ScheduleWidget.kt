@@ -7,7 +7,6 @@ import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
-import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
@@ -43,6 +42,7 @@ import com.jetbrains.kmpapp.data.widget.WidgetPayload
 import com.jetbrains.kmpapp.data.widget.WidgetPayloadCodec
 import com.jetbrains.kmpapp.data.widget.WidgetSelectionEngine
 import com.jetbrains.kmpapp.data.widget.WidgetState
+import com.jetbrains.kmpapp.data.widget.WidgetThemeCodec
 
 /**
  * Android-виджет расписания на Glance. Повторяет структуру и правила
@@ -67,9 +67,11 @@ class ScheduleWidget : GlanceAppWidget() {
             payload == null -> WidgetState.empty(WidgetEmptyReason.BAD_DATA)
             else -> WidgetSelectionEngine().makeState(payload, storedTargetId)
         }
+        val theme = WidgetThemeCodec.decode(ScheduleWidgetStore.readTheme(context))
+        val palette = theme?.toWidgetPalette()
+            ?: if (context.isNightMode()) DarkWidgetPalette else LightWidgetPalette
         provideContent {
-            val dark = LocalContext.current.isNightMode()
-            WidgetRoot(state = state, palette = if (dark) DarkWidgetPalette else LightWidgetPalette)
+            WidgetRoot(state = state, palette = palette)
         }
     }
 }
@@ -81,7 +83,7 @@ class ScheduleWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ScheduleWidget()
 }
 
-private fun Context.isNightMode(): Boolean =
+internal fun Context.isNightMode(): Boolean =
     (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
         Configuration.UI_MODE_NIGHT_YES
 

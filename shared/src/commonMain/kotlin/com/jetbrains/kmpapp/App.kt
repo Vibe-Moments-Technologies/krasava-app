@@ -62,7 +62,7 @@ import com.jetbrains.kmpapp.theme.ThemeOverlay
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
-private val LightColors = lightColorScheme(
+internal val LightColors = lightColorScheme(
     primary = Color(0xFF1E5BB0),
     onPrimary = Color.White,
     primaryContainer = Color(0xFFD6E3FF),
@@ -79,7 +79,7 @@ private val LightColors = lightColorScheme(
     surfaceContainerHigh = Color(0xFFE8EDF5)
 )
 
-private val DarkColors = darkColorScheme(
+internal val DarkColors = darkColorScheme(
     primary = Color(0xFFA8C7FA),
     onPrimary = Color(0xFF003062),
     primaryContainer = Color(0xFF00468A),

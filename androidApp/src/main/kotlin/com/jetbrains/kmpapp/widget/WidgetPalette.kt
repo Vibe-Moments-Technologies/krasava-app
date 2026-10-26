@@ -2,10 +2,12 @@ package com.jetbrains.kmpapp.widget
 
 import androidx.compose.ui.graphics.Color
 import androidx.glance.unit.ColorProvider
+import com.jetbrains.kmpapp.data.widget.WidgetThemeColors
 
 /**
- * Семантические токены виджета (ТЗ, п. 2.1). Виджет не использует палитру
- * приложения: у него собственная тёмная/светлая схема, как у iOS-виджета.
+ * Семантические токены виджета (ТЗ, п. 2.1). Цвета берутся из активной темы
+ * приложения; статические палитры ниже — запасной вариант, пока тема ещё
+ * не опубликована.
  */
 data class WidgetPalette(
     val background: ColorProvider,
@@ -49,4 +51,19 @@ val LightWidgetPalette = WidgetPalette(
     subtleSurface = color(0xFFF2F3F7),
     badgeBackground = color(0xFFEAF7EF),
     badgeText = color(0xFF1D8F4C)
+)
+
+/** Переводит цвета активной темы приложения в палитру виджета. */
+fun WidgetThemeColors.toWidgetPalette(): WidgetPalette = WidgetPalette(
+    background = ColorProvider(Color(background)),
+    primaryText = ColorProvider(Color(primaryText)),
+    subjectText = ColorProvider(Color(subjectText)),
+    secondaryText = ColorProvider(Color(secondaryText)),
+    mutedText = ColorProvider(Color(mutedText)),
+    accent = ColorProvider(Color(accent)),
+    practice = ColorProvider(Color(practice)),
+    divider = ColorProvider(Color(divider)),
+    subtleSurface = ColorProvider(Color(subtleSurface)),
+    badgeBackground = ColorProvider(Color(badgeBackground)),
+    badgeText = ColorProvider(Color(badgeText))
 )

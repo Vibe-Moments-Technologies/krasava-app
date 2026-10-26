@@ -142,4 +142,20 @@ object WidgetBridge {
             null
         }
     }
+
+    fun themeJson(systemDark: Boolean): String? {
+        val repo = repository ?: return null
+        return try {
+            WidgetThemeCodec.encode(
+                WidgetThemeResolver.resolve(
+                    themeMode = repo.themeMode.value,
+                    overlay = repo.themeOverlay.value,
+                    systemDark = systemDark,
+                    halloweenActive = repo.isHalloweenActive.value
+                )
+            )
+        } catch (_: Throwable) {
+            null
+        }
+    }
 }
