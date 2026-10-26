@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp.data
 
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
+import com.jetbrains.kmpapp.data.model.CalendarExpandState
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
@@ -126,6 +127,11 @@ class ScheduleRepository(
     }
 
     val calendarSwipeCollapse: StateFlow<Boolean> = storage.calendarSwipeCollapse
+
+    /** Ступень раскрытия ленты календаря: неделя → две недели → месяц. */
+    val calendarExpandState: StateFlow<CalendarExpandState> = storage.calendarExpandState
+    fun setCalendarExpandState(state: CalendarExpandState) =
+        storage.setCalendarExpandState(state)
 
     fun setCalendarSwipeCollapse(enabled: Boolean) {
         storage.setCalendarSwipeCollapse(enabled)

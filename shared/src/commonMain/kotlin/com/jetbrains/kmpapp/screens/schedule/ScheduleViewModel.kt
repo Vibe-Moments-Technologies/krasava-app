@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.screens.schedule
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.ScheduleRepository
+import com.jetbrains.kmpapp.data.model.CalendarExpandState
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.ScheduleSlot
@@ -38,6 +39,7 @@ class ScheduleViewModel(
     val showBreakProgress: StateFlow<Boolean> = repository.showBreakProgress
     val calendarCollapsed: StateFlow<Boolean> = repository.calendarCollapsed
     val calendarSwipeCollapse: StateFlow<Boolean> = repository.calendarSwipeCollapse
+    val calendarExpandState: StateFlow<CalendarExpandState> = repository.calendarExpandState
     val autoScrollToCurrentLesson: StateFlow<Boolean> = repository.autoScrollToCurrentLesson
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
@@ -200,6 +202,10 @@ class ScheduleViewModel(
 
     fun setCalendarCollapsed(collapsed: Boolean) {
         repository.setCalendarCollapsed(collapsed)
+    }
+
+    fun setCalendarExpandState(state: CalendarExpandState) {
+        repository.setCalendarExpandState(state)
     }
 
     fun nextDay() {

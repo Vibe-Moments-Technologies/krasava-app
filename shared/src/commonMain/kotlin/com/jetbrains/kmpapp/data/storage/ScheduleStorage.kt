@@ -5,6 +5,7 @@ import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
+import com.jetbrains.kmpapp.data.model.CalendarExpandState
 import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
@@ -65,6 +66,18 @@ class ScheduleStorage(
 
     private val _calendarSwipeCollapse = MutableStateFlow(false)
     val calendarSwipeCollapse: StateFlow<Boolean> = _calendarSwipeCollapse.asStateFlow()
+
+    /**
+     * Ступень раскрытия ленты календаря (issue #3): неделя → две недели →
+     * месяц. Свайп вниз по календарику раскрывает, вверх — сворачивает.
+     *
+     * Свёрнутость ([calendarCollapsed]) и раскрытие — независимые оси:
+     * свернуть можно из любой ступени, а раскрывать — из свёрнутого тоже
+     * (жест живёт на бейджe дня в шапке не для всех, поэтому разворот из
+     * свёрнутого состояния возвращает ленту на последнюю ступень).
+     */
+    private val _calendarExpandState = MutableStateFlow(CalendarExpandState.WEEK)
+    val calendarExpandState: StateFlow<CalendarExpandState> = _calendarExpandState.asStateFlow()
 
     private val _hideAdditionalLessons = MutableStateFlow(false)
     val hideAdditionalLessons: StateFlow<Boolean> = _hideAdditionalLessons.asStateFlow()
@@ -247,6 +260,8 @@ class ScheduleStorage(
         _showBreakProgress.value = loadBooleanFlag(KEY_SHOW_BREAK_PROGRESS, true)
         _calendarCollapsed.value = loadBooleanFlag(KEY_CALENDAR_COLLAPSED, false)
         _calendarSwipeCollapse.value = loadBooleanFlag(KEY_CALENDAR_SWIPE_COLLAPSE, false)
+        _calendarExpandState.value =
+            CalendarExpandState.fromName(platformStorage.getString(KEY_CALENDAR_EXPAND_STATE))
         _hideAdditionalLessons.value = loadBooleanFlag(KEY_HIDE_ADDITIONAL_LESSONS, false)
         _autoScrollToCurrentLesson.value = loadBooleanFlag(KEY_AUTO_SCROLL_CURRENT_LESSON, true)
         _showAbbreviatedNames.value = loadBooleanFlag(KEY_SHOW_ABBREVIATED_NAMES, false)
@@ -463,7 +478,11 @@ class ScheduleStorage(
         }
     }
 
-    /** Разрешено ли сворачивать ленту календаря свайпом вверх по разделителю. */
+    /**
+     * Разрешено ли сворачивать ленту календаря свайпом. Жест теперь живёт
+     * на всей области календарика (не на отдельной полосе), свайп вверх
+     * в ступени WEEK сворачивает ленту — если это разрешено настройкой.
+     */
     fun setCalendarSwipeCollapse(enabled: Boolean) {
         _calendarSwipeCollapse.value = enabled
         scope.launch {
@@ -471,6 +490,18 @@ class ScheduleStorage(
                 platformStorage.saveString(KEY_CALENDAR_SWIPE_COLLAPSE, enabled.toString())
             } catch (e: Exception) {
                 println("Failed to persist calendarSwipeCollapse: ${e.message}")
+            }
+        }
+    }
+
+    /** Установить ступень раскрытия ленты календаря. */
+    fun setCalendarExpandState(state: CalendarExpandState) {
+        _calendarExpandState.value = state
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_CALENDAR_EXPAND_STATE, state.name)
+            } catch (e: Exception) {
+                println("Failed to persist calendarExpandState: ${e.message}")
             }
         }
     }
@@ -1015,6 +1046,7 @@ class ScheduleStorage(
         _showBreakProgress.value = true
         _calendarCollapsed.value = false
         _calendarSwipeCollapse.value = false
+        _calendarExpandState.value = CalendarExpandState.WEEK
         _hideAdditionalLessons.value = false
         _autoScrollToCurrentLesson.value = true
         _showAbbreviatedNames.value = false
@@ -1130,6 +1162,8 @@ class ScheduleStorage(
         private const val KEY_SHOW_BREAK_PROGRESS = "krasava_show_break_progress"
         private const val KEY_CALENDAR_COLLAPSED = "krasava_calendar_collapsed"
         private const val KEY_CALENDAR_SWIPE_COLLAPSE = "krasava_calendar_swipe_collapse"
+        // Ступень раскрытия ленты: WEEK | TWO_WEEKS | MONTH (issue #3).
+        private const val KEY_CALENDAR_EXPAND_STATE = "krasava_calendar_expand_state"
         private const val KEY_HIDE_ADDITIONAL_LESSONS = "krasava_hide_additional_lessons"
         private const val KEY_AUTO_SCROLL_CURRENT_LESSON = "krasava_auto_scroll_current_lesson"
         private const val KEY_SHOW_ABBREVIATED_NAMES = "krasava_show_abbreviated_names"

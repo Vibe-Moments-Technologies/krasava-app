@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.VpnKey
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Surface
+import com.jetbrains.kmpapp.data.model.CalendarExpandState
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.RefreshStatus
 import androidx.compose.material3.MaterialTheme
@@ -119,6 +120,7 @@ private fun ScheduleMainContent(
     val showBreakProgress by viewModel.showBreakProgress.collectAsState()
     val calendarCollapsed by viewModel.calendarCollapsed.collectAsState()
     val calendarSwipeCollapse by viewModel.calendarSwipeCollapse.collectAsState()
+    val calendarExpandState by viewModel.calendarExpandState.collectAsState()
     val autoScrollToCurrentLesson by viewModel.autoScrollToCurrentLesson.collectAsState()
     val showAbbreviatedNames by viewModel.showAbbreviatedNames.collectAsState()
     // Значение НЕ читаем здесь: тик раз в 30 секунд не должен пересобирать
@@ -252,6 +254,19 @@ private fun ScheduleMainContent(
                         onTitleClick = { showMonthPicker = true },
                         onCollapse = { viewModel.setCalendarCollapsed(true) },
                         swipeCollapseEnabled = calendarSwipeCollapse,
+                        expandState = calendarExpandState,
+                        onExpandStateChange = { state ->
+                            if (state == CalendarExpandState.MONTH) {
+                                // Третья ступень — не вёрстка в ленте, а
+                                // месячный оверлей: он уже показывает точки
+                                // пар по всему месяцу. Состояние ленты
+                                // остаётся TWO_WEEKS: после закрытия оверлея
+                                // свайп вниз снова его откроет.
+                                showMonthPicker = true
+                            } else {
+                                viewModel.setCalendarExpandState(state)
+                            }
+                        },
                         modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
                     )
                 }

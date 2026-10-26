@@ -7,6 +7,8 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,9 +39,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jetbrains.kmpapp.data.model.CalendarExpandState
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.screens.components.getLessonDotColor
 import kotlinx.coroutines.launch
@@ -53,6 +58,9 @@ import androidx.compose.foundation.shape.CircleShape
 
 private const val BASE_PAGE = 1000
 
+/** Порог вертикального свайпа-ступени, dp→px (issue #3: жест раскрытия). */
+private const val EXPAND_SWIPE_THRESHOLD_PX = 44f
+
 @Composable
 fun WeekCalendarStrip(
     selectedDate: LocalDate,
@@ -61,6 +69,8 @@ fun WeekCalendarStrip(
     onTitleClick: () -> Unit = {},
     onCollapse: () -> Unit = {},
     swipeCollapseEnabled: Boolean = false,
+    expandState: CalendarExpandState = CalendarExpandState.WEEK,
+    onExpandStateChange: (CalendarExpandState) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val today = DateUtils.today()
@@ -94,7 +104,43 @@ fun WeekCalendarStrip(
     val monthTitle = DateUtils.formatMonthTitle(currentWeekMonday.month)
     val year = currentWeekMonday.year
 
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            // Жест раскрытия/сворачивания живёт на всей области календарика
+            // (issue #3, решение владельца). Полоса-делитель 14dp удалена:
+            // она занимала место ради одного жеста, теперь он распределён
+            // по всей ленте.
+            //
+            // Условия бесконтекстности (требование владельца: «всё остальное
+            // нужно пропускать»):
+            // — тапы не затрагиваются: жест реагирует только на смещение
+            //   больше порога, короткое нажатие до порога — не наш случай,
+            //   событие уходит кликабельным детям;
+            // — горизонтальный пейджер не затрагивается: порог направления
+            //   требует вертикального доминирования (|dy| > 1.5|dx|), иначе
+            //   жест отменяется и события не потребляются вовсе;
+            // — событие потребляется только когда жест признан нашим, после
+            //   чего клики/пейджер его уже не увидят.
+            .calendarExpandGesture(
+                enabled = true,
+                onSwipeDown = {
+                    val next = expandState.onSwipeDown()
+                    if (next != expandState) onExpandStateChange(next)
+                },
+                onSwipeUp = {
+                    val next = expandState.onSwipeUp()
+                    if (next != expandState) {
+                        onExpandStateChange(next)
+                    } else if (expandState == CalendarExpandState.WEEK && swipeCollapseEnabled) {
+                        // Дальше сворачивать некуда: в WEEK свайп вверх
+                        // сворачивает ленту целиком — как раньше делала
+                        // 14dp-полоса, только с большей области захвата.
+                        onCollapse()
+                    }
+                }
+            )
+    ) {
         // Month, Year, Week bar with navigation arrows & Сегодня button
         Row(
             modifier = Modifier
@@ -183,156 +229,238 @@ fun WeekCalendarStrip(
             val pageMonday = baseMonday.plus(DatePeriod(days = (page - BASE_PAGE) * 7))
             val weekDates = (0..6).map { pageMonday.plus(DatePeriod(days = it)) }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+            // Раскрытие в две недели (issue #3): автору важно видеть чётную и
+            // нечётную недели рядом. Вторая строка — соседняя неделя, чтобы
+            // чётная/нечётная всегда были в паре.
+            val secondRowDates = if (expandState == CalendarExpandState.TWO_WEEKS) {
+                val secondMonday = pageMonday.plus(DatePeriod(days = 7))
+                (0..6).map { secondMonday.plus(DatePeriod(days = it)) }
+            } else {
+                null
+            }
 
-                weekDates.forEach { date ->
-                    val isSelected = date == selectedDate
-                    val isToday = date == today
-                    val summary = lessonSummaries[date]
-                    val lessonTypes = summary?.lessonTypes ?: emptyList()
-                    val row1 = lessonTypes.take(5)
-                    val row2 = lessonTypes.drop(5).take(5)
+            Column {
+                WeekRow(
+                    weekDates = weekDates,
+                    selectedDate = selectedDate,
+                    today = today,
+                    lessonSummaries = lessonSummaries,
+                    onDateSelected = onDateSelected
+                )
 
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onDateSelected(date) }
-                            .padding(vertical = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        GlitchText(
-                            text = DateUtils.formatDayOfWeekShort(date.dayOfWeek),
-                            fontSize = 11.5.sp,
-                            fontWeight = if (isSelected || isToday) FontWeight.SemiBold else FontWeight.Medium,
-                            color = when {
-                                isSelected -> MaterialTheme.colorScheme.primary
-                                isToday -> MaterialTheme.colorScheme.primary
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-
-                        Spacer(modifier = Modifier.height(3.dp))
-
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
-                                .then(
-                                    when {
-                                        isSelected -> Modifier.background(MaterialTheme.colorScheme.primary)
-                                        isToday -> Modifier
-                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
-                                            .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                                        else -> Modifier
-                                    }
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            GlitchText(
-                                text = date.day.toString(),
-                                fontSize = 14.5.sp,
-                                fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.SemiBold,
-                                color = when {
-                                    isSelected -> MaterialTheme.colorScheme.onPrimary
-                                    isToday -> MaterialTheme.colorScheme.primary
-                                    else -> MaterialTheme.colorScheme.onSurface
-                                }
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(5.dp))
-
-                        // Colored indicator dots matching lesson cards (1 dot per lesson)
-                        // Centered horizontally, wrap to row 2 if > 5 dots
-                        Column(
-                            modifier = Modifier.height(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            if (row1.isNotEmpty()) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(2.5.dp, Alignment.CenterHorizontally),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    row1.forEach { lessonType ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(4.5.dp)
-                                                .clip(CircleShape)
-                                                .background(getLessonDotColor(lessonType, isDark))
-                                        )
-                                    }
-                                }
-                            }
-                            if (row2.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(2.5.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(2.5.dp, Alignment.CenterHorizontally),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    row2.forEach { lessonType ->
-                                        Box(
-                                            modifier = Modifier
-                                                .size(4.5.dp)
-                                                .clip(CircleShape)
-                                                .background(getLessonDotColor(lessonType, isDark))
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                if (secondRowDates != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    WeekRow(
+                        weekDates = secondRowDates,
+                        selectedDate = selectedDate,
+                        today = today,
+                        lessonSummaries = lessonSummaries,
+                        onDateSelected = onDateSelected,
+                        weekParityLabel = parityLabel(secondRowDates.first())
+                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        // Разделитель. Полоса жеста (14dp) появляется только при включённом
-        // сворачивании свайпом; иначе — разделитель в упор, без пустоты.
-        val divider = @Composable {
-            androidx.compose.material3.HorizontalDivider(
+        // Разделитель — просто разделитель, без зоны жеста.
+        androidx.compose.material3.HorizontalDivider(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            thickness = 0.6.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
+        )
+    }
+}
+
+/** Подпись чётности недели для второй строки двухнедельного режима. */
+private fun parityLabel(monday: LocalDate): String {
+    val info = DateUtils.getWeekInfo(monday)
+    return if (info.isEven) "чётная" else "нечётная"
+}
+
+/** Одна строка дней недели (общая для одно- и двухнедельного режимов). */
+@Composable
+private fun WeekRow(
+    weekDates: List<LocalDate>,
+    selectedDate: LocalDate,
+    today: LocalDate,
+    lessonSummaries: Map<LocalDate, DayLessonSummary>,
+    onDateSelected: (LocalDate) -> Unit,
+    weekParityLabel: String? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+
+        weekDates.forEach { date ->
+            val isSelected = date == selectedDate
+            val isToday = date == today
+            val summary = lessonSummaries[date]
+            val lessonTypes = summary?.lessonTypes ?: emptyList()
+            val row1 = lessonTypes.take(5)
+            val row2 = lessonTypes.drop(5).take(5)
+
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                thickness = 0.6.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
-            )
-        }
-        if (swipeCollapseEnabled) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(14.dp)
-                    .pointerInput(Unit) {
-                        var accumulated = 0f
-                        detectVerticalDragGestures(
-                            onDragStart = { accumulated = 0f },
-                            onVerticalDrag = { change, dragAmount ->
-                                change.consume()
-                                accumulated -= dragAmount
-                                if (accumulated > 40f) {
-                                    accumulated = 0f
-                                    onCollapse()
-                                }
-                            }
-                        )
-                    },
-                contentAlignment = Alignment.Center
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { onDateSelected(date) }
+                    .padding(vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                divider()
+                GlitchText(
+                    text = DateUtils.formatDayOfWeekShort(date.dayOfWeek),
+                    fontSize = 11.5.sp,
+                    fontWeight = if (isSelected || isToday) FontWeight.SemiBold else FontWeight.Medium,
+                    color = when {
+                        isSelected -> MaterialTheme.colorScheme.primary
+                        isToday -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(3.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .then(
+                            when {
+                                isSelected -> Modifier.background(MaterialTheme.colorScheme.primary)
+                                isToday -> Modifier
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f))
+                                    .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                else -> Modifier
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    GlitchText(
+                        text = date.day.toString(),
+                        fontSize = 14.5.sp,
+                        fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.SemiBold,
+                        color = when {
+                            isSelected -> MaterialTheme.colorScheme.onPrimary
+                            isToday -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurface
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(5.dp))
+
+                // Colored indicator dots matching lesson cards (1 dot per lesson)
+                // Centered horizontally, wrap to row 2 if > 5 dots
+                Column(
+                    modifier = Modifier.height(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    if (row1.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.5.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            row1.forEach { lessonType ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(4.5.dp)
+                                        .clip(CircleShape)
+                                        .background(getLessonDotColor(lessonType, isDark))
+                                )
+                            }
+                        }
+                    }
+                    if (row2.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.5.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(2.5.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            row2.forEach { lessonType ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(4.5.dp)
+                                        .clip(CircleShape)
+                                        .background(getLessonDotColor(lessonType, isDark))
+                                )
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            divider()
         }
     }
 }
 
+/**
+ * Модификатор жеста раскрытия/сворачивания календарика (issue #3).
+ *
+ * Требование владельца: область захвата — весь календарик, сама область
+ * не красится (модификатор не рисует ничего), а все чужие клики и жесты
+ * должны продолжать работать.
+ *
+ * Как достигается:
+ * 1. Первое нажатие наблюдается, но НЕ потребляется: клики по дням,
+ *    «Сегодня», стрелкам и заголовку работают как раньше.
+ * 2. Дальше отслеживается движение. Жест признаётся нашим только если
+ *    вертикальное смещение превысило порог И вертикаль доминирует над
+ *    горизонталью (иначе это горизонтальный свайп пейджера недели — не ours).
+ * 3. До признания события не потребляются вообще: пейджер скроллится,
+ *    тап-детекторы ждут своего. После признания — последующие события
+ *    потребляются, чтобы список под лентой не дёрнулся.
+ * 4. Один жест — одна ступень: порог сбрасывается после срабатывания,
+ *    продолжение движения без отрыва пальца ничего не меняет.
+ */
+private fun Modifier.calendarExpandGesture(
+    enabled: Boolean,
+    onSwipeDown: () -> Unit,
+    onSwipeUp: () -> Unit
+): Modifier = this.pointerInput(enabled) {
+    if (!enabled) return@pointerInput
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        var handled = false
+        var done = false
+        var dy = 0f
+        var dx = 0f
+        while (!done) {
+            val event = awaitPointerEvent()
+            // Чужой жест уже в работе (пейджерweek скроллится): выходим,
+            // не трогаем.
+            if (event.changes.any { it.isConsumed }) {
+                // Чужой жест уже в работе (например, пейджер недели
+                // перехватил горизонтальный свайп): выходим, не мешаем.
+                done = true
+                continue
+            }
+            val change = event.changes.firstOrNull { it.id == down.id } ?: continue
+            dx += change.positionChange().x
+            dy += change.positionChange().y
+            if (!handled) {
+                val verticalDominates = kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.5f
+                if (verticalDominates && kotlin.math.abs(dy) > EXPAND_SWIPE_THRESHOLD_PX) {
+                    // Ось Y в Compose растёт вниз: dy > 0 — свайп вниз
+                    // (раскрытие), dy < 0 — вверх (сворачивание).
+                    if (dy > 0) onSwipeDown() else onSwipeUp()
+                    handled = true
+                }
+            }
+            if (handled) {
+                // Наш жест: после срабатывания потребляем перемещения,
+                // чтобы ниже лежащие слои (список пар) не скроллились.
+                event.changes.forEach { it.consume() }
+            }
+            if (event.changes.all { !it.pressed }) done = true
+        }
+    }
+}

@@ -145,7 +145,7 @@ fun ScheduleCalendarSettingsScreen(
     ) {
         SettingsToggleRow(
             title = "Сворачивание календаря свайпом",
-            subtitle = "Свайп вверх по разделителю скрывает календарь над расписанием",
+            subtitle = "Свайп вверх по ленте календаря скрывает её над расписанием",
             checked = calendarSwipeCollapse,
             onCheckedChange = { viewModel.setCalendarSwipeCollapse(it) }
         )
