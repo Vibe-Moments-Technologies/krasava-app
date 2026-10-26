@@ -538,11 +538,17 @@ object TetrisEngine {
 
     /**
      * Скорость падения (в миллисекундах) в зависимости от уровня и выбранной сложности.
+     *
+     * Пол — 90 мс, а не 80: при EASY-шаге 65 мс формула без пола уходит
+     * глубоко в минус уже к 12-му уровню (750 − 11×65 = 35), и различия
+     * сложностей ниже ~10-го уровня стираются. 90 мс — соглашение из
+     * `gravityIntervalDecreasesWithLevel`: игра остаётся проходимой
+     * на высоких уровнях, но заметно быстрее, чем на первом.
      */
     fun gravityIntervalMs(
         level: Int,
         difficulty: TetrisDifficulty = TetrisDifficulty.EASY
     ): Long {
-        return max(80L, 750L - (level - 1) * difficulty.speedStepMs)
+        return max(90L, 750L - (level - 1) * difficulty.speedStepMs)
     }
 }
