@@ -367,7 +367,7 @@ object TetrisEngine {
             if (queue.size < 7) {
                 queue.addAll(generate7Bag(random))
             }
-            val nextType = queue.removeFirst()
+            val nextType = queue.removeAt(0)
             val spawnX = spawnXFor(nextType)
             val spawnY = spawnYFor(nextType)
             val newPiece = ActivePiece(nextType, spawnX, spawnY)
@@ -450,7 +450,7 @@ object TetrisEngine {
         if (queue.size < 7) {
             queue.addAll(generate7Bag(random))
         }
-        val nextType = queue.removeFirst()
+        val nextType = queue.removeAt(0)
         val spawnX = spawnXFor(nextType)
         val spawnY = spawnYFor(nextType)
         val nextPiece = ActivePiece(nextType, spawnX, spawnY)

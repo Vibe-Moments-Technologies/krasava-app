@@ -11,7 +11,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
+import androidx.compose.runtime.LaunchedEffect
 import com.jetbrains.kmpapp.notifications.AndroidNotificationsEngine
+import com.jetbrains.kmpapp.widget.ScheduleWidgetStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -39,6 +44,28 @@ class MainActivity : ComponentActivity() {
         )
         setContent {
             App()
+            // App() при композиции подключает WidgetBridge к репозиторию —
+            // после этого можно отдать снапшот виджету (аналог iOS WidgetSync).
+            LaunchedEffect(Unit) {
+                ScheduleWidgetStore.publish(this@MainActivity)
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        publishWidgetSnapshot()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        publishWidgetSnapshot()
+    }
+
+    private fun publishWidgetSnapshot() {
+        val appContext = applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            ScheduleWidgetStore.publish(appContext)
         }
     }
 }
