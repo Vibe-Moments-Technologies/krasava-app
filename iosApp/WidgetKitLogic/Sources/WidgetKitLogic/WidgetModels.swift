@@ -81,6 +81,29 @@ struct WLesson: Decodable, Identifiable, Equatable {
     var isShared: Bool { groupCount > 1 }
 }
 
+/// Пользовательский цвет типа занятия: ARGB обеих схем.
+///
+/// Цвета приходят числами из shared, а не именами: виджету не нужен дубль
+/// палитры приложения, и он не сломается, если вариант цвета переименуют.
+/// Ключ карты — короткий бейдж типа (`ЛК`/`ПР`/`ЛАБ`), тот же, что в
+/// `WLesson.type`.
+struct WTypeColor: Decodable, Equatable {
+    let light: Int
+    let dark: Int
+
+    /// Цвет выбранной схемы в виде 0xRRGGBB, готовый для `Color(hex:)`.
+    ///
+    /// Kotlin `Color.toArgb()` отдаёт знаковый Int, поэтому значения вроде
+    /// `0xFF0284C7` приходят в JSON отрицательными. Маска отбрасывает знаковый
+    /// бит и альфу: альфа не нужна, потому что виджет сам управляет
+    /// прозрачностью бейджа (`WidgetPalette.typeBackground`), а цвета в
+    /// палитре приложения непрозрачные.
+    func rgb(isDark: Bool) -> UInt32 {
+        let value = isDark ? dark : light
+        return UInt32(bitPattern: Int32(truncatingIfNeeded: value)) & 0xFFFFFF
+    }
+}
+
 /// Расписание, сохранённое в приложении (группа, преподаватель или аудитория).
 struct WTarget: Decodable, Equatable {
     let id: Int
@@ -94,6 +117,39 @@ struct WPayload: Decodable, Equatable {
     let generatedAt: Int64
     let defaultTargetId: Int?
     let targets: [WTarget]
+    /// Переопределённые пользователем цвета типов занятий (только изменённые).
+    /// Пусто — виджет рисует свою палитру типов.
+    let typeColorOverrides: [String: WTypeColor]
+
+    enum CodingKeys: String, CodingKey {
+        case generatedAt, defaultTargetId, targets, typeColorOverrides
+    }
+
+    /// Явный декодер ради обратной совместимости: в контейнере может лежать
+    /// снапшот от предыдущей версии приложения, где `typeColorOverrides` ещё
+    /// нет. Синтезированный конструктор потребовал бы ключ и весь payload
+    /// не декодировался — виджет показал бы «данные не читаются» вместо
+    /// расписания.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        generatedAt = try c.decode(Int64.self, forKey: .generatedAt)
+        defaultTargetId = try c.decodeIfPresent(Int.self, forKey: .defaultTargetId)
+        targets = try c.decode([WTarget].self, forKey: .targets)
+        typeColorOverrides =
+            (try? c.decodeIfPresent([String: WTypeColor].self, forKey: .typeColorOverrides)) ?? [:]
+    }
+
+    init(
+        generatedAt: Int64,
+        defaultTargetId: Int?,
+        targets: [WTarget],
+        typeColorOverrides: [String: WTypeColor] = [:]
+    ) {
+        self.generatedAt = generatedAt
+        self.defaultTargetId = defaultTargetId
+        self.targets = targets
+        self.typeColorOverrides = typeColorOverrides
+    }
 }
 
 // MARK: - Статус и контекст дня

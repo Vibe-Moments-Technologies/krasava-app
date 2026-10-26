@@ -5,9 +5,12 @@ import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
+import com.jetbrains.kmpapp.data.model.LessonColor
+import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
+import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -108,6 +111,25 @@ class ScheduleStorage(
      */
     private val _unlockedThemes = MutableStateFlow(setOf<ThemeOverlay>())
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = _unlockedThemes.asStateFlow()
+
+    /**
+     * Пользовательские цвета типов занятий: только переопределённые типы.
+     * Пустая карта — все цвета стандартные. Одинаковые цвета для разных типов
+     * разрешены: это осознанный выбор пользователя, а не ошибка.
+     */
+    private val _lessonTypeColors = MutableStateFlow(emptyMap<LessonType, LessonColor>())
+    val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = _lessonTypeColors.asStateFlow()
+
+    /**
+     * Вариант палитры темы «Киберпанк»: новая (жёлтый/циан) или старая
+     * (маджента/циан).
+     *
+     * Хранится отдельно от [themeOverlay] нарочно: это свойство самой темы,
+     * а не состояния «включена сейчас». Пользователь выбирает вариант один раз,
+     * потом переключается на Матрицу и обратно — выбор остаётся его.
+     */
+    private val _cyberpunkVariant = MutableStateFlow(CyberpunkVariant.DEFAULT)
+    val cyberpunkVariant: StateFlow<CyberpunkVariant> = _cyberpunkVariant.asStateFlow()
 
     /**
      * Год сезона, от которого пользователь отказался вручную.
@@ -230,6 +252,9 @@ class ScheduleStorage(
         _showAbbreviatedNames.value = loadBooleanFlag(KEY_SHOW_ABBREVIATED_NAMES, false)
         _themeOverlay.value = loadThemeOverlay()
         _unlockedThemes.value = loadUnlockedThemes()
+        _lessonTypeColors.value = loadLessonTypeColors()
+        _cyberpunkVariant.value =
+            CyberpunkVariant.fromName(platformStorage.getString(KEY_CYBERPUNK_VARIANT))
         _halloweenDismissedYear.value =
             platformStorage.getString(KEY_HALLOWEEN_DISMISSED_YEAR)?.toIntOrNull()
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
@@ -580,6 +605,72 @@ class ScheduleStorage(
         setThemeOverlay(if (enabled) ThemeOverlay.KAWAII else ThemeOverlay.NONE)
     }
 
+    /** Назначает цвет типу занятия; одинаковые цвета для разных типов разрешены. */
+    fun setLessonTypeColor(type: LessonType, color: LessonColor) {
+        _lessonTypeColors.update { it + (type to color) }
+        persistLessonTypeColors()
+    }
+
+    /**
+     * Выбор палитры «Киберпанка». Пишется всегда, даже когда тема выключена:
+     * это настройка темы, а не текущее состояние.
+     */
+    fun setCyberpunkVariant(variant: CyberpunkVariant) {
+        _cyberpunkVariant.value = variant
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_CYBERPUNK_VARIANT, variant.name)
+            } catch (e: Exception) {
+                println("Failed to persist cyberpunk variant: ${e.message}")
+            }
+        }
+    }
+
+    /** Возвращает все цвета типов к стандартным. */
+    fun resetLessonTypeColors() {
+        _lessonTypeColors.value = emptyMap()
+        scope.launch {
+            try {
+                platformStorage.remove(KEY_LESSON_TYPE_COLORS)
+            } catch (e: Exception) {
+                println("Failed to reset lesson type colors: ${e.message}")
+            }
+        }
+    }
+
+    private fun persistLessonTypeColors() {
+        val encoded = _lessonTypeColors.value.entries.joinToString(";") { (type, color) ->
+            "${type.name}=${color.name}"
+        }
+        scope.launch {
+            try {
+                if (encoded.isEmpty()) platformStorage.remove(KEY_LESSON_TYPE_COLORS)
+                else platformStorage.saveString(KEY_LESSON_TYPE_COLORS, encoded)
+            } catch (e: Exception) {
+                println("Failed to persist lesson type colors: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Читает переопределения цветов. Формат: "LECTURE=BLUE;LAB=ROSE".
+     * Неизвестные имена типов и цветов (после удаления варианта из enum)
+     * тихо пропускаются — лучше стандартный цвет, чем падение на старте.
+     */
+    private fun loadLessonTypeColors(): Map<LessonType, LessonColor> {
+        val raw = platformStorage.getString(KEY_LESSON_TYPE_COLORS) ?: return emptyMap()
+        val result = mutableMapOf<LessonType, LessonColor>()
+        raw.split(';').forEach { entry ->
+            val parts = entry.split('=')
+            if (parts.size == 2) {
+                val type = runCatching { LessonType.valueOf(parts[0]) }.getOrNull()
+                val color = runCatching { LessonColor.valueOf(parts[1]) }.getOrNull()
+                if (type != null && color != null) result[type] = color
+            }
+        }
+        return result
+    }
+
     /**
      * Разблокировка квестовой темы: добавляет или убирает её из списка
      * «Тематические темы». Сакура и Хэллоуин в списке не живут (первая
@@ -927,6 +1018,12 @@ class ScheduleStorage(
         _hideAdditionalLessons.value = false
         _autoScrollToCurrentLesson.value = true
         _showAbbreviatedNames.value = false
+        // Пользовательские цвета занятий — тоже настройка, сбрасывается
+        // вместе с остальными (в исходной ветке этот ключ забывали).
+        _lessonTypeColors.value = emptyMap()
+        // Вариант палитры Киберпанка — тоже настройка: сброс возвращает новую
+        // палитру, которая стоит по умолчанию.
+        _cyberpunkVariant.value = CyberpunkVariant.DEFAULT
         _themeMode.value = ThemeMode.SYSTEM
         _dockTabs.value = DEFAULT_DOCK_TABS
         _dockHidden.value = false
@@ -953,6 +1050,8 @@ class ScheduleStorage(
             platformStorage.saveString(KEY_DIAGNOSTICS_ENABLED, diagnosticsEnabledBefore.toString())
             platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, notificationsEnabledBefore.toString())
             platformStorage.remove(KEY_NOTIFICATIONS_TARGET_ID)
+            platformStorage.remove(KEY_LESSON_TYPE_COLORS)
+            platformStorage.remove(KEY_CYBERPUNK_VARIANT)
             platformStorage.saveString(KEY_VPN_WARNING_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, notifyMinutesBeforeBefore.toString())
             platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, askBeforeNoteDeleteBefore.toString())
@@ -1048,6 +1147,10 @@ class ScheduleStorage(
         private const val KEY_UNLOCKED_KAWAII = "krasava_unlocked_kawaii"
         private const val KEY_UNLOCKED_CYBERPUNK = "krasava_unlocked_cyberpunk"
         private const val KEY_UNLOCKED_MATRIX = "krasava_unlocked_matrix"
+        // Пользовательские цвета типов занятий: "LECTURE=BLUE;LAB=ROSE".
+        private const val KEY_LESSON_TYPE_COLORS = "krasava_lesson_type_colors"
+        // Вариант палитры Киберпанка: NEON (новая) | CLASSIC (старая).
+        private const val KEY_CYBERPUNK_VARIANT = "krasava_cyberpunk_variant"
         private const val KEY_CHEATS_AGREED = "krasava_cheats_agreed"
         private const val KEY_CHEATS_BLOCKED = "krasava_cheats_blocked"
         private const val KEY_DIAGNOSTICS_ENABLED = "krasava_diagnostics_enabled"

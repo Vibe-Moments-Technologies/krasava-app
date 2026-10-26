@@ -1,5 +1,6 @@
 package com.jetbrains.kmpapp.theme
 
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
@@ -82,6 +83,58 @@ val CyberpunkDarkColors = darkColorScheme(
     errorContainer = Color(0xFF730006),
     onErrorContainer = Color(0xFFFFDAD6)
 )
+
+// «Классический» Киберпанк: прежняя палитра темы (маджента + циан), сохранённая
+// как вариант. Основную тему перекрасили в жёлтый/циан/красный, чтобы развести
+// её с Каваем, но часть пользователей привыкла к мадженте — обе палитры живут
+// рядом, выбор хранится отдельно от текущего оверлея. Значения побайтово те,
+// что были до перекраски (git show aa62a6e~1).
+val CyberpunkClassicLightColors = lightColorScheme(
+    primary = Color(0xFFB000B5),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFFFFC6F8),
+    onPrimaryContainer = Color(0xFF3B003D),
+    secondary = Color(0xFF007F86),
+    onSecondary = Color.White,
+    secondaryContainer = Color(0xFF9CF8FF),
+    onSecondaryContainer = Color(0xFF002022),
+    background = Color(0xFFFFF7FF),
+    onBackground = Color(0xFF211A22),
+    surface = Color(0xFFFFF7FF),
+    onSurface = Color(0xFF211A22),
+    surfaceContainer = Color(0xFFF8EAF8),
+    surfaceContainerHigh = Color(0xFFF0D6F0)
+)
+
+val CyberpunkClassicDarkColors = darkColorScheme(
+    primary = Color(0xFFFF5CE1),
+    onPrimary = Color(0xFF4A004B),
+    primaryContainer = Color(0xFF780078),
+    onPrimaryContainer = Color(0xFFFFD7F5),
+    secondary = Color(0xFF00F0FF),
+    onSecondary = Color(0xFF00363A),
+    secondaryContainer = Color(0xFF00565C),
+    onSecondaryContainer = Color(0xFF9CF8FF),
+    background = Color(0xFF090B18),
+    onBackground = Color(0xFFEFE5F5),
+    surface = Color(0xFF090B18),
+    onSurface = Color(0xFFEFE5F5),
+    surfaceContainer = Color(0xFF17142B),
+    surfaceContainerHigh = Color(0xFF241D3D)
+)
+
+/**
+ * Палитра «Киберпанка» по выбранному варианту и схеме.
+ *
+ * Одна точка выбора вместо четырёх веток в вызывающем коде: и [App], и
+ * предпросмотр в «Тематических темах» берут цвета одинаково.
+ */
+fun cyberpunkColors(variant: CyberpunkVariant, isDark: Boolean): ColorScheme = when (variant) {
+    CyberpunkVariant.CLASSIC ->
+        if (isDark) CyberpunkClassicDarkColors else CyberpunkClassicLightColors
+    CyberpunkVariant.NEON ->
+        if (isDark) CyberpunkDarkColors else CyberpunkLightColors
+}
 
 val SakuraDarkColors = darkColorScheme(
     primary = Color(0xFFFFB1C3), onPrimary = Color(0xFF5B112B),

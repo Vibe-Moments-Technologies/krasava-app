@@ -80,6 +80,7 @@ fun SettingsScreen(
     onOpenServiceSettings: () -> Unit = {},
     onOpenSaperSettings: () -> Unit = {},
     onOpenThemedThemes: () -> Unit = {},
+    onOpenLessonColors: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -246,6 +247,14 @@ fun SettingsScreen(
                     title = "Тематические темы",
                     subtitle = "Сакура, кавай и найденные квестами",
                     onClick = onOpenThemedThemes
+                )
+
+                // Цвета типов занятий: бейджи карточек и точки календаря
+                Spacer(modifier = Modifier.height(12.dp))
+                SettingsNavigationRow(
+                    title = "Цвета занятий",
+                    subtitle = "Акценты для лекций, практик, лабораторных",
+                    onClick = onOpenLessonColors
                 )
             }
 

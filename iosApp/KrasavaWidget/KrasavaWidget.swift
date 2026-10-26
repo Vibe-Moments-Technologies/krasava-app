@@ -16,6 +16,10 @@ struct ScheduleEntry: TimelineEntry {
     /// Причина отсутствия данных (когда `state` == nil).
     let emptyReason: EmptyReason?
     let targetId: Int?
+    /// Переопределённые пользователем цвета типов занятий из снапшота.
+    /// Пусто — палитра рисует собственные цвета типов. Значение по умолчанию
+    /// есть специально: placeholder'ы и Preview не обязаны их знать.
+    var typeColorOverrides: [String: WTypeColor] = [:]
 }
 
 // MARK: - Построение таймлайна
@@ -110,7 +114,8 @@ enum WidgetTimelineBuilder {
                 date: moment,
                 state: context?.state,
                 emptyReason: reason,
-                targetId: targetId
+                targetId: targetId,
+                typeColorOverrides: context?.payload.typeColorOverrides ?? [:]
             )
         }
     }
@@ -281,7 +286,11 @@ struct ScheduleWidgetEntryView: View {
     }
 
     private func makePalette(isTinted: Bool) -> WidgetPalette {
-        WidgetPalette(colorScheme: colorScheme, isTinted: isTinted)
+        WidgetPalette(
+            colorScheme: colorScheme,
+            isTinted: isTinted,
+            typeColorOverrides: entry.typeColorOverrides
+        )
     }
 
     @ViewBuilder

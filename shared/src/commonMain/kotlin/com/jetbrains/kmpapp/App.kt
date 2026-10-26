@@ -45,8 +45,7 @@ import com.jetbrains.kmpapp.screens.services.ServicesViewModel
 import com.jetbrains.kmpapp.screens.other.isServiceScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
-import com.jetbrains.kmpapp.theme.CyberpunkDarkColors
-import com.jetbrains.kmpapp.theme.CyberpunkLightColors
+import com.jetbrains.kmpapp.theme.cyberpunkColors
 import com.jetbrains.kmpapp.theme.ErrorColors
 import com.jetbrains.kmpapp.theme.ErrorScanlines
 import com.jetbrains.kmpapp.theme.ErrorTypography
@@ -54,6 +53,7 @@ import com.jetbrains.kmpapp.theme.HalloweenDarkColors
 import com.jetbrains.kmpapp.theme.KawaiiDarkColors
 import com.jetbrains.kmpapp.theme.KawaiiLightColors
 import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
+import com.jetbrains.kmpapp.theme.LocalLessonTypeOverrides
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
@@ -103,6 +103,13 @@ fun App() {
     val themeOverlay by repository.themeOverlay.collectAsState()
     val dockTabs by repository.dockTabs.collectAsState()
     val dockHidden by repository.dockHidden.collectAsState()
+    // Пользовательские цвета типов занятий: пробрасываются вниз через
+    // LocalLessonTypeOverrides, чтобы бейджи и точки календаря перерисовывались
+    // сразу после выбора цвета.
+    val lessonTypeColors by repository.lessonTypeColors.collectAsState()
+    // Вариант палитры «Киберпанка» хранится отдельно от оверлея: тема может
+    // быть выключена, но выбранный вариант переживает переключения тем.
+    val cyberpunkVariant by repository.cyberpunkVariant.collectAsState()
 
     val scheduleViewModel: ScheduleViewModel = koinViewModel()
     val otherViewModel: OtherViewModel = koinViewModel()
@@ -145,7 +152,7 @@ fun App() {
             // кремово-сиреневых поверхностях; намеренно не похожа ни на
             // тёплую розовую Сакуру, ни на жёлто-циановый Киберпанк.
             ThemeOverlay.KAWAII -> if (isDark) KawaiiDarkColors else KawaiiLightColors
-            ThemeOverlay.CYBERPUNK -> if (isDark) CyberpunkDarkColors else CyberpunkLightColors
+            ThemeOverlay.CYBERPUNK -> cyberpunkColors(cyberpunkVariant, isDark)
             ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
             // Перекрыт проверкой halloweenActive выше; ветка нужна для
             // исчерпывающего when.
@@ -165,7 +172,8 @@ fun App() {
         // как «страшный» эффект надписей.
         CompositionLocalProvider(
             LocalGlitchTextEnabled provides (errorActive || halloweenActive),
-            com.jetbrains.kmpapp.theme.LocalHalloweenEnabled provides halloweenActive
+            com.jetbrains.kmpapp.theme.LocalHalloweenEnabled provides halloweenActive,
+            LocalLessonTypeOverrides provides lessonTypeColors
         ) {
         Surface(
             modifier = Modifier.fillMaxSize(),

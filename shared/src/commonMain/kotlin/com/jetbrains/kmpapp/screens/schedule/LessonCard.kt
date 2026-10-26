@@ -49,7 +49,9 @@ import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleSlot
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
+import com.jetbrains.kmpapp.data.model.defaultLessonColor
 import com.jetbrains.kmpapp.data.storage.LessonNotesStorage
+import com.jetbrains.kmpapp.theme.LocalLessonTypeOverrides
 import org.koin.compose.koinInject
 
 @Composable
@@ -642,6 +644,21 @@ private val TYPE_BADGE_COLORS = mapOf(
 @Composable
 internal fun getTypeBadgeColors(lessonType: LessonType): Pair<Color, Color> {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
-    val colors = TYPE_BADGE_COLORS.getValue(lessonType)
+    // Пользовательский цвет: если он отличается от стандартного для этого типа,
+    // рисуем бейдж как полупрозрачную плашку с акцентом. Если выбран «родной»
+    // цвет типа — оставляем привычный контрастный бейдж из TYPE_BADGE_COLORS.
+    val override = LocalLessonTypeOverrides.current[lessonType]
+    if (override != null && override != defaultLessonColor[lessonType]) {
+        val accent = override.color(isDark)
+        val background = accent.copy(alpha = if (isDark) 0.22f else 0.16f)
+        return background to accent
+    }
+    // Фолбэк вместо getValue: новый тип занятия без своей пары цветов не должен
+    // ронять экран расписания — берём нейтральный серый.
+    val colors = TYPE_BADGE_COLORS[lessonType]
+    if (colors == null) {
+        return if (isDark) Color(0xFF334155) to Color(0xFFCBD5E1)
+        else Color(0xFFCBD5E1) to Color(0xFF475569)
+    }
     return if (isDark) colors[0] else colors[1]
 }

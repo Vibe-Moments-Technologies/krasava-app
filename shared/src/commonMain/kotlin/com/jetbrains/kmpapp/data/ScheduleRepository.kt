@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.data
 
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
 import com.jetbrains.kmpapp.data.model.Lesson
+import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.LessonDiffItem
 import com.jetbrains.kmpapp.data.model.LessonDiffType
@@ -11,6 +12,7 @@ import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.network.detectVpnActive
 import com.jetbrains.kmpapp.data.parser.MireaICalParser
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
+import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -156,6 +158,10 @@ class ScheduleRepository(
     /** Строка Хэллоуина видна в списке тем: сезон идёт или тема включена. */
     val isHalloweenRowVisible: StateFlow<Boolean> = storage.isHalloweenRowVisible
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
+    /** Пользовательские цвета типов занятий (только переопределённые). */
+    val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = storage.lessonTypeColors
+    /** Вариант палитры «Киберпанка»: новая (жёлтый/циан) или старая (маджента). */
+    val cyberpunkVariant: StateFlow<CyberpunkVariant> = storage.cyberpunkVariant
     val cheatsAgreed: StateFlow<Boolean?> = storage.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = storage.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = storage.diagnosticsEnabled
@@ -254,6 +260,10 @@ class ScheduleRepository(
     fun setNotificationsTargetId(targetId: Int?) = storage.setNotificationsTargetId(targetId)
     fun setVpnWarningEnabled(enabled: Boolean) = storage.setVpnWarningEnabled(enabled)
     fun setAskBeforeNoteDelete(ask: Boolean) = storage.setAskBeforeNoteDelete(ask)
+    fun setLessonTypeColor(type: LessonType, color: LessonColor) =
+        storage.setLessonTypeColor(type, color)
+    fun resetLessonTypeColors() = storage.resetLessonTypeColors()
+    fun setCyberpunkVariant(variant: CyberpunkVariant) = storage.setCyberpunkVariant(variant)
 
     fun setSakuraTheme(enabled: Boolean) {
         storage.setSakuraThemeExclusive(enabled)

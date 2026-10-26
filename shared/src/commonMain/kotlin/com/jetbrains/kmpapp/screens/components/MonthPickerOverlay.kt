@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.LessonType
+import com.jetbrains.kmpapp.data.model.resolvedLessonColor
+import com.jetbrains.kmpapp.theme.LocalLessonTypeOverrides
 import com.jetbrains.kmpapp.screens.schedule.DayLessonSummary
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -311,16 +313,13 @@ fun MonthPickerOverlay(
     }
 }
 
-/** Цвета точек пар — единый источник для ленточного и месячного календарей. */
-internal fun getLessonDotColor(type: LessonType, isDark: Boolean): Color = when (type) {
-    LessonType.LECTURE -> if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
-    LessonType.PRACTICE -> if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)
-    LessonType.LAB -> if (isDark) Color(0xFFFB923C) else Color(0xFFEA580C)
-    LessonType.EXAM -> if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
-    LessonType.CREDIT -> if (isDark) Color(0xFF2DD4BF) else Color(0xFF0D9488)
-    LessonType.COURSE_WORK -> if (isDark) Color(0xFFFACC15) else Color(0xFFCA8A04)
-    LessonType.CONSULTATION -> if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
-    LessonType.INDIVIDUAL_WORK -> if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
-    LessonType.OTHER -> if (isDark) Color(0xFFC084FC) else Color(0xFF9333EA)
-    LessonType.ADDITIONAL -> if (isDark) Color(0xFFF472B6) else Color(0xFFDB2777)
-}
+/**
+ * Цвета точек пар — единый источник для ленточного и месячного календарей.
+ *
+ * Значения по умолчанию живут в [defaultLessonColor] (та же палитра, что была
+ * здесь раньше), а пользовательские переопределения приходят из
+ * [LocalLessonTypeOverrides] — поэтому функция стала Composable.
+ */
+@Composable
+internal fun getLessonDotColor(type: LessonType, isDark: Boolean): Color =
+    resolvedLessonColor(type, LocalLessonTypeOverrides.current).color(isDark)

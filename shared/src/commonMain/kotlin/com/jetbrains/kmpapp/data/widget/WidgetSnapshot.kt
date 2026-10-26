@@ -2,7 +2,10 @@ package com.jetbrains.kmpapp.data.widget
 
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.model.Lesson
+import com.jetbrains.kmpapp.data.model.LessonColor
+import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
+import androidx.compose.ui.graphics.toArgb
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
@@ -56,6 +59,20 @@ data class WidgetTarget(
     val lessons: List<WidgetLesson> = emptyList()
 )
 
+/**
+ * Пользовательский цвет типа занятия для виджета: ARGB обеих схем.
+ *
+ * Виджет не линкуется с Compose-палитрой приложения, поэтому цвет передаётся
+ * числами, а не именем enum: так Swift-стороне не нужен дубль списка
+ * [com.jetbrains.kmpapp.data.model.LessonColor] и она не сломается, если
+ * вариант переименуют или удалят.
+ */
+@Serializable
+data class WidgetTypeColor(
+    val light: Int,
+    val dark: Int
+)
+
 @Serializable
 data class WidgetPayload(
     val generatedAt: Long,
@@ -65,7 +82,17 @@ data class WidgetPayload(
      * берём цель уведомлений, а если её нет — первое сохранённое.
      */
     val defaultTargetId: Int? = null,
-    val targets: List<WidgetTarget> = emptyList()
+    val targets: List<WidgetTarget> = emptyList(),
+    /**
+     * Переопределённые пользователем цвета типов занятий, ключ — короткий
+     * бейдж (`LessonType.shortName`), тот же, что лежит в [WidgetLesson.type].
+     * Пустая карта — виджет рисует свою собственную палитру типов.
+     *
+     * В снапшот попадают только изменённые типы: виджету не нужно знать
+     * стандартные цвета, у него они свои (подобранные под читаемость на
+     * маленьком размере).
+     */
+    val typeColorOverrides: Map<String, WidgetTypeColor> = emptyMap()
 )
 
 object WidgetSnapshotBuilder {
@@ -76,7 +103,8 @@ object WidgetSnapshotBuilder {
     fun build(
         targets: List<ScheduleTarget>,
         lessonsByTarget: Map<Int, List<Lesson>>,
-        notificationsTargetId: Int?
+        notificationsTargetId: Int?,
+        typeColorOverrides: Map<LessonType, LessonColor> = emptyMap()
     ): String? {
         if (targets.isEmpty()) return null
         val today = kotlin.time.Clock.System.now()
@@ -98,6 +126,16 @@ object WidgetSnapshotBuilder {
                         ?.sortedWith(compareBy({ it.date }, { it.bellNumber }, { it.startTime }))
                         .orEmpty()
                         .map { it.toWidgetLesson() }
+                )
+            },
+            // Ключ — короткий бейдж типа: именно его виджет получает в
+            // WidgetLesson.type и по нему ищет цвет. Несколько типов теоретически
+            // могут дать один бейдж — тогда последний перезапишет предыдущий,
+            // и это безопасно (цвета всё равно пользовательские).
+            typeColorOverrides = typeColorOverrides.entries.associate { (type, color) ->
+                type.shortName to WidgetTypeColor(
+                    light = color.light.toArgb(),
+                    dark = color.dark.toArgb()
                 )
             }
         )
@@ -136,7 +174,8 @@ object WidgetBridge {
             WidgetSnapshotBuilder.build(
                 targets = repo.savedTargets.value,
                 lessonsByTarget = repo.cachedLessons.value,
-                notificationsTargetId = repo.notificationsTargetId.value
+                notificationsTargetId = repo.notificationsTargetId.value,
+                typeColorOverrides = repo.lessonTypeColors.value
             )
         } catch (_: Throwable) {
             null

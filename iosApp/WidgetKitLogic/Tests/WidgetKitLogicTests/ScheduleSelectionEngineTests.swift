@@ -297,6 +297,64 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertEqual(lesson.groupCount, 0)
     }
 
+    func testDecodingWithoutLessonTypeColorsStillWorks() throws {
+        // Снапшот от версии приложения без пользовательских цветов: ключ
+        // typeColorOverrides отсутствует. Виджет должен работать, а не
+        // показывать «данные не читаются».
+        let json = """
+        {
+          "generatedAt": 0,
+          "defaultTargetId": 1,
+          "targets": []
+        }
+        """
+        let payload = try JSONDecoder().decode(WPayload.self, from: Data(json.utf8))
+        XCTAssertTrue(payload.typeColorOverrides.isEmpty)
+    }
+
+    func testDecodingLessonTypeColorOverrides() throws {
+        let json = """
+        {
+          "generatedAt": 0,
+          "defaultTargetId": 1,
+          "targets": [],
+          "typeColorOverrides": {
+            "ПР": {"light": -16546105, "dark": -12849028}
+          }
+        }
+        """
+        let payload = try JSONDecoder().decode(WPayload.self, from: Data(json.utf8))
+        XCTAssertEqual(payload.typeColorOverrides.count, 1)
+        XCTAssertEqual(payload.typeColorOverrides["ПР"]?.light, -16546105)
+        XCTAssertEqual(payload.typeColorOverrides["ПР"]?.dark, -12849028)
+    }
+
+    /// Kotlin `Color.toArgb()` отдаёт знаковый Int, поэтому 0xFF0284C7
+    /// приходит как отрицательное число. Маска должна вернуть тот же RGB,
+    /// что и положительный вариант, — иначе бейдж станет другого цвета.
+    func testSignedArgbNormalizesToSameRgbAsUnsigned() throws {
+        // 0xFF0284C7 как знаковый Int32.
+        let signed = Int(Int32(bitPattern: 0xFF0284C7))
+        XCTAssertLessThan(signed, 0)
+
+        let json = """
+        {"generatedAt":0,"defaultTargetId":1,"targets":[],
+         "typeColorOverrides":{"ЛК":{"light":\(signed),"dark":\(signed)}}}
+        """
+        let payload = try JSONDecoder().decode(WPayload.self, from: Data(json.utf8))
+        let value = try XCTUnwrap(payload.typeColorOverrides["ЛК"])
+
+        XCTAssertEqual(value.rgb(isDark: false), 0x0284C7)
+        XCTAssertEqual(value.rgb(isDark: true), 0x0284C7)
+    }
+
+    /// Обе схемы читаются из своих полей, а не из одного.
+    func testArgbUsesSchemeSpecificField() {
+        let value = WTypeColor(light: 0x00FF00, dark: 0x0000FF)
+        XCTAssertEqual(value.rgb(isDark: false), 0x00FF00)
+        XCTAssertEqual(value.rgb(isDark: true), 0x0000FF)
+    }
+
     // MARK: 18. Устаревший кэш
 
     func testStaleDataIsMarkedButShown() {

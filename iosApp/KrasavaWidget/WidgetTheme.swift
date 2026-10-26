@@ -210,10 +210,18 @@ struct WidgetPalette {
     let colorScheme: ColorScheme
     /// Режим тонирования: акценты становятся монохромными.
     let isTinted: Bool
+    /// Пользовательские цвета типов занятий из снапшота приложения,
+    /// ключ — короткий бейдж типа (`ЛК`/`ПР`/`ЛАБ`). Пусто — свои цвета.
+    let typeColorOverrides: [String: WTypeColor]
 
-    init(colorScheme: ColorScheme = .dark, isTinted: Bool = false) {
+    init(
+        colorScheme: ColorScheme = .dark,
+        isTinted: Bool = false,
+        typeColorOverrides: [String: WTypeColor] = [:]
+    ) {
         self.colorScheme = colorScheme
         self.isTinted = isTinted
+        self.typeColorOverrides = typeColorOverrides
     }
 
     private var isDark: Bool { colorScheme == .dark }
@@ -275,8 +283,16 @@ struct WidgetPalette {
     // MARK: Тип занятия
 
     /// Цвет бейджа типа. Мягкое выделение, неизвестные типы — нейтральные.
+    ///
+    /// Пользовательский цвет из приложения важнее собственной палитры виджета:
+    /// если пользователь назначил типу свой акцент, он должен совпадать с тем,
+    /// что он видит в карточках расписания. В режиме тонирования
+    /// переопределения игнорируются — там все акценты монохромные (ТЗ п. 15.3).
     func typeColor(_ type: String) -> Color {
         guard !isTinted else { return primaryText }
+        if let override = typeColorOverrides[type] {
+            return Color(hex: override.rgb(isDark: isDark))
+        }
         switch type {
         case "ПР":
             return practiceAccent

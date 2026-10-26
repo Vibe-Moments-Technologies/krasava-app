@@ -5,10 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.TaskRepository
 import com.jetbrains.kmpapp.data.DebugConfig
+import com.jetbrains.kmpapp.data.model.LessonColor
+import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
 import com.jetbrains.kmpapp.data.model.StorageStats
 import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,6 +48,8 @@ enum class OtherSubScreen(val depth: Int) {
     SCHEDULE_CALENDAR(2),
     // Тематические темы: найденные квестами надстройки тем
     THEMED_THEMES(2),
+    // Пользовательские цвета типов занятий
+    LESSON_COLORS(2),
     // Параметры сервисов
     SERVICE_NOTES_SETTINGS(2),
     // Настройки игр: «Сапер»
@@ -76,6 +81,7 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SCHEDULE_PROGRESS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_CALENDAR to OtherSubScreen.SETTINGS,
     OtherSubScreen.THEMED_THEMES to OtherSubScreen.SETTINGS,
+    OtherSubScreen.LESSON_COLORS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SAPER_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
@@ -151,6 +157,10 @@ class OtherViewModel(
     val isHalloweenRowVisible: StateFlow<Boolean> = repository.isHalloweenRowVisible
     /** Темы, найденные квестами: только они плюс Сакура видны в списке. */
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
+    /** Пользовательские цвета типов занятий (только переопределённые). */
+    val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = repository.lessonTypeColors
+    /** Вариант палитры «Киберпанка»: NEON (новая) или CLASSIC (старая). */
+    val cyberpunkVariant: StateFlow<CyberpunkVariant> = repository.cyberpunkVariant
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = repository.diagnosticsEnabled
@@ -212,6 +222,11 @@ class OtherViewModel(
 
     fun setMatrixTheme(enabled: Boolean) = repository.setMatrixTheme(enabled)
     fun setHalloweenTheme(enabled: Boolean) = repository.setHalloweenTheme(enabled)
+
+    fun setLessonTypeColor(type: LessonType, color: LessonColor) =
+        repository.setLessonTypeColor(type, color)
+    fun resetLessonTypeColors() = repository.resetLessonTypeColors()
+    fun setCyberpunkVariant(variant: CyberpunkVariant) = repository.setCyberpunkVariant(variant)
 
     /** Матрица потеряна: выключается и исчезает из списка найденных тем. */
     fun revokeMatrixUnlock() = repository.revokeMatrixUnlock()
