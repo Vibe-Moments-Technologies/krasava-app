@@ -94,6 +94,7 @@ fun TetrisScreen(
     val state by viewModel.tetrisState.collectAsState()
     val bestRecord by viewModel.tetrisRecord.collectAsState()
     val errorTheme by viewModel.errorActive.collectAsState()
+    val controlVariant by viewModel.tetrisControlVariant.collectAsState()
 
     var showRulesDialog by remember { mutableStateOf(false) }
 
@@ -248,6 +249,7 @@ fun TetrisScreen(
                 TetrisControls(
                     canHold = state.canHold && state.status == TetrisStatus.PLAYING,
                     isPlaying = state.status == TetrisStatus.PLAYING,
+                    controlVariant = controlVariant,
                     onMoveLeft = { viewModel.moveTetrisLeft() },
                     onMoveRight = { viewModel.moveTetrisRight() },
                     onSoftDrop = { viewModel.softDropTetris() },
@@ -602,6 +604,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTetrisBlock(
 private fun TetrisControls(
     canHold: Boolean,
     isPlaying: Boolean,
+    controlVariant: TetrisControlVariant = TetrisControlVariant.TYPE_1,
     onMoveLeft: () -> Unit,
     onMoveRight: () -> Unit,
     onSoftDrop: () -> Unit,
@@ -614,120 +617,256 @@ private fun TetrisControls(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // 1 ряд: лево, вправо, Hold, перевернуть
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FilledTonalButton(
-                onClick = onMoveLeft,
-                enabled = isPlaying,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(48.dp),
-                contentPadding = PaddingValues(0.dp)
+        if (controlVariant == TetrisControlVariant.TYPE_2) {
+            // Управление 2:
+            // 1 ряд: лево, вращать, право
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Влево"
-                )
-            }
-
-            FilledTonalButton(
-                onClick = onMoveRight,
-                enabled = isPlaying,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(48.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = "Вправо"
-                )
-            }
-
-            FilledTonalButton(
-                onClick = onHold,
-                enabled = canHold && isPlaying,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(48.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(
-                    text = "HOLD",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
-                )
-            }
-
-            Button(
-                onClick = onRotate,
-                enabled = isPlaying,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(48.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.RotateRight,
-                    contentDescription = "Перевернуть"
-                )
-            }
-        }
-
-        // 2 ряд: вниз, сброс
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            FilledTonalButton(
-                onClick = onSoftDrop,
-                enabled = isPlaying,
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(48.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                FilledTonalButton(
+                    onClick = onMoveLeft,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ArrowDownward,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Влево"
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "ВНИЗ",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                }
+
+                Button(
+                    onClick = onRotate,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.RotateRight,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "ВРАЩАТЬ",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                FilledTonalButton(
+                    onClick = onMoveRight,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Вправо"
                     )
                 }
             }
 
-            Button(
-                onClick = onHardDrop,
-                enabled = isPlaying,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
-                ),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier.weight(1f).height(48.dp)
+            // 2 ряд: ниже, Hold, упасть
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                FilledTonalButton(
+                    onClick = onSoftDrop,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardDoubleArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowDownward,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "НИЖЕ",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                FilledTonalButton(
+                    onClick = onHold,
+                    enabled = canHold && isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
                     Text(
-                        text = "СБРОС",
+                        text = "HOLD",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
+                }
+
+                Button(
+                    onClick = onHardDrop,
+                    enabled = isPlaying,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardDoubleArrowDown,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "УПАСТЬ",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        } else {
+            // Управление 1 (по умолчанию):
+            // 1 ряд: лево, вправо, Hold, перевернуть
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilledTonalButton(
+                    onClick = onMoveLeft,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Влево"
+                    )
+                }
+
+                FilledTonalButton(
+                    onClick = onMoveRight,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = "Вправо"
+                    )
+                }
+
+                FilledTonalButton(
+                    onClick = onHold,
+                    enabled = canHold && isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Text(
+                        text = "HOLD",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp
+                    )
+                }
+
+                Button(
+                    onClick = onRotate,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.RotateRight,
+                        contentDescription = "Перевернуть"
+                    )
+                }
+            }
+
+            // 2 ряд: вниз, сброс
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilledTonalButton(
+                    onClick = onSoftDrop,
+                    enabled = isPlaying,
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowDownward,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "ВНИЗ",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = onHardDrop,
+                    enabled = isPlaying,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.secondary
+                    ),
+                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(48.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.KeyboardDoubleArrowDown,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "СБРОС",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
         }

@@ -85,6 +85,13 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     fun setBoardVertical(enabled: Boolean) = gamesStorage.setBoardVertical(enabled)
     fun setSmallCellHintEnabled(enabled: Boolean) = gamesStorage.setSmallCellHintEnabled(enabled)
 
+    /** Настройки «Тетриса» из хранилища: вариант управления и сложность. */
+    val tetrisControlVariant: StateFlow<TetrisControlVariant> = gamesStorage.tetrisControlVariant
+    val tetrisDifficulty: StateFlow<TetrisDifficulty> = gamesStorage.tetrisDifficulty
+
+    fun setTetrisControlVariant(variant: TetrisControlVariant) = gamesStorage.setTetrisControlVariant(variant)
+    fun setTetrisDifficulty(difficulty: TetrisDifficulty) = gamesStorage.setTetrisDifficulty(difficulty)
+
     /**
      * «Тема Error». Активна, пока существует хоть один «сломанный» рекорд
      * (0 с) в любом из вариантов. Это не состояние партии, а глобальное
@@ -481,7 +488,8 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     /** Мягкое опускание (Soft Drop): ускорение падения вниз (+1 очко за клетку). */
     fun softDropTetris() {
-        val (newState, locked) = TetrisEngine.softDrop(_tetrisState.value, tetrisQueue)
+        val difficulty = gamesStorage.tetrisDifficulty.value
+        val (newState, locked) = TetrisEngine.softDrop(_tetrisState.value, tetrisQueue, difficulty = difficulty)
         _tetrisState.value = newState
         if (locked && newState.status == TetrisStatus.GAME_OVER) {
             onTetrisGameOver(newState)
@@ -490,7 +498,8 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     /** Жёсткое падение (Hard Drop): мгновенный сброс вниз и фиксация (+2 очка за клетку). */
     fun hardDropTetris() {
-        val newState = TetrisEngine.hardDrop(_tetrisState.value, tetrisQueue)
+        val difficulty = gamesStorage.tetrisDifficulty.value
+        val newState = TetrisEngine.hardDrop(_tetrisState.value, tetrisQueue, difficulty = difficulty)
         _tetrisState.value = newState
         if (newState.status == TetrisStatus.GAME_OVER) {
             onTetrisGameOver(newState)
@@ -510,10 +519,11 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         tetrisJob?.cancel()
         tetrisJob = viewModelScope.launch(Dispatchers.Default) {
             while (isActive && _tetrisState.value.status == TetrisStatus.PLAYING) {
-                val delayMs = TetrisEngine.gravityIntervalMs(_tetrisState.value.level)
+                val difficulty = gamesStorage.tetrisDifficulty.value
+                val delayMs = TetrisEngine.gravityIntervalMs(_tetrisState.value.level, difficulty)
                 delay(delayMs)
                 if (!isActive || _tetrisState.value.status != TetrisStatus.PLAYING) break
-                val updated = TetrisEngine.gravityTick(_tetrisState.value, tetrisQueue)
+                val updated = TetrisEngine.gravityTick(_tetrisState.value, tetrisQueue, difficulty = difficulty)
                 _tetrisState.value = updated
                 if (updated.status == TetrisStatus.GAME_OVER) {
                     onTetrisGameOver(updated)

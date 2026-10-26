@@ -1,5 +1,7 @@
 package com.jetbrains.kmpapp.data.storage
 
+import com.jetbrains.kmpapp.screens.games.TetrisControlVariant
+import com.jetbrains.kmpapp.screens.games.TetrisDifficulty
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -67,10 +69,32 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     private val _smallCellHintEnabled = MutableStateFlow(false)
     val smallCellHintEnabled: StateFlow<Boolean> = _smallCellHintEnabled.asStateFlow()
 
+    private val _tetrisControlVariant = MutableStateFlow(TetrisControlVariant.TYPE_1)
+    val tetrisControlVariant: StateFlow<TetrisControlVariant> = _tetrisControlVariant.asStateFlow()
+
+    private val _tetrisDifficulty = MutableStateFlow(TetrisDifficulty.EASY)
+    val tetrisDifficulty: StateFlow<TetrisDifficulty> = _tetrisDifficulty.asStateFlow()
+
     init {
         _boardVertical.value = readBool(BOARD_VERTICAL_KEY) ?: true
         _smallCellHintEnabled.value = readBool(SMALL_CELL_HINT_KEY) ?: false
         _tetrisRecord.value = readTetrisRecord()
+        _tetrisControlVariant.value = readTetrisControlVariant()
+        _tetrisDifficulty.value = readTetrisDifficulty()
+    }
+
+    /** Вариант расположения экранных кнопок управления Тетрисом. */
+    fun setTetrisControlVariant(variant: TetrisControlVariant) {
+        if (_tetrisControlVariant.value == variant) return
+        _tetrisControlVariant.value = variant
+        persistString(TETRIS_CONTROL_VARIANT_KEY, variant.id.toString())
+    }
+
+    /** Сложность Тетриса, отвечающая за скорость изменения скорости падения блоков. */
+    fun setTetrisDifficulty(difficulty: TetrisDifficulty) {
+        if (_tetrisDifficulty.value == difficulty) return
+        _tetrisDifficulty.value = difficulty
+        persistString(TETRIS_DIFFICULTY_KEY, difficulty.id)
     }
 
     /** Вертикальная ориентация поля: ширина и высота меняются местами. */
@@ -229,8 +253,28 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         }
     }
 
+    private fun persistString(key: String, value: String) {
+        scope.launch {
+            try {
+                platformStorage.saveString(key, value)
+            } catch (e: Exception) {
+                println("Failed to persist game setting: ${e.message}")
+            }
+        }
+    }
+
     private fun readBool(key: String): Boolean? =
         platformStorage.getString(key)?.toBooleanStrictOrNull()
+
+    private fun readTetrisControlVariant(): TetrisControlVariant {
+        val raw = platformStorage.getString(TETRIS_CONTROL_VARIANT_KEY)?.toIntOrNull()
+        return TetrisControlVariant.fromId(raw)
+    }
+
+    private fun readTetrisDifficulty(): TetrisDifficulty {
+        val raw = platformStorage.getString(TETRIS_DIFFICULTY_KEY)
+        return TetrisDifficulty.fromId(raw)
+    }
 
     //
     // Сохранённая партия: `mine-saved-1|вариант|ширина|высота|статус|секунды|бой?|клетки`.
@@ -334,6 +378,8 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     companion object {
         private const val BOARD_VERTICAL_KEY = "games_settings_board_vertical"
         private const val SMALL_CELL_HINT_KEY = "games_settings_small_cell_hint"
+        private const val TETRIS_CONTROL_VARIANT_KEY = "games_settings_tetris_control_variant"
+        private const val TETRIS_DIFFICULTY_KEY = "games_settings_tetris_difficulty"
 
         private const val SAVED_GAME_KEY = "games_minesweeper_saved_game"
         private const val SAVED_GAME_FORMAT = "mine-saved-1"
