@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -104,6 +105,18 @@ fun WeekCalendarStrip(
     val monthTitle = DateUtils.formatMonthTitle(currentWeekMonday.month)
     val year = currentWeekMonday.year
 
+    // Состояние и колбэки жеста обязаны читаться через rememberUpdatedState:
+    // pointerInput запускается ОДИН раз, а состояние меняется (неделя → две
+    // недели). Без этого жест навсегда запоминает значения первой композиции —
+    // после раскрытия пересчитывает те же ступени и «перестаёт реагировать»
+    // (баг с устройства владельца: оживает только после пересоздания экрана).
+    // Лямбды ниже читают эти делегаты, поэтому pointerInput всегда видит
+    // актуальные значения, хотя сам блок перезапускаться не должен.
+    val currentOnCollapse by rememberUpdatedState(onCollapse)
+    val currentSwipeCollapseEnabled by rememberUpdatedState(swipeCollapseEnabled)
+    val currentExpandState by rememberUpdatedState(expandState)
+    val currentOnExpandStateChange by rememberUpdatedState(onExpandStateChange)
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -123,20 +136,19 @@ fun WeekCalendarStrip(
             // — событие потребляется только когда жест признан нашим, после
             //   чего клики/пейджер его уже не увидят.
             .calendarExpandGesture(
-                enabled = true,
                 onSwipeDown = {
-                    val next = expandState.onSwipeDown()
-                    if (next != expandState) onExpandStateChange(next)
+                    val next = currentExpandState.onSwipeDown()
+                    if (next != currentExpandState) currentOnExpandStateChange(next)
                 },
                 onSwipeUp = {
-                    val next = expandState.onSwipeUp()
-                    if (next != expandState) {
-                        onExpandStateChange(next)
-                    } else if (expandState == CalendarExpandState.WEEK && swipeCollapseEnabled) {
+                    val next = currentExpandState.onSwipeUp()
+                    if (next != currentExpandState) {
+                        currentOnExpandStateChange(next)
+                    } else if (currentExpandState == CalendarExpandState.WEEK && currentSwipeCollapseEnabled) {
                         // Дальше сворачивать некуда: в WEEK свайп вверх
                         // сворачивает ленту целиком — как раньше делала
                         // 14dp-полоса, только с большей области захвата.
-                        onCollapse()
+                        currentOnCollapse()
                     }
                 }
             )
@@ -422,11 +434,9 @@ private fun WeekRow(
  *    продолжение движения без отрыва пальца ничего не меняет.
  */
 private fun Modifier.calendarExpandGesture(
-    enabled: Boolean,
     onSwipeDown: () -> Unit,
     onSwipeUp: () -> Unit
-): Modifier = this.pointerInput(enabled) {
-    if (!enabled) return@pointerInput
+): Modifier = this.pointerInput(Unit) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
         var handled = false
@@ -435,8 +445,6 @@ private fun Modifier.calendarExpandGesture(
         var dx = 0f
         while (!done) {
             val event = awaitPointerEvent()
-            // Чужой жест уже в работе (пейджерweek скроллится): выходим,
-            // не трогаем.
             if (event.changes.any { it.isConsumed }) {
                 // Чужой жест уже в работе (например, пейджер недели
                 // перехватил горизонтальный свайп): выходим, не мешаем.
