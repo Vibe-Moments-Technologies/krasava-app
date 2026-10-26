@@ -12,6 +12,8 @@ import SwiftUI
 struct LargeScheduleWidgetView: View {
     let state: WidgetPresentationState
     let palette: WidgetPalette
+    /// Сокращать названия дисциплин (параметр «Изменить виджет»).
+    var abbreviatedSubject: Bool = false
 
     var body: some View {
         GeometryReader { geo in
@@ -77,7 +79,8 @@ struct LargeScheduleWidgetView: View {
                             lesson: item,
                             palette: palette,
                             density: density,
-                            typography: typography
+                            typography: typography,
+                            abbreviatedSubject: abbreviatedSubject
                         )
                     }
                     if state.upcomingLessons.count > shownUpcoming {
@@ -114,7 +117,8 @@ struct LargeScheduleWidgetView: View {
                             lesson: item,
                             palette: palette,
                             density: density,
-                            typography: typography
+                            typography: typography,
+                            abbreviatedSubject: abbreviatedSubject
                         )
                     }
                 }
@@ -185,7 +189,8 @@ struct LargeScheduleWidgetView: View {
                 lesson: lesson,
                 palette: palette,
                 size: typography.subject(13...15),
-                lines: density.subjectLines
+                lines: density.subjectLines,
+                abbreviatedSubject: abbreviatedSubject
             )
             .padding(.top, Space.s2)
             .layoutPriority(1)
@@ -323,6 +328,8 @@ struct LargeScheduleWidgetView: View {
 struct ExtraLargeScheduleWidgetView: View {
     let state: WidgetPresentationState
     let palette: WidgetPalette
+    /// Сокращать названия дисциплин (параметр «Изменить виджет»).
+    var abbreviatedSubject: Bool = false
 
     var body: some View {
         GeometryReader { geo in
@@ -405,7 +412,8 @@ struct ExtraLargeScheduleWidgetView: View {
                                 lesson: item,
                                 palette: palette,
                                 density: density,
-                                typography: typography
+                                typography: typography,
+                                abbreviatedSubject: abbreviatedSubject
                             )
                         }
                     }
@@ -475,7 +483,8 @@ struct ExtraLargeScheduleWidgetView: View {
                 lesson: lesson,
                 palette: palette,
                 size: typography.subject(14...16),
-                lines: density.subjectLines + 1
+                lines: density.subjectLines + 1,
+                abbreviatedSubject: abbreviatedSubject
             )
             .padding(.top, Space.s4)
 
@@ -540,7 +549,8 @@ struct ExtraLargeScheduleWidgetView: View {
                     lesson: item,
                     palette: palette,
                     density: density,
-                    typography: typography
+                    typography: typography,
+                    abbreviatedSubject: abbreviatedSubject
                 )
             }
         }
@@ -572,7 +582,8 @@ struct ExtraLargeScheduleWidgetView: View {
                         lesson: item,
                         palette: palette,
                         density: density,
-                        typography: typography
+                        typography: typography,
+                        abbreviatedSubject: abbreviatedSubject
                     )
                 }
             }

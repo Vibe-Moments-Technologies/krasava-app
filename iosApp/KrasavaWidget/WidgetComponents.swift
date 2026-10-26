@@ -17,6 +17,9 @@ struct SubjectWithType: View {
     var lines: Int = 2
     /// Показывать ли тип. Если типа нет в модели, он просто не выводится.
     var showsType: Bool = true
+    /// Сокращать название дисциплины (настройка «Изменить виджет»):
+    /// инициалы слов для названий длиннее двух слов.
+    var abbreviatedSubject: Bool = false
 
     var body: some View {
         content
@@ -40,12 +43,14 @@ struct SubjectWithType: View {
     }
 
     private var styledSubject: Text {
-        Text(lesson.subject)
+        Text(lesson.subjectDisplay(abbreviated: abbreviatedSubject))
             .font(.system(size: size, weight: weight))
             .foregroundColor(palette.subjectText)
     }
 
     private var accessibility: String {
+        // VoiceOver всегда читает полное название: сокращение — про экономию
+        // места на экране, а не про то, что слышит пользователь.
         guard showsType, let type = lesson.type.nilIfBlank else {
             return lesson.subject
         }
@@ -348,6 +353,8 @@ struct UpcomingLessonRow: View {
     /// Подпись перед временем первой строки: «ДАЛЕЕ» в Medium, где отдельный
     /// заголовок секции не помещается по высоте. nil — без подписи.
     var inlineLabel: String? = nil
+    /// Сокращать название дисциплины (параметр «Изменить виджет»).
+    var abbreviatedSubject: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: density.lineSpacing) {
@@ -384,7 +391,8 @@ struct UpcomingLessonRow: View {
                 lesson: lesson,
                 palette: palette,
                 size: typography.rowSubject(11...14),
-                lines: density.rowSubjectLines
+                lines: density.rowSubjectLines,
+                abbreviatedSubject: abbreviatedSubject
             )
             .layoutPriority(1)
         }

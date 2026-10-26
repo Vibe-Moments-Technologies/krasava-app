@@ -20,6 +20,9 @@ struct ScheduleEntry: TimelineEntry {
     /// Пусто — палитра рисует собственные цвета типов. Значение по умолчанию
     /// есть специально: placeholder'ы и Preview не обязаны их знать.
     var typeColorOverrides: [String: WTypeColor] = [:]
+    /// Сокращать названия дисциплин (параметр «Изменить виджет»).
+    /// Значение по умолчанию — для placeholder'ов и Preview.
+    var shortSubjectNames: Bool = false
 }
 
 // MARK: - Построение таймлайна
@@ -44,6 +47,7 @@ enum WidgetTimelineBuilder {
     static func entries(
         targetId: Int?,
         now: Date,
+        shortSubjectNames: Bool = false,
         calendar: Calendar = ScheduleClock.calendar()
     ) -> [ScheduleEntry] {
         var dates: [Date] = [now]
@@ -115,7 +119,8 @@ enum WidgetTimelineBuilder {
                 state: context?.state,
                 emptyReason: reason,
                 targetId: targetId,
-                typeColorOverrides: context?.payload.typeColorOverrides ?? [:]
+                typeColorOverrides: context?.payload.typeColorOverrides ?? [:],
+                shortSubjectNames: shortSubjectNames
             )
         }
     }
@@ -138,17 +143,25 @@ struct ScheduleWidgetProvider: AppIntentTimelineProvider {
     }
 
     func snapshot(for configuration: KrasavaWidgetIntent, in context: Context) async -> ScheduleEntry {
-        let targetId = configuration.target?.id
+        let targetId = configuration.selectedTargetId
         let now = Date()
         let (ctx, reason) = WidgetData.context(selectedId: targetId, now: now)
         return ScheduleEntry(
-            date: now, state: ctx?.state, emptyReason: reason, targetId: targetId
+            date: now,
+            state: ctx?.state,
+            emptyReason: reason,
+            targetId: targetId,
+            shortSubjectNames: configuration.shortSubjectNames
         )
     }
 
     func timeline(for configuration: KrasavaWidgetIntent, in context: Context) async -> Timeline<ScheduleEntry> {
-        let targetId = configuration.target?.id
-        let entries = WidgetTimelineBuilder.entries(targetId: targetId, now: Date())
+        let targetId = configuration.selectedTargetId
+        let entries = WidgetTimelineBuilder.entries(
+            targetId: targetId,
+            now: Date(),
+            shortSubjectNames: configuration.shortSubjectNames
+        )
         // .atEnd: система вернётся за новой шкалой после последней записи.
         return Timeline(entries: entries, policy: .atEnd)
     }
@@ -315,17 +328,18 @@ struct ScheduleWidgetEntryView: View {
 
     @ViewBuilder
     private func view(for state: WidgetPresentationState, palette: WidgetPalette) -> some View {
+        let shortNames = entry.shortSubjectNames
         switch familyOverride ?? family {
         case .systemMedium:
-            MediumScheduleWidgetView(state: state, palette: palette)
+            MediumScheduleWidgetView(state: state, palette: palette, abbreviatedSubject: shortNames)
         case .systemLarge:
-            LargeScheduleWidgetView(state: state, palette: palette)
+            LargeScheduleWidgetView(state: state, palette: palette, abbreviatedSubject: shortNames)
         case .systemExtraLarge:
             // iPad: горизонтальная панель (ТЗ п. 1.2). На iPhone этого
             // семейства нет, поэтому ветка срабатывает только на планшете.
-            ExtraLargeScheduleWidgetView(state: state, palette: palette)
+            ExtraLargeScheduleWidgetView(state: state, palette: palette, abbreviatedSubject: shortNames)
         default:
-            SmallScheduleWidgetView(state: state, palette: palette)
+            SmallScheduleWidgetView(state: state, palette: palette, abbreviatedSubject: shortNames)
         }
     }
 }

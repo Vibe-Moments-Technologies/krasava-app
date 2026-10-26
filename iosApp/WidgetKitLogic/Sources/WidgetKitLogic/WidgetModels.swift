@@ -364,4 +364,31 @@ extension WLesson {
     /// Собственных сокращений не изобретаем (ТЗ п. 10.2): если фид не отдал
     /// короткое имя, используется полное с ограничением строк.
     var shortSubject: String { subject }
+
+    /// Название для показа с учётом пользовательской настройки сокращения.
+    ///
+    /// Сокращение — та же логика, что в приложении
+    /// (`SubjectAbbreviation.abbreviateSubjectName`): слова длиннее двух
+    /// превращаются в инициалы («Базы данных и управление ими» → «БДиУИ»),
+    /// названия из одного-двух слов не трогаются. Зеркальная реализация
+    /// живёт здесь, а не в снапшоте: приложение включает/выключает сокращение
+    /// параметром самого виджета («Изменить виджет»), а не глобальной
+    /// настройкой, поэтому значение в снапшот не входит.
+    func subjectDisplay(abbreviated: Bool) -> String {
+        guard abbreviated else { return subject }
+        return Self.abbreviate(subject)
+    }
+
+    /// Инициалы слов для названий длиннее двух слов; иначе — как есть.
+    /// Разбивка по пробелам и дефисам, как в Kotlin-оригинале.
+    static func abbreviate(_ subject: String) -> String {
+        let words = subject
+            .split(whereSeparator: { $0 == " " || $0 == "-" })
+            .filter { !$0.isEmpty }
+        guard words.count > 2 else { return subject }
+        return words.map { word in
+            let first = word.first!
+            return word.count > 2 ? String(first).uppercased() : String(first)
+        }.joined()
+    }
 }

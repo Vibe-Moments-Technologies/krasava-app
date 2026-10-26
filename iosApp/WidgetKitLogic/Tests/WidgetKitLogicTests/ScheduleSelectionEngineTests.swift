@@ -355,6 +355,33 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertEqual(value.rgb(isDark: true), 0x0000FF)
     }
 
+    // MARK: Сокращение названий дисциплин (параметр виджета)
+
+    /// Названия из одного-двух слов не сокращаются — инициалы бессмысленны.
+    func testShortSubjectsAreNotAbbreviated() {
+        let one = lesson(subject: "Физика")
+        XCTAssertEqual(one.subjectDisplay(abbreviated: true), "Физика")
+        let two = lesson(subject: "Базы данных")
+        XCTAssertEqual(two.subjectDisplay(abbreviated: false), "Базы данных")
+    }
+
+    /// Длинные названия превращаются в инициалы слов, длиннее двух букв.
+    func testLongSubjectAbbreviatesToInitials() {
+        let long = lesson(subject: "Базы данных и управление ими")
+        XCTAssertEqual(long.subjectDisplay(abbreviated: true), "БДиУИ")
+    }
+
+    /// Дефис — тоже граница слова, как в Kotlin-оригинале.
+    func testHyphenIsAWordBoundary() {
+        XCTAssertEqual(WLesson.abbreviate("Проектирование-и-разработка"), "ПИР")
+    }
+
+    /// Выключенное сокращение не меняет название.
+    func testAbbreviationOffKeepsFullSubject() {
+        let long = lesson(subject: "Базы данных и управление ими")
+        XCTAssertEqual(long.subjectDisplay(abbreviated: false), "Базы данных и управление ими")
+    }
+
     // MARK: 18. Устаревший кэш
 
     func testStaleDataIsMarkedButShown() {

@@ -14,6 +14,8 @@ import SwiftUI
 struct SmallScheduleWidgetView: View {
     let state: WidgetPresentationState
     let palette: WidgetPalette
+    /// Сокращать названия дисциплин (параметр «Изменить виджет»).
+    var abbreviatedSubject: Bool = false
 
     var body: some View {
         GeometryReader { geo in
@@ -66,7 +68,8 @@ struct SmallScheduleWidgetView: View {
                     lesson: lesson,
                     palette: palette,
                     size: typography.subject(11...13),
-                    lines: subjectLines(density: density, typography: typography, height: height)
+                    lines: subjectLines(density: density, typography: typography, height: height),
+                    abbreviatedSubject: abbreviatedSubject
                 )
                 .layoutPriority(1)
 
@@ -177,6 +180,8 @@ struct SmallScheduleWidgetView: View {
 struct MediumScheduleWidgetView: View {
     let state: WidgetPresentationState
     let palette: WidgetPalette
+    /// Сокращать названия дисциплин (параметр «Изменить виджет»).
+    var abbreviatedSubject: Bool = false
 
     var body: some View {
         GeometryReader { geo in
@@ -323,7 +328,8 @@ struct MediumScheduleWidgetView: View {
                 lesson: lesson,
                 palette: palette,
                 size: typography.subject(11...13),
-                lines: subjectLines
+                lines: subjectLines,
+                abbreviatedSubject: abbreviatedSubject
             )
             .padding(.top, Space.s2)
             .layoutPriority(1)
@@ -398,7 +404,8 @@ struct MediumScheduleWidgetView: View {
                     palette: palette,
                     density: density,
                     typography: typography,
-                    inlineLabel: index == 0 ? "ДАЛЕЕ" : nil
+                    inlineLabel: index == 0 ? "ДАЛЕЕ" : nil,
+                    abbreviatedSubject: abbreviatedSubject
                 )
             }
         }
