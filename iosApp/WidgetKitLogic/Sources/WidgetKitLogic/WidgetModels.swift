@@ -380,15 +380,17 @@ extension WLesson {
     }
 
     /// Инициалы слов для названий длиннее двух слов; иначе — как есть.
-    /// Разбивка по пробелам и дефисам, как в Kotlin-оригинале.
+    /// Разбивка по пробелам и дефисам, как в Kotlin-оригинале: слово длиннее
+    /// двух букв даёт заглавный инициал, короткие слова («и», «на»)
+    /// остаются целиком — иначе «Базы данных и управление ими» сжималось
+    /// в нечитаемое «БДиУи» вместо «БДиУИ»-подобных человекочитаемых форм.
     static func abbreviate(_ subject: String) -> String {
         let words = subject
             .split(whereSeparator: { $0 == " " || $0 == "-" })
             .filter { !$0.isEmpty }
         guard words.count > 2 else { return subject }
         return words.map { word in
-            let first = word.first!
-            return word.count > 2 ? String(first).uppercased() : String(first)
+            word.count > 2 ? String(word.first!).uppercased() : String(word)
         }.joined()
     }
 }
