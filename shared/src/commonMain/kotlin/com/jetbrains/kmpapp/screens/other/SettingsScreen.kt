@@ -24,12 +24,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -56,6 +58,8 @@ import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
+import com.jetbrains.kmpapp.data.widget.isScheduleWidgetPinningSupported
+import com.jetbrains.kmpapp.data.widget.requestScheduleWidgetPin
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 
 import androidx.compose.material.icons.filled.TaskAlt
@@ -108,6 +112,7 @@ fun SettingsScreen(
     var showCustomMinutesDialog by remember { mutableStateOf(false) }
     var customMinutesDraft by remember { mutableStateOf("") }
     var showNotificationsTargetDialog by remember { mutableStateOf(false) }
+    var showWidgetPinFailedDialog by remember { mutableStateOf(false) }
 
     // Скролл живёт в ViewModel: LayeredNavHost пересоздаёт этот экран в
     // другом слое при переходе в подраздел — общий ScrollState переживает
@@ -376,6 +381,25 @@ fun SettingsScreen(
                 )
             }
 
+            // Section: Widget — системное закрепление на главном экране
+            if (isScheduleWidgetPinningSupported()) {
+                SettingsSectionCard(
+                    title = "Виджет",
+                    icon = Icons.Default.Widgets
+                ) {
+                    SettingsActionRow(
+                        title = "Добавить на главный экран",
+                        subtitle = "Система предложит разместить виджет. Убрать — долгим нажатием на виджет → «Удалить»",
+                        icon = Icons.Default.Add,
+                        onClick = {
+                            if (!requestScheduleWidgetPin()) {
+                                showWidgetPinFailedDialog = true
+                            }
+                        }
+                    )
+                }
+            }
+
             // Section: Service settings
             SettingsSectionCard(
                 title = "Параметры сервисов",
@@ -571,6 +595,23 @@ fun SettingsScreen(
         }
     }
 
+    if (showWidgetPinFailedDialog) {
+        AlertDialog(
+            onDismissRequest = { showWidgetPinFailedDialog = false },
+            title = { GlitchText("Не удалось добавить виджет") },
+            text = {
+                GlitchText(
+                    "Добавьте его вручную: долгое нажатие на рабочем столе → «Виджеты» → «Красава» → «Расписание»."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showWidgetPinFailedDialog = false }) {
+                    GlitchText("Понятно")
+                }
+            }
+        )
+    }
+
     if (showNotificationsTargetDialog) {
         AlertDialog(
             onDismissRequest = { showNotificationsTargetDialog = false },
@@ -727,6 +768,44 @@ private fun SettingsNavigationRow(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = "Открыть",
             tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun SettingsActionRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            GlitchText(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            GlitchText(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = MaterialTheme.colorScheme.primary
         )
     }
 }
