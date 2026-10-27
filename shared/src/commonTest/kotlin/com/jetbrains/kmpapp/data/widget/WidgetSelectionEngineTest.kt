@@ -185,11 +185,11 @@ class WidgetSelectionEngineTest {
 
     @Test
     fun subjectDisplayAbbreviatesLongTitles() {
-        // Слова из 1–2 букв остаются целиком («и»), 3+ букв — инициал.
-        // Ровно то же поведение, что у Swift-зеркала (testLongSubjectAbbreviatesToInitials)
-        // и экрана расписания.
+        // Слова из 1–2 букв остаются целиком («и»), 3+ букв — инициал
+        // («ими» → «И»). Ровно то же поведение, что у Swift-зеркала
+        // (testLongSubjectAbbreviatesToInitials) и экрана расписания.
         val lesson = lesson("x", subject = "Базы данных и управление ими")
-        assertEquals("БДиУи", WidgetLabels.subjectDisplay(lesson, abbreviated = true))
+        assertEquals("БДиУИ", WidgetLabels.subjectDisplay(lesson, abbreviated = true))
     }
 
     @Test
