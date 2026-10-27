@@ -132,6 +132,27 @@ object WidgetLabels {
     /** `14:20–15:50` с типографским тире. */
     fun timeRange(lesson: WidgetLesson): String = "${lesson.start}–${lesson.end}"
 
+    /**
+     * Название дисциплины с учётом сокращения: инициалы слов длиннее двух
+     * букв для названий из 3+ слов («Базы данных и управление ими» →
+     * «БДиУи»). Слово из 1–2 букв остаётся целиком.
+     *
+     * Зеркально Swift-стороне (`WLesson.subjectDisplay`); настройка виджета
+     * («Сокращать названия» в конфигураторе Android / параметре iOS), а не
+     * тумблеру экрана расписания — у каждого виджета свой выбор.
+     */
+    fun subjectDisplay(lesson: WidgetLesson, abbreviated: Boolean): String =
+        if (!abbreviated) lesson.subject else abbreviateSubject(lesson.subject)
+
+    /** Инициалы слов длиннее двух; названия из 1–2 слов не меняются. */
+    fun abbreviateSubject(subject: String): String {
+        val words = subject.split(' ', '-').filter { it.isNotBlank() }
+        if (words.size <= 2) return subject
+        return words.joinToString("") { word ->
+            if (word.length > 2) word.first().uppercaseChar().toString() else word
+        }
+    }
+
     /** Человекочитаемое место занятия. */
     fun roomDisplay(lesson: WidgetLesson): String {
         val trimmed = lesson.room.trim()

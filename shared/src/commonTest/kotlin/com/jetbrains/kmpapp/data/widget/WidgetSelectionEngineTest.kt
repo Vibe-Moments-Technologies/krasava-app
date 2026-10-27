@@ -171,4 +171,37 @@ class WidgetSelectionEngineTest {
         assertEquals("Аудитория уточняется", WidgetLabels.roomDisplay(lesson("x", room = " ")))
         assertEquals("341" to "С-20", WidgetLabels.splitClassroom("341 (С-20)"))
     }
+
+    // MARK: Сокращение названий (параметр виджета Android / iOS)
+
+    @Test
+    fun subjectDisplayKeepsFullTitleWhenAbbreviationOff() {
+        val lesson = lesson("x", subject = "Базы данных и управление ими")
+        assertEquals(
+            "Базы данных и управление ими",
+            WidgetLabels.subjectDisplay(lesson, abbreviated = false)
+        )
+    }
+
+    @Test
+    fun subjectDisplayAbbreviatesLongTitles() {
+        // Слова из 1–2 букв остаются целиком («и»), 3+ букв — инициал.
+        // Ровно то же поведение, что у Swift-зеркала (testLongSubjectAbbreviatesToInitials)
+        // и экрана расписания.
+        val lesson = lesson("x", subject = "Базы данных и управление ими")
+        assertEquals("БДиУи", WidgetLabels.subjectDisplay(lesson, abbreviated = true))
+    }
+
+    @Test
+    fun subjectDisplayLeavesShortTitlesAlone() {
+        assertEquals("Физика", WidgetLabels.abbreviateSubject("Физика"))
+        assertEquals("Базы данных", WidgetLabels.abbreviateSubject("Базы данных"))
+    }
+
+    @Test
+    fun subjectDisplayHyphenIsWordBoundary() {
+        // «Проектирование-и-разработка» → «ПиР»: дефис делит слова, союз
+        // «и» остаётся строчным.
+        assertEquals("ПиР", WidgetLabels.abbreviateSubject("Проектирование-и-разработка"))
+    }
 }

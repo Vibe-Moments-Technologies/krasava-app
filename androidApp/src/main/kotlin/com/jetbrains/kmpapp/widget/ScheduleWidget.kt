@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
@@ -61,9 +62,14 @@ class ScheduleWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val raw = ScheduleWidgetStore.read(context)
         val payload: WidgetPayload? = WidgetPayloadCodec.decode(raw)
-        val storedTargetId = runCatching {
-            getAppWidgetState(context, PreferencesGlanceStateDefinition, id)[WidgetTargetIdKey]
+        val storedConfig = runCatching {
+            val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
+            Pair(prefs[WidgetTargetIdKey], prefs[WidgetShortNamesKey] ?: false)
         }.getOrNull()
+        // id -1 — опция «По умолчанию» из конфигуратора: движку отдаем null,
+        // он сам возьмёт расписание уведомлений (тот же фолбэк, что у iOS).
+        val storedTargetId = storedConfig?.first?.takeIf { it != DEFAULT_TARGET_ID }
+        val shortNames = storedConfig?.second ?: false
         val state = when {
             raw == null -> WidgetState.empty(WidgetEmptyReason.NO_DATA)
             payload == null -> WidgetState.empty(WidgetEmptyReason.BAD_DATA)
@@ -78,13 +84,25 @@ class ScheduleWidget : GlanceAppWidget() {
         val typeColors = payload?.typeColorOverrides ?: emptyMap()
         val isDark = context.isNightMode()
         provideContent {
-            WidgetRoot(state = state, palette = palette, typeColors = typeColors, isDark = isDark)
+            WidgetRoot(
+                state = state,
+                palette = palette,
+                typeColors = typeColors,
+                isDark = isDark,
+                shortNames = shortNames
+            )
         }
     }
 }
 
 /** Выбранное пользователем расписание для конкретного экземпляра виджета. */
 internal val WidgetTargetIdKey = intPreferencesKey("target_id")
+
+/** Сокращать названия дисциплин в этом экземпляре виджета. */
+internal val WidgetShortNamesKey = booleanPreferencesKey("short_names")
+
+/** id опции «По умолчанию» в конфигураторе (реальных id < 0 не бывает). */
+internal const val DEFAULT_TARGET_ID = -1
 
 class ScheduleWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = ScheduleWidget()
@@ -99,7 +117,8 @@ private fun WidgetRoot(
     state: WidgetState,
     palette: WidgetPalette,
     typeColors: Map<String, WidgetTypeColor> = emptyMap(),
-    isDark: Boolean = false
+    isDark: Boolean = false,
+    shortNames: Boolean = false
 ) {
     val size = LocalSize.current
     val widthDp = size.width.value
@@ -123,11 +142,11 @@ private fun WidgetRoot(
         if (state.primary == null) {
             EmptyContent(state, palette)
         } else if (compact) {
-            SmallContent(state, palette, typeColors, isDark, widthDp, heightDp)
+            SmallContent(state, palette, typeColors, isDark, shortNames, widthDp, heightDp)
         } else if (wideShort) {
-            MediumContent(state, palette, typeColors, isDark, heightDp)
+            MediumContent(state, palette, typeColors, isDark, shortNames, heightDp)
         } else {
-            LargeContent(state, palette, typeColors, isDark, widthDp, heightDp, extra)
+            LargeContent(state, palette, typeColors, isDark, shortNames, widthDp, heightDp, extra)
         }
     }
 }
@@ -140,6 +159,7 @@ private fun SmallContent(
     palette: WidgetPalette,
     typeColors: Map<String, WidgetTypeColor>,
     isDark: Boolean,
+    shortNames: Boolean,
     widthDp: Float,
     heightDp: Float
 ) {
@@ -160,7 +180,7 @@ private fun SmallContent(
         Label(WidgetLabels.timeRange(primary), palette.primaryText, 13, FontWeight.Medium)
         Spacer(modifier = GlanceModifier.height(if (tight) 3.dp else 6.dp))
         Label(
-            text = primary.subject,
+            text = WidgetLabels.subjectDisplay(primary, shortNames),
             color = palette.subjectText,
             sizeSp = if (tight) 11 else 12,
             weight = FontWeight.Medium,
@@ -182,6 +202,7 @@ private fun MediumContent(
     palette: WidgetPalette,
     typeColors: Map<String, WidgetTypeColor>,
     isDark: Boolean,
+    shortNames: Boolean,
     heightDp: Float
 ) {
     val primary = state.primary ?: return
@@ -210,7 +231,7 @@ private fun MediumContent(
             )
             Spacer(modifier = GlanceModifier.height(3.dp))
             Label(
-                text = primary.subject,
+                text = WidgetLabels.subjectDisplay(primary, shortNames),
                 color = palette.subjectText,
                 sizeSp = if (compact) 10 else 11,
                 weight = FontWeight.Medium,
@@ -231,7 +252,7 @@ private fun MediumContent(
                 Spacer(modifier = GlanceModifier.height(4.dp))
                 state.upcoming.take(maxRows).forEachIndexed { index, lesson ->
                     if (index > 0) Spacer(modifier = GlanceModifier.height(6.dp))
-                    UpcomingRow(lesson, palette, compact = true)
+                    UpcomingRow(lesson, palette, shortNames, compact = true)
                 }
             }
         }
@@ -246,6 +267,7 @@ private fun LargeContent(
     palette: WidgetPalette,
     typeColors: Map<String, WidgetTypeColor>,
     isDark: Boolean,
+    shortNames: Boolean,
     widthDp: Float,
     heightDp: Float,
     extra: Boolean
@@ -303,7 +325,7 @@ private fun LargeContent(
         Label(WidgetLabels.timeRange(primary), palette.primaryText, 15, FontWeight.Medium)
         Spacer(modifier = GlanceModifier.height(3.dp))
         Label(
-            text = primary.subject,
+            text = WidgetLabels.subjectDisplay(primary, shortNames),
             color = palette.subjectText,
             sizeSp = 13,
             weight = FontWeight.Medium,
@@ -335,7 +357,7 @@ private fun LargeContent(
             Spacer(modifier = GlanceModifier.height(4.dp))
             todayRows.forEachIndexed { index, lesson ->
                 if (index > 0) Spacer(modifier = GlanceModifier.height(6.dp))
-                UpcomingRow(lesson, palette, compact = false)
+                UpcomingRow(lesson, palette, shortNames, compact = false)
             }
         }
 
@@ -345,7 +367,7 @@ private fun LargeContent(
             Spacer(modifier = GlanceModifier.height(4.dp))
             firstNextRows.forEachIndexed { index, lesson ->
                 if (index > 0) Spacer(modifier = GlanceModifier.height(6.dp))
-                UpcomingRow(lesson, palette, compact = false)
+                UpcomingRow(lesson, palette, shortNames, compact = false)
             }
         }
 
@@ -355,7 +377,7 @@ private fun LargeContent(
             Spacer(modifier = GlanceModifier.height(4.dp))
             secondNextRows.forEachIndexed { index, lesson ->
                 if (index > 0) Spacer(modifier = GlanceModifier.height(6.dp))
-                UpcomingRow(lesson, palette, compact = false)
+                UpcomingRow(lesson, palette, shortNames, compact = false)
             }
         }
 
@@ -530,7 +552,12 @@ private fun MetaRow(lesson: WidgetLesson, palette: WidgetPalette, sizeSp: Int) {
 }
 
 @androidx.compose.runtime.Composable
-private fun UpcomingRow(lesson: WidgetLesson, palette: WidgetPalette, compact: Boolean) {
+private fun UpcomingRow(
+    lesson: WidgetLesson,
+    palette: WidgetPalette,
+    shortNames: Boolean,
+    compact: Boolean
+) {
     Column(modifier = GlanceModifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.Vertical.CenterVertically) {
             Label(
@@ -549,7 +576,7 @@ private fun UpcomingRow(lesson: WidgetLesson, palette: WidgetPalette, compact: B
             )
         }
         Label(
-            text = lesson.subject,
+            text = WidgetLabels.subjectDisplay(lesson, shortNames),
             color = palette.subjectText,
             sizeSp = if (compact) 9 else 10,
             maxLines = 1
