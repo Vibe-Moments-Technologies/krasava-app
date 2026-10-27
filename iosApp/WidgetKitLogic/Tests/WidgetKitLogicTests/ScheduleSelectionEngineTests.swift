@@ -365,18 +365,15 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertEqual(two.subjectDisplay(abbreviated: false), "Базы данных")
     }
 
-    /// Длинные названия превращаются в инициалы слов, длиннее двух букв.
-    /// Слово из трёх букв («ими») — уже инициал в верхнем регистре,
-    /// союз из одной буквы («и») — остаётся строчным: поведение
-    /// слово в слово совпадает с `abbreviateSubjectName` приложения.
+    /// От каждого слова — первая буква: длинные (>2) заглавной, короткие
+    /// строчной. Правило унаследовано от экрана расписания приложения
+    /// (`abbreviateSubjectName`), виджет своего не задаёт.
     func testLongSubjectAbbreviatesToInitials() {
         let long = lesson(subject: "Базы данных и управление ими")
-        XCTAssertEqual(long.subjectDisplay(abbreviated: true), "БДиУИ")
+        XCTAssertEqual(long.subjectDisplay(abbreviated: true), "БДиУи")
     }
 
     /// Дефис — тоже граница слова, как в Kotlin-оригинале.
-    /// Союзы из одной буквы остаются строчными: сокращение «ПиР» читается
-    /// лучше, чем «ПИР» — и это ровно поведение приложения.
     func testHyphenIsAWordBoundary() {
         XCTAssertEqual(WLesson.abbreviate("Проектирование-и-разработка"), "ПиР")
     }
@@ -387,10 +384,9 @@ final class ScheduleSelectionEngineTests: XCTestCase {
         XCTAssertEqual(long.subjectDisplay(abbreviated: false), "Базы данных и управление ими")
     }
 
-    /// Слова из двух букв остаются как есть (не uppercase) — как в Kotlin.
-    func testTwoLetterWordsStayAsIs() {
-        // «на», «им» — два знака, строчными.
-        XCTAssertEqual(WLesson.abbreviate("Теория на практике им. Иванова"), "ТнаПИИ")
+    /// Двухбуквенные слова дают одну букву — как на экране расписания.
+    func testTwoLetterWordsGiveFirstLetter() {
+        XCTAssertEqual(WLesson.abbreviate("Теория на практике им. Иванова"), "ТнПИИ")
     }
 
     // MARK: 18. Устаревший кэш

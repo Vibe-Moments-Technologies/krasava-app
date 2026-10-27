@@ -222,7 +222,14 @@ class ScheduleRepository(
                         }
                         targetLessons != null -> {
                             NotificationsManager.reschedule(targetLessons, p.minutes) { lesson ->
-                                val room = lesson.classrooms.firstOrNull()?.let { ", ауд. $it" } ?: ""
+                                // «СДО» — сайт вуза, не аудитория: в тексте
+                                // напоминания подпись формата, а не «ауд. СДО».
+                                val room = when {
+                                    lesson.isRemote -> ", дистанционно (СДО)"
+                                    lesson.classrooms.isNotEmpty() ->
+                                        ", ауд. ${lesson.classrooms.joinToString(", ")}"
+                                    else -> ""
+                                }
                                 "Через ${p.minutes} мин: ${lesson.subject}$room"
                             }
                             scheduledTargetId = target.id
@@ -432,7 +439,12 @@ class ScheduleRepository(
                             date = lesson.date,
                             bellNumber = lesson.bellNumber,
                             subject = lesson.subject,
-                            description = "Новая пара (${lesson.bellNumber} пара, ауд. ${lesson.classrooms.joinToString().ifEmpty { "—" }})"
+                            // «СДО» — дистанционный маркер, не аудитория.
+                            description = if (lesson.isRemote) {
+                                "Новая пара (${lesson.bellNumber} пара, дистанционно · СДО)"
+                            } else {
+                                "Новая пара (${lesson.bellNumber} пара, ауд. ${lesson.classrooms.joinToString().ifEmpty { "—" }})"
+                            }
                         )
                     )
                 }

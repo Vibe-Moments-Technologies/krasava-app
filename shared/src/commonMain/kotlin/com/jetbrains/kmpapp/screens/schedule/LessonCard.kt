@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
@@ -301,7 +302,26 @@ fun LessonCard(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f)
                             )
-                        } else if (lesson.classrooms.isNotEmpty()) {
+                        } else if (lesson.isRemote) {
+                            // «СДО» из фида — это сайт вуза
+                            // (online-edu.mirea.ru), не корпус и не аудитория:
+                            // рисуем подпись дистанционной пары, а не строку
+                            // с иконкой локации.
+                            Icon(
+                                imageVector = Icons.Default.Language,
+                                contentDescription = "Дистанционно",
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            GlitchText(
+                                text = "Дистанционно · СДО",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1
+                            )
+                        } else if (lesson.physicalClassrooms.isNotEmpty()) {
                             Icon(
                                 imageVector = Icons.Default.LocationOn,
                                 contentDescription = "Аудитория",
@@ -310,7 +330,7 @@ fun LessonCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             GlitchText(
-                                text = lesson.classrooms.joinToString(", "),
+                                text = lesson.physicalClassrooms.joinToString(", "),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,

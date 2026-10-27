@@ -551,7 +551,13 @@ private fun LessonMiniCard(lesson: Lesson, abbreviateNames: Boolean) {
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        if (lesson.classrooms.isNotEmpty()) {
+        if (lesson.isRemote) {
+            GlitchText(
+                text = "Дистанционно · СДО",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+            )
+        } else if (lesson.classrooms.isNotEmpty()) {
             GlitchText(
                 text = "Ауд. ${lesson.classrooms.joinToString(", ")}",
                 style = MaterialTheme.typography.labelSmall,

@@ -69,7 +69,21 @@ data class Lesson(
     val endTime: String,
     val date: LocalDate,
     val groups: List<String> = emptyList()
-)
+) {
+    /**
+     * Дистанционная пара: аудитория в фиде приходит строкой «СДО» (сайт вуза
+     * online-edu.mirea.ru), а не номером аудитории. Корпусом она не является
+     * и по клику на карту не ведёт.
+     *
+     * Сравнение без регистра: фид писали и «СДО», и «сдо».
+     */
+    val isRemote: Boolean
+        get() = classrooms.any { it.trim().equals("СДО", ignoreCase = true) }
+
+    /** Аудитории, не являющиеся дистанционными маркерами. */
+    val physicalClassrooms: List<String>
+        get() = classrooms.filterNot { it.trim().equals("СДО", ignoreCase = true) }
+}
 
 data class DaySchedule(
     val date: LocalDate,

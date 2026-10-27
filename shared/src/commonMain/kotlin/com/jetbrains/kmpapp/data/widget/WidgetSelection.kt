@@ -133,13 +133,13 @@ object WidgetLabels {
     fun timeRange(lesson: WidgetLesson): String = "${lesson.start}–${lesson.end}"
 
     /**
-     * Название дисциплины с учётом сокращения: инициалы слов длиннее двух
-     * букв для названий из 3+ слов («Базы данных и управление ими» →
-     * «БДиУи»). Слово из 1–2 букв остаётся целиком.
+     * Название дисциплины с учётом сокращения.
      *
-     * Зеркально Swift-стороне (`WLesson.subjectDisplay`); настройка виджета
-     * («Сокращать названия» в конфигураторе Android / параметре iOS), а не
-     * тумблеру экрана расписания — у каждого виджета свой выбор.
+     * Правило — ровно то, что в коде экрана расписания
+     * (`abbreviateSubjectName`): инициалы слов длиннее двух букв для
+     * названий из 3+ слов, от слов в 1–2 буквы — первая буква («Базы
+     * данных и управление ими» → «БДиУи»). Виджеты (Android Glance и
+     * iOS Swift-зеркало) наследуют это правило, не задают своё.
      */
     fun subjectDisplay(lesson: WidgetLesson, abbreviated: Boolean): String =
         if (!abbreviated) lesson.subject else abbreviateSubject(lesson.subject)
@@ -148,9 +148,7 @@ object WidgetLabels {
     fun abbreviateSubject(subject: String): String {
         val words = subject.split(' ', '-').filter { it.isNotBlank() }
         if (words.size <= 2) return subject
-        return words.joinToString("") { word ->
-            if (word.length > 2) word.first().uppercaseChar().toString() else word
-        }
+        return words.joinToString("") { word -> word.first().uppercaseChar().toString() }
     }
 
     /** Человекочитаемое место занятия. */

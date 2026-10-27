@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Add
@@ -230,8 +231,50 @@ fun LessonDetailScreen(
                 }
             }
 
-            // Classrooms card
-            if (lesson.classrooms.isNotEmpty()) {
+            // Classrooms card / дистанционная пара
+            if (lesson.isRemote) {
+                // «СДО» из фида — сайт вуза (online-edu.mirea.ru), не корпус:
+                // вместо фейковой аудитории — честная подпись и ссылка.
+                DetailSectionCard(
+                    title = "Формат",
+                    icon = Icons.Default.Language
+                ) {
+                    GlitchText(
+                        text = "Дистанционно",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    GlitchText(
+                        text = "Пара проходит в СДО вуза — среде дистанционного обучения.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                    GlitchText(
+                        text = "online-edu.mirea.ru",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { uriHandler.openUri("https://online-edu.mirea.ru/") }
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                    // Смешанный формат: есть и аудитории, и дистанционная
+                    // строка (несколько аудиторий у пары) — показываем обе.
+                    if (lesson.physicalClassrooms.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(14.dp))
+                        GlitchText(
+                            text = "Также аудитории: ${lesson.physicalClassrooms.joinToString(", ")}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else if (lesson.classrooms.isNotEmpty()) {
                 DetailSectionCard(
                     title = if (lesson.classrooms.size > 1) "Аудитории" else "Аудитория",
                     icon = Icons.Default.LocationOn
