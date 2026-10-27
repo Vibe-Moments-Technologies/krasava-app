@@ -181,4 +181,23 @@ object WidgetBridge {
             null
         }
     }
+
+    fun themeJson(systemDark: Boolean): String? {
+        val repo = repository ?: return null
+        return try {
+            WidgetThemeCodec.encode(
+                WidgetThemeResolver.resolve(
+                    themeMode = repo.themeMode.value,
+                    overlay = repo.themeOverlay.value,
+                    systemDark = systemDark,
+                    halloweenActive = repo.isHalloweenActive.value,
+                    // Вариант палитры Киберпанка пробрасывается в виджет:
+                    // «Старая» маджента должна жить и вне приложения.
+                    cyberpunkVariant = repo.cyberpunkVariant.value
+                )
+            )
+        } catch (_: Throwable) {
+            null
+        }
+    }
 }
