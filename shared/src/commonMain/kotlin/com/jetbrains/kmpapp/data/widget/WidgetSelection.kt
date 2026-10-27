@@ -135,20 +135,25 @@ object WidgetLabels {
     /**
      * Название дисциплины с учётом сокращения.
      *
-     * Правило — ровно то, что в коде экрана расписания
-     * (`abbreviateSubjectName`): инициалы слов длиннее двух букв для
-     * названий из 3+ слов, от слов в 1–2 буквы — первая буква («Базы
-     * данных и управление ими» → «БДиУи»). Виджеты (Android Glance и
-     * iOS Swift-зеркало) наследуют это правило, не задают своё.
+     * Правило — дословно из кода экрана расписания
+     * (`abbreviateSubjectName`): для названий из 3+ слов от каждого слова
+     * берётся первая буква — слова длиннее двух букв дают заглавный
+     * инициал, слова в 1–2 буквы остаются строчными («Базы данных и
+     * управление ими» → «БДиУИ»: «и» строчная, «ими» заглавная).
+     * Виджеты (Android Glance и iOS Swift-зеркало) наследуют правило,
+     * а не задают своё.
      */
     fun subjectDisplay(lesson: WidgetLesson, abbreviated: Boolean): String =
         if (!abbreviated) lesson.subject else abbreviateSubject(lesson.subject)
 
-    /** Инициалы слов длиннее двух; названия из 1–2 слов не меняются. */
+    /** Первые буквы слов для названий из 3+ слов; иначе — как есть. */
     fun abbreviateSubject(subject: String): String {
         val words = subject.split(' ', '-').filter { it.isNotBlank() }
         if (words.size <= 2) return subject
-        return words.joinToString("") { word -> word.first().uppercaseChar().toString() }
+        return words.joinToString("") { word ->
+            if (word.length > 2) word.first().uppercaseChar().toString()
+            else word.first().toString()
+        }
     }
 
     /** Человекочитаемое место занятия. */

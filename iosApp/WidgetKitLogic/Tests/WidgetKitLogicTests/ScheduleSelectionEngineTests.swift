@@ -367,10 +367,11 @@ final class ScheduleSelectionEngineTests: XCTestCase {
 
     /// От каждого слова — первая буква: длинные (>2) заглавной, короткие
     /// строчной. Правило унаследовано от экрана расписания приложения
-    /// (`abbreviateSubjectName`), виджет своего не задаёт.
+    /// (`abbreviateSubjectName`), виджет своего не задаёт. «ими» — три
+    /// буквы, инициал заглавной: «БДиУИ».
     func testLongSubjectAbbreviatesToInitials() {
         let long = lesson(subject: "Базы данных и управление ими")
-        XCTAssertEqual(long.subjectDisplay(abbreviated: true), "БДиУи")
+        XCTAssertEqual(long.subjectDisplay(abbreviated: true), "БДиУИ")
     }
 
     /// Дефис — тоже граница слова, как в Kotlin-оригинале.

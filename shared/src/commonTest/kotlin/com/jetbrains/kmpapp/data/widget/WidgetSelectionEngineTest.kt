@@ -185,11 +185,11 @@ class WidgetSelectionEngineTest {
 
     @Test
     fun subjectDisplayAbbreviatesLongTitles() {
-        // Правило экрана расписания: от каждого слова — первая буква
-        // (длинные заглавной, «и» строчной). «Базы данных и управление
-        // ими» → «БДиУи», как в abbreviateSubjectName приложения.
+        // Правило экрана расписания дословно: слово длиннее двух букв —
+        // заглавный инициал, короче — строчная первая буква. «Базы данных
+        // и управление ими» → «БДиУИ» («и» строчная, «ими» заглавная).
         val lesson = lesson("x", subject = "Базы данных и управление ими")
-        assertEquals("БДиУи", WidgetLabels.subjectDisplay(lesson, abbreviated = true))
+        assertEquals("БДиУИ", WidgetLabels.subjectDisplay(lesson, abbreviated = true))
     }
 
     @Test
