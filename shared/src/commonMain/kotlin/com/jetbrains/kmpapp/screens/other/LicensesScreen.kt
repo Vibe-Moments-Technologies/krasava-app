@@ -124,6 +124,17 @@ fun LicensesScreen(
                 )
             }
 
+            // Отдельный блок внизу (решение владельца): политика нужна
+            // в UI приложения — Google Play требует, чтобы она была
+            // доступна из самого приложения, не только в сторе.
+            SectionCard(title = "Политика конфиденциальности") {
+                LicenseItem(
+                    title = "Открыть политику",
+                    description = "Как приложение обрабатывает данные.",
+                    onClick = { uriHandler.openUri("https://vibe-moments-technologies.github.io/krasava-app/privacy.html") }
+                )
+            }
+
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
