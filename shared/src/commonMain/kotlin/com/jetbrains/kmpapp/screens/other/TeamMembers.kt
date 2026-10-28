@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.screens.other
 import org.jetbrains.compose.resources.DrawableResource
 import kmp_app_template.shared.generated.resources.Res
 import kmp_app_template.shared.generated.resources.team_kirasunshine
+import kmp_app_template.shared.generated.resources.team_kristalina5058
 import kmp_app_template.shared.generated.resources.team_l1ratch
 import kmp_app_template.shared.generated.resources.team_prosto_max
 
@@ -62,6 +63,7 @@ val projectTeam = listOf(
         name = "kristalina5058",
         role = "Картограф",
         department = "Карты",
+        avatar = Res.drawable.team_kristalina5058,
         links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/kristalina5058"))
     )
 )
