@@ -48,3 +48,4 @@ actual fun requestScheduleWidgetPin(): Boolean {
         manager.requestPinAppWidget(provider, null, configPendingIntent)
     }.getOrDefault(false)
 }
+

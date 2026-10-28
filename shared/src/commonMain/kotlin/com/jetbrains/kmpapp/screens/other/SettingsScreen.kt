@@ -64,9 +64,11 @@ import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
+import com.jetbrains.kmpapp.data.widget.WidgetPinFeedback
 import com.jetbrains.kmpapp.data.widget.isScheduleWidgetPinningSupported
 import com.jetbrains.kmpapp.data.widget.requestScheduleWidgetPin
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 import androidx.compose.material.icons.filled.TaskAlt
@@ -76,6 +78,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+
+/**
+ * Ждать открытия конфигуратора виджета после запроса закрепления, прежде
+ * чем решить, что системный диалог был подавлен (OEM-запрет). 5 секунд
+ * хватает на подтверждение в системном окне.
+ */
+private const val WIDGET_PIN_DIALOG_TIMEOUT_MS = 5_000L
 
 @Composable
 fun SettingsScreen(
@@ -122,23 +131,21 @@ fun SettingsScreen(
     var customMinutesDraft by remember { mutableStateOf("") }
     var showNotificationsTargetDialog by remember { mutableStateOf(false) }
     var showWidgetPinFailedDialog by remember { mutableStateOf(false) }
-    // Сообщение о заблокированном разрешении: уведомления или виджет.
-    // Решение владельца: переключатель не врёт — при невыдаче разрешения
-    // он возвращается в «выкл», а снекбар объясняет, что произошло.
-    val snackbarHostState = remember { SnackbarHostState() }
-    val notificationsHint = "Разрешение не выдано. Включите уведомления для приложения в настройках системы и попробуйте снова"
-    val widgetHint = "Система не предложила добавление. Добавьте виджет долгим нажатием на рабочем экране → «Виджеты», либо выдайте приложению нужное разрешение в настройках системы"
+    // Предупреждения — диалогами поверх экрана (решение владельца):
+    // снекбар внизу не виден за навигационной панелью.
+    var showNotificationsDeniedDialog by remember { mutableStateOf(false) }
+    val isAuthorizedNow by remember(notificationsEnabled) { mutableStateOf(NotificationsManager.isAuthorized()) }
     val scope = rememberCoroutineScope()
 
     // Пользователь мог выдать разрешение в системном диалоге и вернуться:
-    // перепроверяем при каждом возврате фокуса на экран настроек.
-    val isAuthorizedNow = remember(notificationsEnabled) { NotificationsManager.isAuthorized() }
+    // откатываем «включено без разрешения» (старые установки/перенос),
+    // чтобы переключатель не врал. false НЕ запрашивает разрешение —
+    // иначе системный диалог (resumed-activity) ронял приложение
+    // при первом входе на экран.
     LaunchedEffect(Unit) {
         snapshotFlow { notificationsEnabled }
             .collect { enabled ->
                 if (enabled && !NotificationsManager.isAuthorized()) {
-                    // Включён без разрешения (старые установки/перенос):
-                    // откатываем, чтобы переключатель не врал.
                     viewModel.setNotificationsEnabled(false)
                 }
             }
@@ -152,7 +159,6 @@ fun SettingsScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
-        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             Row(
                 modifier = Modifier
@@ -431,7 +437,20 @@ fun SettingsScreen(
                         subtitle = "Система предложит разместить виджет. Убрать — долгим нажатием на виджет → «Удалить»",
                         icon = Icons.Default.Add,
                         onClick = {
-                            if (!requestScheduleWidgetPin()) {
+                            if (requestScheduleWidgetPin()) {
+                                // Запрос принят. OEM-запрет («нет прав» на
+                                // виджеты) может подавить диалог молча:
+                                // ждём метку открытия конфигуратора, её нет —
+                                // предупреждение поверх экрана.
+                                WidgetPinFeedback.markPinRequested()
+                                val requestedAt = WidgetPinFeedback.lastPinRequestedAtMillis
+                                scope.launch {
+                                    delay(WIDGET_PIN_DIALOG_TIMEOUT_MS)
+                                    if (WidgetPinFeedback.lastConfigureOpenedAtMillis < requestedAt) {
+                                        showWidgetPinFailedDialog = true
+                                    }
+                                }
+                            } else {
                                 showWidgetPinFailedDialog = true
                             }
                         }
@@ -501,19 +520,15 @@ fun SettingsScreen(
                             checked = notificationsEnabled,
                             onCheckedChange = { wanted ->
                                 if (wanted && !isAuthorizedNow) {
-                                    // Договорённость с владельцем: пока разрешение
-                                    // не выдано, тумблер возвращается в «выкл», а не
-                                    // молча «включает» неработающие напоминания.
-                                    // setNotificationsEnabled(false) внутри запросит
-                                    // разрешение (см. ScheduleStorage).
-                                    viewModel.setNotificationsEnabled(false)
-                                    scope.launch {
-                                        snackbarHostState.showSnackbar(
-                                            message = notificationsHint,
-                                            withDismissAction = true,
-                                            duration = SnackbarDuration.Long
-                                        )
-                                    }
+                                    // Первая установка: явно просим системное
+                                    // разрешение (тумблер остаётся «выкл» —
+                                    // включится после выдачи). Системный диалог
+                                    // асинхронен; если выдали — повторное
+                                    // включение пройдёт мгновенно; отказ дважды
+                                    // (ОС прячет диалог навсегда) — предупреждение
+                                    // поверх экрана объясняет путь через настройки.
+                                    NotificationsManager.requestAuthorization()
+                                    showNotificationsDeniedDialog = true
                                 } else {
                                     viewModel.setNotificationsEnabled(wanted)
                                 }
@@ -672,6 +687,26 @@ fun SettingsScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showWidgetPinFailedDialog = false }) {
+                    GlitchText("Понятно")
+                }
+            }
+        )
+    }
+
+    if (showNotificationsDeniedDialog) {
+        // Диалог поверх экрана (решение владельца: снекбар внизу не виден).
+        // Тумблер уже вернулся в «выкл»: объясняем, что делать дальше.
+        AlertDialog(
+            onDismissRequest = { showNotificationsDeniedDialog = false },
+            title = { GlitchText("Уведомления не разрешены") },
+            text = {
+                GlitchText(
+                    "Напоминания включатся, только когда система разрешит приложению показывать уведомления. " +
+                        "Разрешите их для «Красавы» в настройках телефона и вернитесь включить напоминания."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showNotificationsDeniedDialog = false }) {
                     GlitchText("Понятно")
                 }
             }

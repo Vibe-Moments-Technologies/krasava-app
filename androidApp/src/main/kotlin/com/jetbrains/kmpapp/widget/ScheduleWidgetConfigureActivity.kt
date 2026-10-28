@@ -11,6 +11,7 @@ import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import com.jetbrains.kmpapp.data.widget.WidgetPayload
 import com.jetbrains.kmpapp.data.widget.WidgetPayloadCodec
+import com.jetbrains.kmpapp.data.widget.WidgetPinFeedback
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -31,6 +32,10 @@ class ScheduleWidgetConfigureActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setResult(RESULT_CANCELED)
+
+        // Метка для экрана настроек: конфигуратор открылся — значит
+        // системный диалог закрепления не был подавлен.
+        WidgetPinFeedback.lastConfigureOpenedAtMillis = System.currentTimeMillis()
 
         appWidgetId = intent?.getIntExtra(
             AppWidgetManager.EXTRA_APPWIDGET_ID,

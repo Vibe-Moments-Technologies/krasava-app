@@ -810,9 +810,9 @@ class ScheduleStorage(
      */
     fun setNotificationsEnabled(enabled: Boolean) {
         if (enabled && !NotificationsManager.isAuthorized()) {
-            // Сначала спрашиваем разрешение: системный диалог асинхронен,
-            // ответ придёт после возврата в приложение. Повторное включение
-            // тумблера после выдачи разрешит.
+            // Спрашиваем разрешение (только при ЯВНОЙ попытке включить —
+            // параметр true): системный диалог требует resumed-activity,
+            // откат из наблюдателя передаёт false и молчит.
             NotificationsManager.requestAuthorization()
             return
         }

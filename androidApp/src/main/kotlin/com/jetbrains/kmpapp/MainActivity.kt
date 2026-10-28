@@ -27,9 +27,12 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // Разрешение POST_NOTIFICATIONS (API 33+) просится только в момент,
         // когда пользователь включает тумблер напоминаний в настройках.
+        // lifecycle-контекст обязателен: launch вне RESUMED кидает
+        // IllegalStateException (краш «при первой установке»).
         AndroidNotificationsEngine.permissionRequester = {
             if (Build.VERSION.SDK_INT >= 33 &&
-                !NotificationManagerCompat.from(this).areNotificationsEnabled()
+                !NotificationManagerCompat.from(this).areNotificationsEnabled() &&
+                lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
             ) {
                 requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
