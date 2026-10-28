@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
+import androidx.core.app.NotificationManagerCompat
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.storage.AndroidContextProvider
 
@@ -26,6 +27,11 @@ object AndroidNotificationsEngine : NotificationsManager.NotificationEngine {
 
     override fun requestAuthorization() {
         permissionRequester?.invoke()
+    }
+
+    override fun isAuthorized(): Boolean {
+        val ctx = context ?: return false
+        return NotificationManagerCompat.from(ctx).areNotificationsEnabled()
     }
 
     override fun schedule(id: String, title: String, body: String, dateEpochMillis: Long) {

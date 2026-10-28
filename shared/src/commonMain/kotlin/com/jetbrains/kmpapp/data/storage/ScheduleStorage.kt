@@ -798,7 +798,24 @@ class ScheduleStorage(
         }
     }
 
+    /**
+     * Включить напоминания. Тумблер не врёт (решение владельца): включённым
+     * он становится только при реально выданном разрешении. Если система
+     * его не выдала — запросим, но значение не включим: пользователь увидит
+     * пояснение в снекбаре и переключатель вернётся в «выкл», пока не выдаст.
+     *
+     * Сценарий: отказ дважды → Android навсегда прячет диалог; без этой
+     * проверки тумблер включался, будильники ставились, а уведомления
+     * молча не показывались.
+     */
     fun setNotificationsEnabled(enabled: Boolean) {
+        if (enabled && !NotificationsManager.isAuthorized()) {
+            // Сначала спрашиваем разрешение: системный диалог асинхронен,
+            // ответ придёт после возврата в приложение. Повторное включение
+            // тумблера после выдачи разрешит.
+            NotificationsManager.requestAuthorization()
+            return
+        }
         val changed = _notificationsEnabled.value != enabled
         _notificationsEnabled.value = enabled
         if (enabled) {
@@ -806,7 +823,6 @@ class ScheduleStorage(
                 _notificationsTargetId.value = _selectedTarget.value?.id
                 persistNotificationsTargetId(_notificationsTargetId.value)
             }
-            NotificationsManager.requestAuthorization()
         }
         scope.launch { platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, enabled.toString()) }
         if (changed) {

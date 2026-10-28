@@ -41,11 +41,17 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -61,6 +67,7 @@ import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.widget.isScheduleWidgetPinningSupported
 import com.jetbrains.kmpapp.data.widget.requestScheduleWidgetPin
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import kotlinx.coroutines.launch
 
 import androidx.compose.material.icons.filled.TaskAlt
 import androidx.compose.material3.AlertDialog
@@ -115,6 +122,27 @@ fun SettingsScreen(
     var customMinutesDraft by remember { mutableStateOf("") }
     var showNotificationsTargetDialog by remember { mutableStateOf(false) }
     var showWidgetPinFailedDialog by remember { mutableStateOf(false) }
+    // Сообщение о заблокированном разрешении: уведомления или виджет.
+    // Решение владельца: переключатель не врёт — при невыдаче разрешения
+    // он возвращается в «выкл», а снекбар объясняет, что произошло.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val notificationsHint = "Разрешение не выдано. Включите уведомления для приложения в настройках системы и попробуйте снова"
+    val widgetHint = "Система не предложила добавление. Добавьте виджет долгим нажатием на рабочем экране → «Виджеты», либо выдайте приложению нужное разрешение в настройках системы"
+    val scope = rememberCoroutineScope()
+
+    // Пользователь мог выдать разрешение в системном диалоге и вернуться:
+    // перепроверяем при каждом возврате фокуса на экран настроек.
+    val isAuthorizedNow = remember(notificationsEnabled) { NotificationsManager.isAuthorized() }
+    LaunchedEffect(Unit) {
+        snapshotFlow { notificationsEnabled }
+            .collect { enabled ->
+                if (enabled && !NotificationsManager.isAuthorized()) {
+                    // Включён без разрешения (старые установки/перенос):
+                    // откатываем, чтобы переключатель не врал.
+                    viewModel.setNotificationsEnabled(false)
+                }
+            }
+    }
 
     // Скролл живёт в ViewModel: LayeredNavHost пересоздаёт этот экран в
     // другом слое при переходе в подраздел — общий ScrollState переживает
@@ -124,6 +152,7 @@ fun SettingsScreen(
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             Row(
                 modifier = Modifier
@@ -470,7 +499,25 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Switch(
                             checked = notificationsEnabled,
-                            onCheckedChange = { viewModel.setNotificationsEnabled(it) }
+                            onCheckedChange = { wanted ->
+                                if (wanted && !isAuthorizedNow) {
+                                    // Договорённость с владельцем: пока разрешение
+                                    // не выдано, тумблер возвращается в «выкл», а не
+                                    // молча «включает» неработающие напоминания.
+                                    // setNotificationsEnabled(false) внутри запросит
+                                    // разрешение (см. ScheduleStorage).
+                                    viewModel.setNotificationsEnabled(false)
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(
+                                            message = notificationsHint,
+                                            withDismissAction = true,
+                                            duration = SnackbarDuration.Long
+                                        )
+                                    }
+                                } else {
+                                    viewModel.setNotificationsEnabled(wanted)
+                                }
+                            }
                         )
                     }
 

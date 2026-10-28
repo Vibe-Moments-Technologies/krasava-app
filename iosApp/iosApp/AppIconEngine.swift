@@ -31,6 +31,13 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
+    func isAuthorized() -> Bool {
+        // Синхронный getter: тумблер в настройках сворачивает состояние без
+        // гонок. После отказа iOS тоже не показывает диалог повторно —
+        // включённым переключатель может быть только при выданном разрешении.
+        UNUserNotificationCenter.current().notificationSettings().authorizationStatus == .authorized
+    }
+
     /// Идентификаторы, поставленные этой партией занятий. Храним их в
     /// UserDefaults, чтобы после перезапуска можно было синхронно снять
     /// старую партию без гонки с новой постановкой.

@@ -21,6 +21,13 @@ object NotificationsManager {
     interface NotificationEngine {
         /** Запросить системное разрешение (вызывается при включении тумблера). */
         fun requestAuthorization()
+        /**
+         * Выдано ли разрешение прямо сейчас. Синхронно: тумблер в настройках
+         * сворачивает состояние без гонок. После отказа Android прячет
+         * системный диалог навсегда — включённым тумблер имеет право быть
+         * только когда здесь true (решение владельца: не врать переключателем).
+         */
+        fun isAuthorized(): Boolean
         /** Запланировать уведомление с идентификатором; dateEpochMillis — время показа. */
         fun schedule(id: String, title: String, body: String, dateEpochMillis: Long)
         /** Снять все запланированные (в т.ч. предыдущую партию). */
@@ -43,6 +50,12 @@ object NotificationsManager {
     fun requestAuthorization() {
         engine?.requestAuthorization()
     }
+
+    /**
+     * Разрешение выдано. false, если движка нет (платформа не умеет) или
+     * система ещё не выдала разрешение.
+     */
+    fun isAuthorized(): Boolean = engine?.isAuthorized() ?: false
 
     /**
      * Отладка: тестовое уведомление через [delayMillis] (сейчас ≈ 1.5 с).
