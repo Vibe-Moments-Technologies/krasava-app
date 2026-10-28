@@ -52,9 +52,16 @@ val projectTeam = listOf(
     ),
     TeamMember(
         name = "KiraSunshine",
-        role = "Картограф",
+        // Карты + дизайн: владелец подтвердил вторую роль.
+        role = "Картограф · Дизайнер",
         department = "Карты",
         avatar = Res.drawable.team_kirasunshine,
         links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/KiraSunshine"))
+    ),
+    TeamMember(
+        name = "kristalina5058",
+        role = "Картограф",
+        department = "Карты",
+        links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/kristalina5058"))
     )
 )

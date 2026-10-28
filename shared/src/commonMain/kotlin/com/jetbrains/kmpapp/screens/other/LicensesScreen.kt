@@ -124,18 +124,6 @@ fun LicensesScreen(
                 )
             }
 
-            SectionCard(title = "Юридические документы") {
-                LicenseItem(
-                    title = "Пользовательское соглашение",
-                    onClick = { uriHandler.openUri("https://vibe-moments-technologies.github.io/krasava-app/terms.html") }
-                )
-                HorizontalDivider(modifier = Modifier.padding(vertical = 10.dp))
-                LicenseItem(
-                    title = "Политика конфиденциальности",
-                    onClick = { uriHandler.openUri("https://vibe-moments-technologies.github.io/krasava-app/privacy.html") }
-                )
-            }
-
             Spacer(modifier = Modifier.height(80.dp))
         }
     }
