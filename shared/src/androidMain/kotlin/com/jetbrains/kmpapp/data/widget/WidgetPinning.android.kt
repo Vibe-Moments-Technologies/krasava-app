@@ -13,7 +13,7 @@ import com.jetbrains.kmpapp.data.storage.AndroidContextProvider
  * от приложения.
  */
 private const val WIDGET_RECEIVER_CLASS = "com.jetbrains.kmpapp.widget.ScheduleWidgetReceiver"
-private const val WIDGET_CONFIGURE_CLASS = "com.jetbrains.kmpapp.widget.ScheduleWidgetConfigureActivity"
+private const val WIDGET_APPLY_CLASS = "com.jetbrains.kmpapp.widget.ScheduleWidgetApplyActivity"
 
 actual fun isScheduleWidgetPinningSupported(): Boolean {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
@@ -30,13 +30,16 @@ actual fun requestScheduleWidgetPin(): Boolean {
         val manager = AppWidgetManager.getInstance(context)
         if (!manager.isRequestPinAppWidgetSupported) return false
         val provider = ComponentName(context.packageName, WIDGET_RECEIVER_CLASS)
-        // Success-callback: без него многие лаунчеры при добавлении ИЗ
-        // ПРИЛОЖЕНИЯ пропускают конфигуратор (даже если он объявлен в
-        // appwidget-provider). Колбэк срабатывает после подтверждения
-        // пользователем — и открывает конфигуратор гарантированно, на
-        // любом лаунчере, с уже валидным id виджета.
+        // Success-callback: срабатывает после подтверждения пользователем.
+        // Из приложения параметры выбираются ЗАРАНЕЕ — внутренний
+        // конфигуратор (решение владельца: лаунчеры системный
+        // конфигуратор при добавлении из приложения всё равно не
+        // показывают). Колбэк ведёт в неинтерактивную
+        // ScheduleWidgetApplyActivity: она пишет выбор в Glance-состояние
+        // нового экземпляра (нет параметров — просто закрывается) и
+        // помечает «диалог не был подавлен» для экрана настроек.
         val configIntent = Intent().apply {
-            setClassName(context.packageName, WIDGET_CONFIGURE_CLASS)
+            setClassName(context.packageName, WIDGET_APPLY_CLASS)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         val configPendingIntent = PendingIntent.getActivity(

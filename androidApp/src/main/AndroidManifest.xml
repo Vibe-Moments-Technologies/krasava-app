@@ -64,7 +64,8 @@
                 android:resource="@xml/schedule_widget_info"/>
         </receiver>
 
-        <!-- Выбор расписания для конкретного экземпляра виджета. -->
+        <!-- Выбор расписания для конкретного экземпляра виджета
+             (системный флоу: долгое нажатие на рабочем столе). -->
         <activity
             android:name=".widget.ScheduleWidgetConfigureActivity"
             android:exported="true"
@@ -74,6 +75,15 @@
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE"/>
             </intent-filter>
         </activity>
+
+        <!-- Применение параметров внутреннего конфигуратора после
+             подтверждения закрепления из приложения: стартует
+             success-callback'ом, не интерактивна. -->
+        <activity
+            android:name=".widget.ScheduleWidgetApplyActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.NoDisplay"/>
     </application>
 
 </manifest>

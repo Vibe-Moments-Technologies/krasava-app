@@ -41,9 +41,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -85,6 +84,9 @@ import androidx.compose.runtime.setValue
  * хватает на подтверждение в системном окне.
  */
 private const val WIDGET_PIN_DIALOG_TIMEOUT_MS = 5_000L
+
+/** «По умолчанию» в конфигураторах виджета: цель уведомлений (id < 0). */
+private const val DEFAULT_WIDGET_TARGET_ID = -1
 
 @Composable
 fun SettingsScreen(
@@ -134,7 +136,10 @@ fun SettingsScreen(
     // Предупреждения — диалогами поверх экрана (решение владельца):
     // снекбар внизу не виден за навигационной панелью.
     var showNotificationsDeniedDialog by remember { mutableStateOf(false) }
-    val isAuthorizedNow by remember(notificationsEnabled) { mutableStateOf(NotificationsManager.isAuthorized()) }
+    // Внутренний конфигуратор виджета (добавление из приложения).
+    var showWidgetConfigDialog by remember { mutableStateOf(false) }
+    var widgetConfigTargetId by remember { mutableStateOf<Int?>(null) }
+    var widgetConfigShortNames by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     // Пользователь мог выдать разрешение в системном диалоге и вернуться:
@@ -426,7 +431,7 @@ fun SettingsScreen(
                 )
             }
 
-            // Section: Widget — системное закрепление на главном экране
+            // Section: Widget — закрепление на главном экране
             if (isScheduleWidgetPinningSupported()) {
                 SettingsSectionCard(
                     title = "Виджет",
@@ -434,25 +439,13 @@ fun SettingsScreen(
                 ) {
                     SettingsActionRow(
                         title = "Добавить на главный экран",
-                        subtitle = "Система предложит разместить виджет. Убрать — долгим нажатием на виджет → «Удалить»",
+                        subtitle = "Выберите расписание — система предложит разместить виджет. Убрать — долгим нажатием → «Удалить»",
                         icon = Icons.Default.Add,
                         onClick = {
-                            if (requestScheduleWidgetPin()) {
-                                // Запрос принят. OEM-запрет («нет прав» на
-                                // виджеты) может подавить диалог молча:
-                                // ждём метку открытия конфигуратора, её нет —
-                                // предупреждение поверх экрана.
-                                WidgetPinFeedback.markPinRequested()
-                                val requestedAt = WidgetPinFeedback.lastPinRequestedAtMillis
-                                scope.launch {
-                                    delay(WIDGET_PIN_DIALOG_TIMEOUT_MS)
-                                    if (WidgetPinFeedback.lastConfigureOpenedAtMillis < requestedAt) {
-                                        showWidgetPinFailedDialog = true
-                                    }
-                                }
-                            } else {
-                                showWidgetPinFailedDialog = true
-                            }
+                            // Внутренний конфигуратор (решение владельца):
+                            // лаунчеры не показывают системный при добавлении
+                            // из приложения, поэтому параметры выбираем здесь.
+                            showWidgetConfigDialog = true
                         }
                     )
                 }
@@ -519,7 +512,11 @@ fun SettingsScreen(
                         Switch(
                             checked = notificationsEnabled,
                             onCheckedChange = { wanted ->
-                                if (wanted && !isAuthorizedNow) {
+                                // Статус читается в момент клика (без remember-кэша):
+                                // после выдачи прав в системном окне повторное
+                                // включение проходит сразу, без перезапуска
+                                // (репорт тестера).
+                                if (wanted && !NotificationsManager.isAuthorized()) {
                                     // Первая установка: явно просим системное
                                     // разрешение (тумблер остаётся «выкл» —
                                     // включится после выдачи). Системный диалог
@@ -536,13 +533,16 @@ fun SettingsScreen(
                         )
                     }
 
-                    if (notificationsEnabled) {
-                        val notificationTarget = savedTargets.firstOrNull { it.id == notificationsTargetId }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showNotificationsTargetDialog = true }
-                                .padding(vertical = 4.dp),
+                    // Выбор цели — всегда доступен (репорт тестера): цель
+                    // уведомлений — ещё и дефолт для виджетов («По умолчанию»
+                    // в их конфигураторах). Прятать её за включённый тумблер
+                    // значило «без уведомлений нельзя менять группу виджета».
+                    val notificationTarget = savedTargets.firstOrNull { it.id == notificationsTargetId }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { showNotificationsTargetDialog = true }
+                            .padding(vertical = 4.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -637,7 +637,6 @@ fun SettingsScreen(
                                 }
                             }
                         }
-                    }
                 }
             }
 
@@ -688,6 +687,127 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = { showWidgetPinFailedDialog = false }) {
                     GlitchText("Понятно")
+                }
+            }
+        )
+    }
+
+    if (showWidgetConfigDialog) {
+        // Внутренний конфигуратор виджета (решение владельца): лаунчеры
+        // не показывают системный конфигуратор при добавлении из
+        // приложения — выбираем параметры здесь, закрепление после
+        // подтверждения применит их к новому экземпляру молча
+        // (ScheduleWidgetApplyActivity из success-callback).
+        AlertDialog(
+            onDismissRequest = { showWidgetConfigDialog = false },
+            title = { GlitchText("Виджет расписания") },
+            text = {
+                if (savedTargets.isEmpty()) {
+                    GlitchText("Сначала добавьте хотя бы одно расписание.")
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        GlitchText(
+                            text = "Расписание",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        // «По умолчанию» — цель уведомлений, как в системном
+                        // конфигураторе: тот же фолбэк движка виджета.
+                        val configRows = savedTargets
+                        val effectiveId = widgetConfigTargetId
+                            ?: notificationsTargetId
+                            ?: configRows.firstOrNull()?.id
+                        configRows.forEach { target ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { widgetConfigTargetId = target.id }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    GlitchText(
+                                        text = target.fullTitle,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                RadioButton(
+                                    selected = target.id == effectiveId,
+                                    onClick = { widgetConfigTargetId = target.id }
+                                )
+                            }
+                        }
+                        GlitchText(
+                            text = "«По умолчанию» = расписание уведомлений. Виджеты без своего выбора берут его же.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { widgetConfigShortNames = !widgetConfigShortNames }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                GlitchText(
+                                    text = "Сокращать длинные названия",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                GlitchText(
+                                    text = "Инициалы слов: «Базы данных и управление ими» → «БДиУИ»",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Checkbox(
+                                checked = widgetConfigShortNames,
+                                onCheckedChange = { widgetConfigShortNames = it }
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showWidgetConfigDialog = false
+                        if (savedTargets.isEmpty()) return@TextButton
+                        // Конкретная цель либо «По умолчанию» (-1 = цель
+                        // уведомлений) — тот же контракт, что у системного
+                        // конфигуратора и ApplyActivity.
+                        val chosen = widgetConfigTargetId
+                            ?: notificationsTargetId
+                            ?: savedTargets.firstOrNull()?.id
+                        val targetId = chosen ?: DEFAULT_WIDGET_TARGET_ID
+                        WidgetPinFeedback.pendingConfig = Pair(targetId, widgetConfigShortNames)
+                        if (requestScheduleWidgetPin()) {
+                            // OEM-запрет может подавить диалог молча: ждём
+                            // метку «закрепление подтверждено» (её ставит
+                            // ScheduleWidgetApplyActivity), её нет —
+                            // предупреждение поверх экрана.
+                            WidgetPinFeedback.markPinRequested()
+                            val requestedAt = WidgetPinFeedback.lastPinRequestedAtMillis
+                            scope.launch {
+                                delay(WIDGET_PIN_DIALOG_TIMEOUT_MS)
+                                if (WidgetPinFeedback.lastConfigureOpenedAtMillis < requestedAt) {
+                                    showWidgetPinFailedDialog = true
+                                }
+                            }
+                        } else {
+                            showWidgetPinFailedDialog = true
+                        }
+                    }
+                ) {
+                    GlitchText("Добавить виджет")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showWidgetConfigDialog = false }) {
+                    GlitchText("Отмена")
                 }
             }
         )
