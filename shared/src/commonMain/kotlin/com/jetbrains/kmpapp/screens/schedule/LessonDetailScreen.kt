@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -78,7 +79,9 @@ fun LessonDetailScreen(
     val subjects by taskRepository.subjects.collectAsState()
     val isAlreadyAdded = subjects.any { it.name.trim().equals(lesson.subject.trim(), ignoreCase = true) }
 
-    // Персистентные заметки (R2): к паре и к предмету
+    // Персистентные заметки (R2): к паре и к предмету — единый шит
+    // добавления/редактирования (решение владельца: вместо двух полей —
+    // кнопка «Добавить заметку» / «Редактировать заметки»).
     val dateStr = lesson.date.toString()
     var lessonNoteText by remember(targetId, dateStr, lesson.bellNumber) {
         mutableStateOf(notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.text ?: "")
@@ -86,6 +89,7 @@ fun LessonDetailScreen(
     var subjectNoteText by remember(targetId, lesson.subject) {
         mutableStateOf(notesStorage.getSubjectNote(targetId, lesson.subject)?.text ?: "")
     }
+    var showNoteSheet by remember { mutableStateOf(false) }
 
     // rememberUpdatedState: onDispose видит актуальные тексты, а не из первого рендера
     val currentLessonNote by androidx.compose.runtime.rememberUpdatedState(lessonNoteText)
@@ -312,27 +316,38 @@ fun LessonDetailScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    // Заметка к этой паре
-                    NoteField(
-                        icon = Icons.Default.EditNote,
-                        title = "Заметка к этой паре",
-                        placeholder = "Например: принести отчёт, тетрадь…",
-                        value = lessonNoteText,
-                        onValueChange = { lessonNoteText = it }
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Заметка к предмету
-                    NoteField(
-                        icon = Icons.Default.MenuBook,
-                        title = "Заметка к предмету",
-                        placeholder = "Например: всегда брать тетрадь, учебник…",
-                        value = subjectNoteText,
-                        onValueChange = { subjectNoteText = it }
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
+                    // Заметка — единая кнопка (решение владельца): нет заметок
+                    // → «Добавить заметку», есть → «Редактировать заметки».
+                    // Выбор формата и текст — в выдвигающемся снизу шите.
+                    val hasNotes = lessonNoteText.isNotBlank() || subjectNoteText.isNotBlank()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { showNoteSheet = true }
+                            .background(
+                                if (hasNotes) MaterialTheme.colorScheme.secondaryContainer
+                                else MaterialTheme.colorScheme.primaryContainer
+                            )
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EditNote,
+                            contentDescription = null,
+                            tint = if (hasNotes) MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        GlitchText(
+                            text = if (hasNotes) "Редактировать заметки" else "Добавить заметку",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = if (hasNotes) MaterialTheme.colorScheme.onSecondaryContainer
+                            else MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
 
                     // Добавить предмет в задачи — одна строка: плюсик + текст
                     Row(
@@ -393,7 +408,105 @@ fun LessonDetailScreen(
                 }
             }
 
+            // Шит заметок: выбор формата + текст (как AddScheduleBottomSheet).
+            if (showNoteSheet) {
+                NoteEditorSheet(
+                    lessonNoteText = lessonNoteText,
+                    subjectNoteText = subjectNoteText,
+                    onLessonNoteChange = { lessonNoteText = it },
+                    onSubjectNoteChange = { subjectNoteText = it },
+                    onDismiss = { showNoteSheet = false }
+                )
+            }
+
             Spacer(modifier = Modifier.height(72.dp))
+        }
+    }
+}
+
+/**
+ * Выдвигающийся снизу шит заметок (стиль AddScheduleBottomSheet):
+ * выбор формата чипами («К этой паре» / «К предмету») и одно поле
+ * текста активного формата. Сохранение — при закрытии (onDismiss у
+ * родителя уже пишет через DisposableEffect).
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun NoteEditorSheet(
+    lessonNoteText: String,
+    subjectNoteText: String,
+    onLessonNoteChange: (String) -> Unit,
+    onSubjectNoteChange: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var format by remember { mutableStateOf(if (lessonNoteText.isNotBlank()) 0 else 1) }
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
+        skipPartiallyExpanded = true
+    )
+
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() },
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .imePadding()
+                .padding(bottom = 24.dp)
+        ) {
+            GlitchText(
+                text = "Заметка",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Формат: к паре или к предмету
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                androidx.compose.material3.FilterChip(
+                    selected = format == 0,
+                    onClick = { format = 0 },
+                    label = { GlitchText("К этой паре", fontSize = 13.sp) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                )
+                androidx.compose.material3.FilterChip(
+                    selected = format == 1,
+                    onClick = { format = 1 },
+                    label = { GlitchText("К предмету", fontSize = 13.sp) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = if (format == 0) lessonNoteText else subjectNoteText,
+                onValueChange = { if (format == 0) onLessonNoteChange(it) else onSubjectNoteChange(it) },
+                placeholder = {
+                    GlitchText(
+                        if (format == 0) "Например: принести отчёт…"
+                        else "Например: всегда брать тетрадь…"
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                singleLine = false,
+                maxLines = 5
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            GlitchText(
+                text = if (format == 0) "Показывается только у этой пары"
+                else "Показывается у всех пар предмета",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

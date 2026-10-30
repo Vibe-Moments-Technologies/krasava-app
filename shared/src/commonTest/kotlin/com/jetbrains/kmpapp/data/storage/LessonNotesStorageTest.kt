@@ -92,6 +92,61 @@ class LessonNotesStorageTest {
         assertEquals("Из файла", loaded.getLessonNote(1, "2026-10-28", 2)?.text)
     }
 
+    @Test
+    fun remapMovesNoteWhenLessonShifts() {
+        // Баг владельца: «обновил расписание — заметки стёрлись».
+        // Пару сдвинули (дата+звонок), заметка должна переехать за ней.
+        storage.saveLessonNote(1, "2026-10-28", 3, "Принести методичку")
+
+        val old = listOf(lesson(date = "2026-10-28", bell = 3, subject = "Базы данных"))
+        // Пара та же (предмет/тип), но 5-я пара на другой дате.
+        val new = listOf(lesson(date = "2026-11-04", bell = 5, subject = "Базы данных"))
+
+        storage.remapLessonNotes(1, old, new)
+        assertEquals("Принести методичку", storage.getLessonNote(1, "2026-11-04", 5)?.text)
+        assertNull(storage.getLessonNote(1, "2026-10-28", 3))
+    }
+
+    @Test
+    fun remapKeepsNoteWhenLessonStays() {
+        storage.saveLessonNote(1, "2026-10-28", 3, "Принести методичку")
+        val old = listOf(lesson(date = "2026-10-28", bell = 3, subject = "Базы данных"))
+        storage.remapLessonNotes(1, old, old)
+        assertEquals("Принести методичку", storage.getLessonNote(1, "2026-10-28", 3)?.text)
+    }
+
+    @Test
+    fun remapKeepsWeeklyLessonNoteOnItsDate() {
+        // Еженедельная пара живёт на нескольких датах: заметка к одной
+        // из них не должна «переезжать» на другую при обновлении.
+        storage.saveLessonNote(1, "2026-10-28", 3, "К этой среде")
+        val old = listOf(
+            lesson(date = "2026-10-21", bell = 3, subject = "Базы данных"),
+            lesson(date = "2026-10-28", bell = 3, subject = "Базы данных")
+        )
+        val new = listOf(
+            lesson(date = "2026-10-21", bell = 3, subject = "Базы данных"),
+            lesson(date = "2026-10-28", bell = 3, subject = "Базы данных"),
+            lesson(date = "2026-11-04", bell = 3, subject = "Базы данных")
+        )
+        storage.remapLessonNotes(1, old, new)
+        assertEquals("К этой среде", storage.getLessonNote(1, "2026-10-28", 3)?.text)
+    }
+
+    private fun lesson(date: String, bell: Int, subject: String) =
+        com.jetbrains.kmpapp.data.model.Lesson(
+            id = "x_${date}_$bell",
+            subject = subject,
+            lessonType = com.jetbrains.kmpapp.data.model.LessonType.PRACTICE,
+            teachers = emptyList(),
+            classrooms = emptyList(),
+            bellNumber = bell,
+            startTime = "12:00",
+            endTime = "13:30",
+            date = kotlinx.datetime.LocalDate.parse(date),
+            groups = listOf("БИСО-02-23")
+        )
+
     private class FakePlatformStorage : KeyValueStore {
         val saved = mutableMapOf<String, String>()
         override fun saveString(key: String, value: String) { saved[key] = value }

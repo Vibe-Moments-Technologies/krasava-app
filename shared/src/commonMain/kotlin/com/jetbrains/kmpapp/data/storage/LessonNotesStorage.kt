@@ -1,5 +1,6 @@
 package com.jetbrains.kmpapp.data.storage
 
+import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonNote
 import com.jetbrains.kmpapp.data.model.NoteScope
 import kotlinx.coroutines.CoroutineScope
@@ -159,6 +160,81 @@ class LessonNotesStorage(
      */
     fun removeNotesForTarget(targetId: Int) {
         _notes.update { list -> list.filter { it.targetId != targetId } }
+        persist()
+    }
+
+    /**
+     * Перепривязка LESSON-заметок после обновления расписания: ключ
+     * заметки — targetId_дата_звонок, и при сдвиге пары (дату/звонок
+     * поменяли) заметка «отклеивалась»: не удалялась, но больше не
+     * показывалась — выглядело как «обновил расписание — заметки
+     * стёрлись» (репорт владельца).
+     *
+     * Сопоставление пар: (предмет, тип, звонок) — три стабильных
+     * признака. Заметка пары, ушедшей со своей даты, переезжает
+     * на новую дату той же пары; однозначность гарантируется
+     * уникальностью предмета+типа в списке.
+     */
+    fun remapLessonNotes(
+        targetId: Int,
+        oldLessons: List<Lesson>,
+        newLessons: List<Lesson>
+    ) {
+        if (oldLessons.isEmpty() || newLessons.isEmpty()) return
+
+        data class PairId(val subject: String, val type: String, val bell: Int)
+
+        fun Lesson.pairId() = PairId(
+            subject.trim().lowercase(),
+            lessonType.name,
+            bellNumber
+        )
+
+        // Старый ключ даты+звонка → признаки пары (для заметок).
+        // Один и тот же (subject, type, bell) на нескольких датах —
+        // обычное дело (еженедельная пара): заметка остаётся на месте,
+        // если её дата+звонок живы в новом расписании.
+        val oldByDateBell: Map<Pair<String, Int>, List<PairId>> =
+            oldLessons.groupBy({ it.date.toString() to it.bellNumber }, { it.pairId() })
+        val newByDateBell: Map<Pair<String, Int>, List<PairId>> =
+            newLessons.groupBy({ it.date.toString() to it.bellNumber }, { it.pairId() })
+
+        _notes.update { list ->
+            val updated = mutableListOf<LessonNote>()
+            for (note in list) {
+                if (note.targetId != targetId || note.scope != NoteScope.LESSON) {
+                    updated.add(note); continue
+                }
+                val parts = note.noteKey.split("_")
+                if (parts.size != 3) { updated.add(note); continue }
+                val noteDate = parts[1]
+                val noteBell = parts[2].toIntOrNull() ?: run { updated.add(note); continue }
+                val dateBell = noteDate to noteBell
+
+                // Пара на прежнем месте жива? Заметка на месте.
+                val oldPairIds = oldByDateBell[dateBell]
+                val newPairIds = newByDateBell[dateBell]
+                if (newPairIds != null && oldPairIds != null && oldPairIds == newPairIds) {
+                    updated.add(note); continue
+                }
+
+                // Пара ушла с даты: ищем её новое место по признакам.
+                val moved = oldPairIds
+                    ?.singleOrNull()
+                    ?.let { pairId ->
+                        newLessons.firstOrNull { it.pairId() == pairId }
+                            ?.takeIf { it.date.toString() != noteDate || it.bellNumber != noteBell }
+                            ?.let { relocated ->
+                                note.copy(
+                                    noteKey = lessonKey(targetId, relocated.date.toString(), relocated.bellNumber),
+                                    updatedAt = Clock.System.now().toEpochMilliseconds()
+                                )
+                            }
+                    }
+                updated.add(moved ?: note)
+            }
+            updated
+        }
         persist()
     }
 

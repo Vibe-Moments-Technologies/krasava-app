@@ -389,6 +389,12 @@ class ScheduleRepository(
             val oldLessons = storage.getLessons(target.id)
             storage.saveLessons(target.id, parsedLessons)
             storage.saveWeekMarkers(target.id, MireaICalParser.parseWeekMarkers(ical))
+            // Заметки к парам переживают обновление: при сдвиге пары
+            // (дата/звонок изменились) заметка переезжает за ней
+            // (remapLessonNotes), а не «отклеивается» навсегда.
+            if (oldLessons != null && oldLessons.isNotEmpty()) {
+                lessonNotesStorage.remapLessonNotes(target.id, oldLessons, parsedLessons)
+            }
             val now = Clock.System.now().toEpochMilliseconds()
             storage.setLastSyncTime(target.id, now)
             _errorMessage.value = null

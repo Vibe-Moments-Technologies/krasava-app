@@ -13,11 +13,20 @@ import platform.posix.memcpy
 
 @OptIn(ExperimentalForeignApi::class)
 actual open class NotesFileStorage {
+    /**
+     * Documents/Krasava — именованная папка приложения (решение
+     * владельца): видна пользователю в «Файлах», но явно
+     * принадлежит приложению; попадает в iCloud-бэкап.
+     */
     private fun filePath(): String? {
         val docs = NSSearchPathForDirectoriesInDomains(
             NSDocumentDirectory, NSUserDomainMask, true
         ).firstOrNull() as? String ?: return null
-        return "$docs/$FILE_NAME"
+        val dir = "$docs/Krasava"
+        NSFileManager.defaultManager.createDirectoryAtPath(
+            dir, withIntermediateDirectories = true, attributes = null, error = null
+        )
+        return "$dir/$FILE_NAME"
     }
 
     @OptIn(ExperimentalForeignApi::class)
