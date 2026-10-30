@@ -170,10 +170,12 @@ class LessonNotesStorage(
      * показывалась — выглядело как «обновил расписание — заметки
      * стёрлись» (репорт владельца).
      *
-     * Сопоставление пар: (предмет, тип, звонок) — три стабильных
-     * признака. Заметка пары, ушедшей со своей даты, переезжает
-     * на новую дату той же пары; однозначность гарантируется
-     * уникальностью предмета+типа в списке.
+     * Сопоставление пар: (предмет, тип) — пара та же, когда совпадают
+     * они; звонок и дата у «той же» пары вуз может поменять. Заметка
+     * пары, ушедшей со своей даты, переезжает на её новое место.
+     * Спорные случаи (несколько одноимённых пар, пара на нескольких
+     * датах) — заметка остаётся на месте: перестраховка против ложных
+     * переносов.
      */
     fun remapLessonNotes(
         targetId: Int,
@@ -182,22 +184,21 @@ class LessonNotesStorage(
     ) {
         if (oldLessons.isEmpty() || newLessons.isEmpty()) return
 
-        data class PairId(val subject: String, val type: String, val bell: Int)
+        // (дата, звонок) жив в новом расписании — заметки этого слота
+        // не трогаем вовсе (еженедельные пары в т.ч.).
+        val newSlots: Set<Pair<String, Int>> =
+            newLessons.map { it.date.toString() to it.bellNumber }.toSet()
 
-        fun Lesson.pairId() = PairId(
-            subject.trim().lowercase(),
-            lessonType.name,
-            bellNumber
-        )
+        // Признак пары без даты/звонка.
+        data class PairId(val subject: String, val type: String)
+        fun Lesson.pairId() = PairId(subject.trim().lowercase(), lessonType.name)
 
-        // Старый ключ даты+звонка → признаки пары (для заметок).
-        // Один и тот же (subject, type, bell) на нескольких датах —
-        // обычное дело (еженедельная пара): заметка остаётся на месте,
-        // если её дата+звонок живы в новом расписании.
-        val oldByDateBell: Map<Pair<String, Int>, List<PairId>> =
+        // Однозначность обязательна: (subject, type) один раз в старом и
+        // один раз в новом. Дубликаты (та же пара на нескольких датах) —
+        // идентичны по pairId и потому «один признак, много пар» —
+        // переносим только если старый слот умер и новый ровно один.
+        val oldBySlot: Map<Pair<String, Int>, List<PairId>> =
             oldLessons.groupBy({ it.date.toString() to it.bellNumber }, { it.pairId() })
-        val newByDateBell: Map<Pair<String, Int>, List<PairId>> =
-            newLessons.groupBy({ it.date.toString() to it.bellNumber }, { it.pairId() })
 
         _notes.update { list ->
             val updated = mutableListOf<LessonNote>()
@@ -209,29 +210,39 @@ class LessonNotesStorage(
                 if (parts.size != 3) { updated.add(note); continue }
                 val noteDate = parts[1]
                 val noteBell = parts[2].toIntOrNull() ?: run { updated.add(note); continue }
-                val dateBell = noteDate to noteBell
+                val slot = noteDate to noteBell
 
-                // Пара на прежнем месте жива? Заметка на месте.
-                val oldPairIds = oldByDateBell[dateBell]
-                val newPairIds = newByDateBell[dateBell]
-                if (newPairIds != null && oldPairIds != null && oldPairIds == newPairIds) {
-                    updated.add(note); continue
-                }
+                // Слот жив в новом расписании — заметка на месте.
+                if (slot in newSlots) { updated.add(note); continue }
 
-                // Пара ушла с даты: ищем её новое место по признакам.
-                val moved = oldPairIds
-                    ?.singleOrNull()
-                    ?.let { pairId ->
-                        newLessons.firstOrNull { it.pairId() == pairId }
-                            ?.takeIf { it.date.toString() != noteDate || it.bellNumber != noteBell }
-                            ?.let { relocated ->
-                                note.copy(
-                                    noteKey = lessonKey(targetId, relocated.date.toString(), relocated.bellNumber),
-                                    updatedAt = Clock.System.now().toEpochMilliseconds()
-                                )
-                            }
+                // Слот умер: какая пара на нём была? (однозначность)
+                val pairIds = oldBySlot[slot] ?: listOf()
+                if (pairIds.size != 1) { updated.add(note); continue }
+                val pairId = pairIds.first()
+
+                // Новое место той же пары; переносим, если оно одно и
+                // не занято другой заметкой.
+                val relocated = newLessons.filter { it.pairId() == pairId }
+                if (relocated.size != 1) { updated.add(note); continue }
+                val newSlot = relocated.first().date.toString() to relocated.first().bellNumber
+                if (newSlot in newSlots && newSlot != slot) {
+                    // Здесь заметка переехавшей пары: переносим, если на
+                    // новом слоте ещё нет другой заметки.
+                    val occupied = list.any {
+                        it.scope == NoteScope.LESSON && it.targetId == targetId &&
+                            it.noteKey == lessonKey(targetId, newSlot.first, newSlot.second)
                     }
-                updated.add(moved ?: note)
+                    if (!occupied) {
+                        updated.add(
+                            note.copy(
+                                noteKey = lessonKey(targetId, newSlot.first, newSlot.second),
+                                updatedAt = Clock.System.now().toEpochMilliseconds()
+                            )
+                        )
+                        continue
+                    }
+                }
+                updated.add(note)
             }
             updated
         }
