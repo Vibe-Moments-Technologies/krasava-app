@@ -40,12 +40,14 @@ class LessonNotesStorageTest {
     fun savesAndReadsBack() {
         storage.saveLessonNote(1, "2026-10-28", 3, "Принести методичку")
         assertEquals("Принести методичку", storage.getLessonNote(1, "2026-10-28", 3)?.text)
+        storage.persistNow()
         assertTrue(file.content.orEmpty().contains("Принести методичку"))
     }
 
     @Test
     fun survivesPlatformClearAll() {
         storage.saveSubjectNote(1, "Базы данных", "Конспект в ноутбуке")
+        storage.persistNow()
         platform.clearAll()
         // Новый экземпляр читает файл — заметка на месте.
         val reloaded = LessonNotesStorage(platform, FakeFileStorage(file.content))

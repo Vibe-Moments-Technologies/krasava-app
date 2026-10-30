@@ -74,6 +74,18 @@ class LessonNotesStorage(
         }
     }
 
+    /**
+     * Синхронная запись файла — только для тестов: persist() асинхронный,
+     * а тесту нужен файл сразу после save-вызова.
+     */
+    internal fun persistNow() {
+        try {
+            fileStorage.write(json.encodeToString(_notes.value))
+        } catch (e: Exception) {
+            println("LessonNotesStorage: failed to persist: ${e.message}")
+        }
+    }
+
     // ── Ключи ─────────────────────────────────────────────────
 
     fun lessonKey(targetId: Int, date: String, bellNumber: Int): String =
