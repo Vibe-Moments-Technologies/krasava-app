@@ -783,7 +783,7 @@ fun SettingsScreen(
                             ?: notificationsTargetId
                             ?: savedTargets.firstOrNull()?.id
                         val targetId = chosen ?: DEFAULT_WIDGET_TARGET_ID
-                        WidgetPinFeedback.pendingConfig = Pair(targetId, widgetConfigShortNames)
+                        WidgetPinFeedback.setPendingConfig(targetId, widgetConfigShortNames)
                         if (requestScheduleWidgetPin()) {
                             // OEM-запрет может подавить диалог молча: ждём
                             // метку «закрепление подтверждено» (её ставит

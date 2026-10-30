@@ -18,6 +18,7 @@ import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.appwidget.state.getAppWidgetState
+import androidx.glance.appwidget.state.updateAppWidgetState
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
@@ -42,10 +43,12 @@ import com.jetbrains.kmpapp.data.widget.WidgetLabels
 import com.jetbrains.kmpapp.data.widget.WidgetLesson
 import com.jetbrains.kmpapp.data.widget.WidgetPayload
 import com.jetbrains.kmpapp.data.widget.WidgetPayloadCodec
+import com.jetbrains.kmpapp.data.widget.WidgetPinFeedback
 import com.jetbrains.kmpapp.data.widget.WidgetSelectionEngine
 import com.jetbrains.kmpapp.data.widget.WidgetState
 import com.jetbrains.kmpapp.data.widget.WidgetThemeCodec
 import com.jetbrains.kmpapp.data.widget.WidgetTypeColor
+import com.jetbrains.kmpapp.data.widget.consumePendingWidgetConfig
 
 /**
  * Android-виджет расписания на Glance. Повторяет структуру и правила
@@ -62,10 +65,39 @@ class ScheduleWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val raw = ScheduleWidgetStore.read(context)
         val payload: WidgetPayload? = WidgetPayloadCodec.decode(raw)
-        val storedConfig = runCatching {
+        // Null-ключ = экземпляр ещё не настроен (важно: Pair(null, false)
+        // от getAppWidgetState — валидный объект, «нет конфига» — это
+        // именно null-ключ, а не null пары; из-за путаницы с этим
+        // внутренний конфигуратор не применялся вовсе — все виджеты
+        // жили на дефолте, и нельзя было сделать виджеты двух групп).
+        var storedConfig = runCatching {
             val prefs = getAppWidgetState(context, PreferencesGlanceStateDefinition, id)
             Pair(prefs[WidgetTargetIdKey], prefs[WidgetShortNamesKey] ?: false)
         }.getOrNull()
+
+        // Внутренний конфигуратор (добавление из приложения): незакрытый
+        // экземпляр (null-ключ) + персистентный pendingConfig = только
+        // что закреплённый. Лаунчер может забиндить виджет ДО или ВМЕСТО
+        // success-callback-активности (на некоторых OEM она вовсе не
+        // стартует), поэтому применение дублируется здесь — на первом
+        // же рендере виджета. Prefs переживают смерть процесса.
+        // Одноразовые: следующий виджет из системного флоу не должен
+        // получить чужой конфиг.
+        if (storedConfig?.first == null) {
+            consumePendingWidgetConfig(context)?.let { pending ->
+                runCatching {
+                    updateAppWidgetState(context, id) { prefs ->
+                        prefs[WidgetTargetIdKey] = pending.first
+                        prefs[WidgetShortNamesKey] = pending.second
+                    }
+                }
+                storedConfig = pending
+                // Для экрана настроек: применение считаем подтверждением —
+                // диалог закрепления не был подавлен.
+                WidgetPinFeedback.lastConfigureOpenedAtMillis =
+                    System.currentTimeMillis()
+            }
+        }
         // id -1 — опция «По умолчанию» из конфигуратора: движку отдаем null,
         // он сам возьмёт расписание уведомлений (тот же фолбэк, что у iOS).
         val storedTargetId = storedConfig?.first?.takeIf { it != DEFAULT_TARGET_ID }

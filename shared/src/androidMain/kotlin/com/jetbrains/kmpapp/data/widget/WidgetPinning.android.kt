@@ -30,6 +30,17 @@ actual fun requestScheduleWidgetPin(): Boolean {
         val manager = AppWidgetManager.getInstance(context)
         if (!manager.isRequestPinAppWidgetSupported) return false
         val provider = ComponentName(context.packageName, WIDGET_RECEIVER_CLASS)
+        // Выбор из внутреннего конфигуратора — персистим сразу (переживает
+        // смерть процесса): лаунчер может забиндить виджет раньше или без
+        // success-callback-активности, виджет применит параметры сам на
+        // первом рендере.
+        WidgetPinFeedback.pendingConfig?.let { (targetId, shortNames) ->
+            context.getSharedPreferences(WIDGET_PREFS, android.content.Context.MODE_PRIVATE)
+                .edit()
+                .putInt(KEY_PENDING_TARGET, targetId)
+                .putBoolean(KEY_PENDING_SHORT, shortNames)
+                .commit()
+        }
         // Success-callback: срабатывает после подтверждения пользователем.
         // Из приложения параметры выбираются ЗАРАНЕЕ — внутренний
         // конфигуратор (решение владельца: лаунчеры системный
@@ -50,5 +61,26 @@ actual fun requestScheduleWidgetPin(): Boolean {
         )
         manager.requestPinAppWidget(provider, null, configPendingIntent)
     }.getOrDefault(false)
+}
+
+/** Тот же файл prefs, что у ScheduleWidgetStore (общий контейнер). */
+internal const val WIDGET_PREFS = "krasava_widget"
+internal const val KEY_PENDING_TARGET = "pending_widget_target"
+internal const val KEY_PENDING_SHORT = "pending_widget_short_names"
+
+/**
+ * Прочитать и снять персистентные параметры внутреннего конфигуратора
+ * (вызов из androidApp — виджетом на первом рендере или ApplyActivity).
+ * null — их нет (виджет добавлен через системный флоу).
+ */
+fun consumePendingWidgetConfig(context: android.content.Context): Pair<Int, Boolean>? {
+    val prefs = context.getSharedPreferences(WIDGET_PREFS, android.content.Context.MODE_PRIVATE)
+    if (!prefs.contains(KEY_PENDING_TARGET)) return null
+    val config = Pair(
+        prefs.getInt(KEY_PENDING_TARGET, -1),
+        prefs.getBoolean(KEY_PENDING_SHORT, false)
+    )
+    prefs.edit().remove(KEY_PENDING_TARGET).remove(KEY_PENDING_SHORT).commit()
+    return config
 }
 
