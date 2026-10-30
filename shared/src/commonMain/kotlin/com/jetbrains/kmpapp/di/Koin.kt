@@ -6,6 +6,7 @@ import com.jetbrains.kmpapp.data.api.MireaScheduleApi
 import com.jetbrains.kmpapp.data.config.RemoteConfigLoader
 import com.jetbrains.kmpapp.data.storage.GamesStorage
 import com.jetbrains.kmpapp.data.storage.LessonNotesStorage
+import com.jetbrains.kmpapp.data.storage.NotesFileStorage
 import com.jetbrains.kmpapp.data.storage.PlatformStorage
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
 import com.jetbrains.kmpapp.data.update.AppUpdateChecker
@@ -54,11 +55,23 @@ val dataModule = module {
 
     singleOf(::PlatformPowerManager)
     singleOf(::PlatformStorage)
+    // Заметки: PlatformStorage как legacy-источник (миграция старого
+    // ключа) + файловый бэкенд как основное хранилище.
+    single<com.jetbrains.kmpapp.data.storage.KeyValueStore> {
+        val ps = get<PlatformStorage>()
+        object : com.jetbrains.kmpapp.data.storage.KeyValueStore {
+            override fun saveString(key: String, value: String) = ps.saveString(key, value)
+            override fun getString(key: String): String? = ps.getString(key)
+            override fun remove(key: String) = ps.remove(key)
+            override fun clearAll() = ps.clearAll()
+        }
+    }
+    single { com.jetbrains.kmpapp.data.storage.NotesFileStorage() }
+    singleOf(::LessonNotesStorage)
     singleOf(::UnifiedSyncManager)
     singleOf(::MireaScheduleApi)
     singleOf(::VkAvatarLoader)
     singleOf(::ScheduleStorage)
-    singleOf(::LessonNotesStorage)
     singleOf(::GamesStorage)
     singleOf(::ScheduleRepository)
     singleOf(::AppUpdateChecker)

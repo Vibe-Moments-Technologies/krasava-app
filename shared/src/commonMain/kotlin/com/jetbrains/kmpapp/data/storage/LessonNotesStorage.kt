@@ -21,10 +21,17 @@ import kotlin.time.Clock
  *  - LESSON:  "{targetId}_{date}_{bellNumber}" — заметка к конкретной паре
  *  - SUBJECT: "{targetId}_{subject.lowercase()}" — заметка к предмету
  *
- * Персистентность: JSON в PlatformStorage под ключом KEY_LESSON_NOTES.
+ * Персистентность: файл lesson_notes.json в documents/files-папке
+ * ([NotesFileStorage]) — заметки это пользовательский контент, не кеш:
+ * они переживают «очистить кеш», «сбросить данные» и пересоздание
+ * расписания. Раньше жили в PlatformStorage и терялись при clearAll().
+ *
+ * Миграция: при первом чтении заметки из старого ключа prefs
+ * (krasava_lesson_notes) переезжают в файл, ключ снимается.
  */
 class LessonNotesStorage(
-    private val platformStorage: PlatformStorage
+    private val legacyStore: KeyValueStore,
+    private val fileStorage: NotesFileStorage
 ) {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
@@ -38,9 +45,19 @@ class LessonNotesStorage(
 
     private fun load() {
         try {
-            val raw = platformStorage.getString(KEY_LESSON_NOTES)
-            if (!raw.isNullOrBlank()) {
-                _notes.value = json.decodeFromString(raw)
+            val fromFile = fileStorage.read()
+            if (!fromFile.isNullOrBlank()) {
+                _notes.value = json.decodeFromString(fromFile)
+                return
+            }
+            // Миграция со старого ключа prefs: заметки, записанные до
+            // перевода на файл, не должны потеряться.
+            val legacy = legacyStore.getString(KEY_LEGACY)
+            if (!legacy.isNullOrBlank()) {
+                val parsed = json.decodeFromString<List<LessonNote>>(legacy)
+                _notes.value = parsed
+                fileStorage.write(json.encodeToString(parsed))
+                legacyStore.remove(KEY_LEGACY)
             }
         } catch (t: Throwable) {
             println("LessonNotesStorage: failed to load: ${t.message}")
@@ -50,7 +67,7 @@ class LessonNotesStorage(
     private fun persist() {
         scope.launch {
             try {
-                platformStorage.saveString(KEY_LESSON_NOTES, json.encodeToString(_notes.value))
+                fileStorage.write(json.encodeToString(_notes.value))
             } catch (e: Exception) {
                 println("LessonNotesStorage: failed to persist: ${e.message}")
             }
@@ -95,8 +112,6 @@ class LessonNotesStorage(
             list.filter { it.noteKey != key } + note
         }
         persist()
-        if (text.isNotBlank()) {
-        }
     }
 
     fun saveSubjectNote(targetId: Int, subject: String, text: String) {
@@ -116,8 +131,6 @@ class LessonNotesStorage(
             list.filter { it.noteKey != key } + note
         }
         persist()
-        if (text.isNotBlank()) {
-        }
     }
 
     fun deleteNote(noteId: String) {
@@ -127,7 +140,11 @@ class LessonNotesStorage(
 
     // ── Каскадное удаление ────────────────────────────────────
 
-    /** Удаляет все заметки расписания (вызывается при removeTarget). */
+    /**
+     * Удаляет все заметки расписания — только явное удаление расписания
+     * пользователем (removeTarget): заметки переживают обновления,
+     * сброс данных и очистку кеша.
+     */
     fun removeNotesForTarget(targetId: Int) {
         _notes.update { list -> list.filter { it.targetId != targetId } }
         persist()
@@ -147,7 +164,7 @@ class LessonNotesStorage(
 
     /** Размер данных в байтах (для DataAndCacheScreen). */
     fun getStorageSizeBytes(): Long =
-        platformStorage.getString(KEY_LESSON_NOTES)?.encodeToByteArray()?.size?.toLong() ?: 0L
+        fileStorage.read()?.encodeToByteArray()?.size?.toLong() ?: 0L
 
     fun formatBytes(bytes: Long): String = when {
         bytes < 1024 -> "$bytes Б"
@@ -156,6 +173,7 @@ class LessonNotesStorage(
     }
 
     companion object {
-        private const val KEY_LESSON_NOTES = "krasava_lesson_notes"
+        /** Старый ключ PlatformStorage — для одноразовой миграции в файл. */
+        internal const val KEY_LEGACY = "krasava_lesson_notes"
     }
 }
