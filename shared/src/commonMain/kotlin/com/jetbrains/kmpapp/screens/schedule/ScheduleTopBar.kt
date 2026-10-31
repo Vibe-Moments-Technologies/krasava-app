@@ -8,6 +8,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -112,7 +114,20 @@ fun ScheduleTopBar(
                 DropdownMenu(
                     expanded = dropdownExpanded,
                     onDismissRequest = { dropdownExpanded = false },
-                    modifier = Modifier.clip(RoundedCornerShape(16.dp))
+                    // Репорт владельца: меню меньше капсулы группы, с углами
+                    // «как приклеили рядышком». Ширина — не меньше капсулы,
+                    // форма/фон — в стиле капсулы (surfaceContainerHigh,
+                    // 16dp, тонкая рамка outline-variant). Меню открывается
+                    // от Box-якоря капсулы (позиция по левому краю).
+                    modifier = Modifier
+                        .widthIn(min = 240.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                            shape = RoundedCornerShape(16.dp)
+                        )
                 ) {
                     if (savedTargets.isEmpty()) {
                         DropdownMenuItem(

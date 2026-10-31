@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.screens.schedule
 import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -605,21 +607,29 @@ private fun NoteEditorSheet(
                     )
                 )
             } else {
-                // Поле вне композиции → клавиатура закрыта. Тап по карточке
-                // возвращает поле (и по тапу в поле — фокус/клавиатура).
+                // Поле вне композиции → клавиатура закрыта. Карточка —
+                // точная копия вида OutlinedTextField (рамка 1dp, та же
+                // форма/высота), иначе после Done текст «терял оконтовку и
+                // висел в пустоте», а высота прыгала (репорт владельца).
+                // Тап возвращает поле редактирования.
+                val text = if (format == 0) lessonNoteValue.text else subjectNoteValue.text
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
+                        .heightIn(min = 56.dp)
                         .clip(RoundedCornerShape(12.dp))
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                            shape = RoundedCornerShape(12.dp)
+                        )
                         .clickable { fieldVisible = true }
-                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    val text = if (format == 0) lessonNoteValue.text else subjectNoteValue.text
                     GlitchText(
                         text = if (text.isBlank()) "Нажмите, чтобы редактировать…" else text,
-                        fontSize = 14.sp,
+                        fontSize = 16.sp,
                         color = if (text.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
                         else MaterialTheme.colorScheme.onSurface
                     )
