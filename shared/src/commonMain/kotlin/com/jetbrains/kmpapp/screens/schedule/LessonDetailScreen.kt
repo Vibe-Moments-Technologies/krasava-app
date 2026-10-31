@@ -502,11 +502,24 @@ private fun NoteEditorSheet(
                 .imePadding()
                 .padding(bottom = 24.dp)
         ) {
-            GlitchText(
-                text = "Заметка",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GlitchText(
+                    text = "Заметка",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                // Явная кнопка «Готово»: сворачивает клавиатуру, не закрывая
+                // шит — системные способы (Done на многострочном поле iOS
+                // не приходит, свайп клавиатуры вниз перехватывается шитом)
+                // не работали (репорт владельца).
+                androidx.compose.material3.TextButton(onClick = { hideKeyboard() }) {
+                    GlitchText("Готово", color = MaterialTheme.colorScheme.primary)
+                }
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
             // Формат: к паре или к предмету

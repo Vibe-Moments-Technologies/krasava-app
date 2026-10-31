@@ -3,14 +3,10 @@ package com.jetbrains.kmpapp.data.storage
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonNote
 import com.jetbrains.kmpapp.data.model.NoteScope
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
@@ -34,7 +30,6 @@ class LessonNotesStorage(
     private val legacyStore: KeyValueStore,
     private val fileStorage: NotesFileStorage
 ) {
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     private val _notes = MutableStateFlow<List<LessonNote>>(emptyList())
@@ -65,26 +60,25 @@ class LessonNotesStorage(
         }
     }
 
-    private fun persist() {
-        scope.launch {
-            try {
-                fileStorage.write(json.encodeToString(_notes.value))
-            } catch (e: Exception) {
-                println("LessonNotesStorage: failed to persist: ${e.message}")
-            }
-        }
-    }
-
     /**
-     * Синхронная запись файла — только для тестов: persist() асинхронный,
-     * а тесту нужен файл сразу после save-вызова.
+     * Запись файла — синхронная. Асинхронной она была зря: JSON заметок —
+     * килобайты, запись мгновенная, а «смахнутое сразу после шита»
+     * приложение убивало корутину до записи — заметки терялись при
+     * перезапуске (репорт владельца: «в приложении есть, после
+     * перезапуска — нет»). Гарантия «закрыл шит = записано» важнее
+     * экономии миллисекунды.
      */
-    internal fun persistNow() {
+    private fun persist() {
         try {
             fileStorage.write(json.encodeToString(_notes.value))
         } catch (e: Exception) {
             println("LessonNotesStorage: failed to persist: ${e.message}")
         }
+    }
+
+    /** Синхронная запись — см. persist(): он теперь тоже синхронный. */
+    internal fun persistNow() {
+        persist()
     }
 
     // ── Ключи ─────────────────────────────────────────────────
