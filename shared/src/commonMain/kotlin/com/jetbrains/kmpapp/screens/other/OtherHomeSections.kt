@@ -110,7 +110,11 @@ internal fun UpdateMiniBadge(
         UpdateUrgency.CRITICAL -> Color(0xFF581C87).copy(alpha = 0.40f)
         UpdateUrgency.NEW_VERSION -> Color(0xFFDC2626).copy(alpha = 0.30f)
         UpdateUrgency.MINOR_BUILD -> Color(0xFFD97706).copy(alpha = 0.30f)
-        UpdateUrgency.UP_TO_DATE -> MaterialTheme.colorScheme.surfaceContainerHigh
+        // Заливка всегда видима (репорт владельца: «нет заливки»):
+        // surfaceContainerHigh сливался с фоном шапки — капсула выглядела
+        // прозрачной. Нейтральное состояние — primaryContainer с прозрачностью
+        // (паттерн воскресного баннера).
+        UpdateUrgency.UP_TO_DATE -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
     }
 
     val accentTint = when (urgency) {
@@ -120,10 +124,13 @@ internal fun UpdateMiniBadge(
         UpdateUrgency.UP_TO_DATE -> if (isCheckingUpdate) MaterialTheme.colorScheme.primary else Color(0xFF22C55E)
     }
 
+    // Только сам номер версии, без сборки и префиксов (репорт владельца:
+    // «номер сборки занимает весь верх»). dev/beta-суффиксы отрезаем —
+    // в капсуле место только для X.Y.Z.
     val versionText = when {
         isCheckingUpdate -> "…"
-        hasUpdate -> updateResult?.latestVersion ?: AppVersion.DISPLAY_VERSION
-        else -> AppVersion.DISPLAY_VERSION
+        hasUpdate -> shortVersion(updateResult?.latestVersion) ?: AppVersion.VERSION_NAME
+        else -> AppVersion.VERSION_NAME
     }
 
     val statusIcon = when {
@@ -276,6 +283,13 @@ internal fun UpdateStatusCard(
             }
         }
     }
+}
+
+/** «26.4.0-dev.105» → «26.4.0»: в мини-виджете версии место только для X.Y.Z. */
+internal fun shortVersion(raw: String?): String? {
+    if (raw.isNullOrBlank()) return null
+    val dash = raw.indexOf('-')
+    return if (dash > 0) raw.substring(0, dash) else raw
 }
 
 

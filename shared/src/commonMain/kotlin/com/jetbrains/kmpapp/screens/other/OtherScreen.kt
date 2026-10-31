@@ -1,6 +1,5 @@
 package com.jetbrains.kmpapp.screens.other
 import com.jetbrains.kmpapp.theme.GlitchText
-import com.jetbrains.kmpapp.data.model.AppVersion
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -350,11 +349,11 @@ private fun OtherMainContent(
             )
 
             // 4. О программе — кнопкой в ленте (репорт владельца: раньше
-            // иконка-Info в шапке). Про версию и обновления теперь мини-
-            // виджет в шапке; «О программе» показывает ссылки и команду.
+            // иконка-Info в шапке). Версия — в мини-виджете шапки; тут —
+            // короткое описание, как у соседних карточек.
             OtherNavCard(
                 title = "О программе",
-                subtitle = "Версия ${AppVersion.DISPLAY_VERSION}, команда и ссылки",
+                subtitle = "Команда, ссылки и контакты",
                 icon = Icons.Outlined.Info,
                 onClick = { onNavigate(OtherSubScreen.ABOUT) }
             )
