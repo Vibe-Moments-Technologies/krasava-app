@@ -127,14 +127,14 @@ fun ScheduleTopBar(
                     // Surface меню: её квадратные углы торчали из-под
                     // скруглённой подложки. Скругляем сам попап — параметры
                     // shape/containerColor достаются внутренней Surface.
-                    // Ширина — ровно ширина капсулы (меряется живьём);
-                    // компенсация отступов меню не понадобилась: попап
-                    // позиционируется от якоря, а width задаёт его целиком.
+                    // Ширина — ровно ширина капсулы (меряется живьём).
+                    // Страховочный widthIn(200dp) убран: он ПОБЕЖДАЛ width
+                    // при коротком названии и раздувал список шире блока —
+                    // «большой пробел между группой и галочкой».
                     shape = RoundedCornerShape(16.dp),
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 0.dp,
                     modifier = Modifier
-                        .widthIn(min = 200.dp)
                         .then(
                             if (capsuleWidth.width > 0) {
                                 Modifier.width(with(LocalDensity.current) { capsuleWidth.width.toDp() })
