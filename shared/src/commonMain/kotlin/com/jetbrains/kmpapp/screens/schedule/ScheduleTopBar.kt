@@ -122,25 +122,26 @@ fun ScheduleTopBar(
                 DropdownMenu(
                     expanded = dropdownExpanded,
                     onDismissRequest = { dropdownExpanded = false },
-                    // Репорт владельца: меню меньше капсулы группы, с углами
-                    // «как приклеили рядышком». Ширина — ровно ширина капсулы
-                    // (не меньше min 200dp для коротких названий), форма/фон —
-                    // в стиле капсулы (surfaceContainerHigh, 16dp, тонкая
-                    // рамка outline-variant). Меню открывается от Box-якоря
-                    // капсулы (позиция по левому краю).
+                    // Репорт владельца: «уголочки вылезающие от квадрата» —
+                    // modifier-clip/background рисуются ПОВЕРХ внутренней
+                    // Surface меню: её квадратные углы торчали из-под
+                    // скруглённой подложки. Скругляем сам попап — параметры
+                    // shape/containerColor достаются внутренней Surface.
+                    // Ширина — ширина капсулы (меряется живьём) минус
+                    // внутренние горизонтальные отступы меню, чтобы пункт
+                    // попадал ровно под капсулу (min 200dp).
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    tonalElevation = 0.dp,
                     modifier = Modifier
                         .widthIn(min = 200.dp)
                         .then(
                             if (capsuleWidth.width > 0) {
-                                Modifier.width(with(LocalDensity.current) { capsuleWidth.width.toDp() })
+                                val menuHorizontalInsets = 16.dp
+                                Modifier.width(
+                                    with(LocalDensity.current) { capsuleWidth.width.toDp() } - menuHorizontalInsets
+                                )
                             } else Modifier
-                        )
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-                        .border(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant,
-                            shape = RoundedCornerShape(16.dp)
                         )
                 ) {
                     if (savedTargets.isEmpty()) {
