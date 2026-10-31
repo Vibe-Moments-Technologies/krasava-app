@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.model.AppVersion
 import com.jetbrains.kmpapp.data.update.UpdateCheckResult
 import com.jetbrains.kmpapp.data.update.UpdateUrgency
@@ -90,9 +91,81 @@ internal fun HiddenTabsCard(
 }
 
 /**
+ * Мини-виджет версии/обновления в шапке «Другого» (репорт владельца):
+ * капсула-овал, слева иконка статуса (галочка / обновление / спиннер),
+ * справа версия — текущая или новая, если вышла. Заливка — та же
+ * 3-ступенчатая палитра, что была у большой карточки обновлений.
+ * Тап — ручная проверка (когда нет найденного обновления).
+ */
+@Composable
+internal fun UpdateMiniBadge(
+    updateResult: UpdateCheckResult?,
+    isCheckingUpdate: Boolean,
+    onCheckForUpdates: () -> Unit
+) {
+    val urgency = updateResult?.urgency ?: UpdateUrgency.UP_TO_DATE
+    val hasUpdate = updateResult?.hasUpdate == true
+
+    val containerColor = when (urgency) {
+        UpdateUrgency.CRITICAL -> Color(0xFF581C87).copy(alpha = 0.40f)
+        UpdateUrgency.NEW_VERSION -> Color(0xFFDC2626).copy(alpha = 0.30f)
+        UpdateUrgency.MINOR_BUILD -> Color(0xFFD97706).copy(alpha = 0.30f)
+        UpdateUrgency.UP_TO_DATE -> MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+
+    val accentTint = when (urgency) {
+        UpdateUrgency.CRITICAL -> Color(0xFFC084FC)
+        UpdateUrgency.NEW_VERSION -> Color(0xFFEF4444)
+        UpdateUrgency.MINOR_BUILD -> Color(0xFFF59E0B)
+        UpdateUrgency.UP_TO_DATE -> if (isCheckingUpdate) MaterialTheme.colorScheme.primary else Color(0xFF22C55E)
+    }
+
+    val versionText = when {
+        isCheckingUpdate -> "…"
+        hasUpdate -> updateResult?.latestVersion ?: AppVersion.DISPLAY_VERSION
+        else -> AppVersion.DISPLAY_VERSION
+    }
+
+    val statusIcon = when {
+        isCheckingUpdate -> Icons.Default.Refresh
+        urgency == UpdateUrgency.CRITICAL -> Icons.Default.SystemUpdate
+        urgency == UpdateUrgency.NEW_VERSION -> Icons.Default.SystemUpdate
+        urgency == UpdateUrgency.MINOR_BUILD -> Icons.Default.Refresh
+        else -> Icons.Default.CheckCircle
+    }
+
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(containerColor)
+            .clickable(enabled = !hasUpdate && !isCheckingUpdate) { onCheckForUpdates() }
+            .padding(start = 10.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = statusIcon,
+            contentDescription = null,
+            tint = accentTint,
+            modifier = Modifier.size(15.dp)
+        )
+        Spacer(modifier = Modifier.width(5.dp))
+        GlitchText(
+            text = versionText,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (hasUpdate) accentTint else MaterialTheme.colorScheme.onSurface,
+            maxLines = 1
+        )
+    }
+}
+
+/**
  * Карточка версии/обновления — информационная. Никаких переходов и
  * установщиков: приложение обновляется маркетом, sideload — вручную.
  * Тап при актуальной версии — повторная проверка.
+ *
+ * СКРЫТА с редизайна «Другого» (репорт владельца): заменена мини-
+ * виджетом UpdateMiniBadge в шапке. Оставлена «на всякий».
  */
 @Composable
 internal fun UpdateStatusCard(

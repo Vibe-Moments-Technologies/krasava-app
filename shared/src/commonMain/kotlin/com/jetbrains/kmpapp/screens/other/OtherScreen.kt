@@ -1,5 +1,6 @@
 package com.jetbrains.kmpapp.screens.other
 import com.jetbrains.kmpapp.theme.GlitchText
+import com.jetbrains.kmpapp.data.model.AppVersion
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -294,13 +295,17 @@ private fun OtherMainContent(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                IconButton(onClick = { onNavigate(OtherSubScreen.ABOUT) }) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = "О программе",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                // «О программе» спущена кнопкой в ленту (репорт владельца);
+                // в шапке её место занял мини-виджет версии/обновления.
+                // Мини-виджет: капсула-овал, слева иконка статуса
+                // (галочка/обновление/спиннер), справа версия — текущая
+                // или новая, если вышла. Заливка — та же 3-ступенчатая
+                // палитра бывшей большой карточки. Тап — ручная проверка.
+                UpdateMiniBadge(
+                    updateResult = updateResult,
+                    isCheckingUpdate = isCheckingUpdate,
+                    onCheckForUpdates = { viewModel.checkForUpdates() }
+                )
             }
         },
         modifier = modifier.fillMaxSize()
@@ -344,12 +349,24 @@ private fun OtherMainContent(
                 onClick = { onNavigate(OtherSubScreen.SETTINGS) }
             )
 
-            // 4. App Version / Auto-Update Card with 3-tier colors
-            UpdateStatusCard(
-                updateResult = updateResult,
-                isCheckingUpdate = isCheckingUpdate,
-                onCheckForUpdates = { viewModel.checkForUpdates() }
+            // 4. О программе — кнопкой в ленте (репорт владельца: раньше
+            // иконка-Info в шапке). Про версию и обновления теперь мини-
+            // виджет в шапке; «О программе» показывает ссылки и команду.
+            OtherNavCard(
+                title = "О программе",
+                subtitle = "Версия ${AppVersion.DISPLAY_VERSION}, команда и ссылки",
+                icon = Icons.Outlined.Info,
+                onClick = { onNavigate(OtherSubScreen.ABOUT) }
             )
+
+            // 5. App Version / Auto-Update Card — СКРЫТА (репорт владельца):
+            // заменена мини-виджетом в шапке. Код оставлен «на всякий»:
+            // вернуть — раскомментировать блок ниже.
+            // UpdateStatusCard(
+            //     updateResult = updateResult,
+            //     isCheckingUpdate = isCheckingUpdate,
+            //     onCheckForUpdates = { viewModel.checkForUpdates() }
+            // )
 
             // 5. Ссылки на соцсети проекта — намеренно без рамок и фона.
             // «Есть проблема или идея?» живёт в «О программе» — дубль с
