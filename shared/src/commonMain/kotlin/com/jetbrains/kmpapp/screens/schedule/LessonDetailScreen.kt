@@ -42,14 +42,20 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -481,6 +487,7 @@ private fun NoteEditorSheet(
         skipPartiallyExpanded = true
     )
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    val scope = rememberCoroutineScope()
     // Диагноз по репорту («клавиатура уходит ТОЛЬКО при выходе из шита»):
     // на iOS CMP программные clearFocus/hide()/resignFirstResponder в
     // модальном шите не срабатывают — клавиатура гарантированно закрывается
@@ -513,7 +520,21 @@ private fun NoteEditorSheet(
                 .padding(bottom = 24.dp)
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Зона шапки = «ручка» шторки (iOS-паттерн): потянуть вниз
+                    // ~90dp или флик — закрыть шит. Встроенный порог закрытия
+                    // ModalBottomSheet почти у низа экрана — «маленький» жест
+                    // отскакивал обратно (репорт владельца).
+                    .height(48.dp)
+                    .sheetDragDismiss(
+                        onDismiss = {
+                            hideKeyboard()
+                            scope.launch { sheetState.hide() }.invokeOnCompletion {
+                                onDismiss()
+                            }
+                        }
+                    ),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 GlitchText(
@@ -522,12 +543,13 @@ private fun NoteEditorSheet(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
-                // Явная кнопка «Готово»: сворачивает клавиатуру, не закрывая
-                // шит — системные способы (Done на многострочном поле iOS
-                // не приходит, свайп клавиатуры вниз перехватывается шитом)
-                // не работали (репорт владельца).
-                androidx.compose.material3.TextButton(onClick = { hideKeyboard() }) {
-                    GlitchText("Готово", color = MaterialTheme.colorScheme.primary)
+                // «Готово» видно только при открытом поле ввода; когда поле
+                // свёрнуто в карточку, клавиатуры уже нет — кнопка была
+                // мертва в этом состоянии (репорт владельца).
+                if (fieldVisible) {
+                    androidx.compose.material3.TextButton(onClick = { hideKeyboard() }) {
+                        GlitchText("Готово", color = MaterialTheme.colorScheme.primary)
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -711,4 +733,43 @@ private fun NoteField(
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     )
+}
+
+/**
+ * Жест закрытия шторки по «ручке»-шапке (iOS-паттерн): вертикальная тяга
+ * вниз от 90dp ИЛИ быстрый флик вниз закрывают шит. Встроенный порог
+ * ModalBottomSheet почти у низа экрана — короткая тяга отскакивала
+ * обратно, приходилось «сильно вниз» (репорт владельца). жест читается
+ * на Main-пассе ДО собственного drag-детектора шита — конфликтов
+ * скролла нет: шапка не скроллится.
+ */
+private fun Modifier.sheetDragDismiss(
+    onDismiss: () -> Unit
+): Modifier = pointerInput(Unit) {
+    // PointerInputScope — Density: 90dp → px прямо тут.
+    val thresholdPx = 90.dp.toPx()
+    val velocityThresholdPx = 1600f
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false)
+        var totalDown = 0f
+        var lastY = down.position.y
+        var trackedTime = down.uptimeMillis
+        while (true) {
+            val event = awaitPointerEvent()
+            if (event.changes.all { !it.pressed }) break
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            val dy = change.position.y - lastY
+            val dt = (change.uptimeMillis - trackedTime).coerceAtLeast(1L)
+            totalDown += dy.coerceAtLeast(0f)
+            val velocityY = dy / dt * 1000f
+            lastY = change.position.y
+            trackedTime = change.uptimeMillis
+            // Тяга вниз за порог ИЛИ флик вниз с любой высоты.
+            if (totalDown > thresholdPx || velocityY > velocityThresholdPx) {
+                event.changes.forEach { it.consume() }
+                onDismiss()
+                break
+            }
+        }
+    }
 }
