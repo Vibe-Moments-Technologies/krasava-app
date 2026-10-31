@@ -61,11 +61,6 @@ fun LayeredNavHost(
         val widthPx = constraints.maxWidth.toFloat()
         val scope = rememberCoroutineScope()
 
-        if (screen == null) {
-            rootContent()
-            return@BoxWithConstraints
-        }
-
         var isBackTransition by remember { mutableStateOf(false) }
         // Одноразовый флаг: подстраница уже открыта в момент композиции
         // (возврат из другой вкладки) — без въезда; потребляется первым же
@@ -77,9 +72,16 @@ fun LayeredNavHost(
         // композиции: LaunchedEffect сработал бы кадром позже и новый экран
         // успевал мигнуть «за пределами» (баг на подстраницах 2-го уровня).
         val layerX = remember(screen) {
-            mutableFloatStateOf(if (isBackTransition || skipInitialEnter) 0f else widthPx)
+            mutableFloatStateOf(
+                if (screen == null || isBackTransition || skipInitialEnter) 0f else widthPx
+            )
         }
 
+        // Раннего return при screen == null больше нет: слои дерева
+        // постоянны при переходах корень ↔ подстраница. Со сменой слотов
+        // (rootContent переезжал между ветками) композиция «пересобиралась»
+        // заново и въезд подстраницы выглядел скачком (репорт: «Другое» →
+        // подстраница без анимации, хотя назад — с анимацией).
         val back: (Float) -> Unit = { initialVelocity ->
             committed = true
             scope.launch {
@@ -93,6 +95,7 @@ fun LayeredNavHost(
         }
 
         LaunchedEffect(screen) {
+            if (screen == null) return@LaunchedEffect
             if (isBackTransition) {
                 // Возврат: экран уже на месте, только сбрасываем флаг.
                 isBackTransition = false
@@ -129,24 +132,29 @@ fun LayeredNavHost(
             }
         }
 
-        androidx.compose.foundation.layout.Box(
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer { translationX = layerX.floatValue.coerceIn(0f, widthPx) }
-                .swipeBackLayer(
-                    layerX = layerX,
-                    widthPx = widthPx,
-                    // Жест обязан перезапускаться при смене экрана: узел
-                    // pointerInput держит ссылки на состояния старого экрана,
-                    // иначе после возврата свайп пишет в мёртвый слой
-                    // (баг «после выхода жест не работает»).
-                    restartKey = screen,
-                    gestureEnabled = swipeGestureEnabled(screen),
-                    isCommitted = { committed },
-                    onCommit = { velocity -> back(velocity) }
-                )
-        ) {
-            screenContent(screen) { back(0f) }
+        // Дочерний слой — только когда есть дочерний экран. Дерево
+        // постоянно при переходах корень ↔ подстраница: смена слотов
+        // «пересобирала» композицию и въезд выглядел скачком.
+        if (screen != null) {
+            androidx.compose.foundation.layout.Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { translationX = layerX.floatValue.coerceIn(0f, widthPx) }
+                    .swipeBackLayer(
+                        layerX = layerX,
+                        widthPx = widthPx,
+                        // Жест обязан перезапускаться при смене экрана: узел
+                        // pointerInput держит ссылки на состояния старого экрана,
+                        // иначе после возврата свайп пишет в мёртвый слой
+                        // (баг «после выхода жест не работает»).
+                        restartKey = screen,
+                        gestureEnabled = swipeGestureEnabled(screen),
+                        isCommitted = { committed },
+                        onCommit = { velocity -> back(velocity) }
+                    )
+            ) {
+                screenContent(screen) { back(0f) }
+            }
         }
     }
 }

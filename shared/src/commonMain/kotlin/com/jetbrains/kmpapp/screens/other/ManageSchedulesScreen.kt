@@ -28,7 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -87,6 +87,7 @@ fun ManageSchedulesScreen(
 
     var showAddSheet by remember { mutableStateOf(false) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
+    var filterMenuExpanded by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
@@ -122,11 +123,87 @@ fun ManageSchedulesScreen(
                     )
                 }
 
-                FilledIconButton(
-                    onClick = { showAddSheet = true },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Добавить расписание")
+                // Сортировка, фильтр и «плюс» — рядом в топбаре (репорт
+                // владельца): поиск по добавленным убран, фильтр переехал
+                // из чипов в кнопку рядом с добавлением.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box {
+                        IconButton(onClick = { sortMenuExpanded = true }) {
+                            Icon(
+                                imageVector = SortIcon,
+                                contentDescription = "Сортировка"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false }
+                        ) {
+                            TargetSortOrder.entries.forEach { order ->
+                                DropdownMenuItem(
+                                    text = {
+                                        GlitchText(
+                                            text = order.displayName,
+                                            fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (sortOrder == order) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 13.sp
+                                        )
+                                    },
+                                    trailingIcon = if (sortOrder == order) {
+                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
+                                    } else null,
+                                    onClick = {
+                                        viewModel.setSortOrder(order)
+                                        sortMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Box {
+                        IconButton(onClick = { filterMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.FilterAlt,
+                                contentDescription = "Фильтр"
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = filterMenuExpanded,
+                            onDismissRequest = { filterMenuExpanded = false }
+                        ) {
+                            listOf(
+                                null to "Все",
+                                ScheduleTargetType.GROUP to "Группы",
+                                ScheduleTargetType.TEACHER to "Преподаватели",
+                                ScheduleTargetType.AUDITORIUM to "Аудитории"
+                            ).forEach { (type, title) ->
+                                DropdownMenuItem(
+                                    text = {
+                                        GlitchText(
+                                            text = title,
+                                            fontWeight = if (filterType == type) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (filterType == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 13.sp
+                                        )
+                                    },
+                                    trailingIcon = if (filterType == type) {
+                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
+                                    } else null,
+                                    onClick = {
+                                        viewModel.setFilterType(type)
+                                        filterMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    FilledIconButton(
+                        onClick = { showAddSheet = true },
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Добавить расписание")
+                    }
                 }
             }
         }
@@ -175,94 +252,8 @@ fun ManageSchedulesScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
             ) {
-                // Search bar and sorting button
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { GlitchText("Поиск...", fontSize = 13.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(
-                                    onClick = { viewModel.setSearchQuery("") },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(Icons.Default.Close, contentDescription = "Очистить", modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(14.dp),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    Box {
-                        IconButton(onClick = { sortMenuExpanded = true }) {
-                            Icon(
-                                imageVector = SortIcon,
-                                contentDescription = "Сортировка",
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = sortMenuExpanded,
-                            onDismissRequest = { sortMenuExpanded = false }
-                        ) {
-                            TargetSortOrder.entries.forEach { order ->
-                                DropdownMenuItem(
-                                    text = {
-                                        GlitchText(
-                                            text = order.displayName,
-                                            fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (sortOrder == order) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    trailingIcon = if (sortOrder == order) {
-                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
-                                    } else null,
-                                    onClick = {
-                                        viewModel.setSortOrder(order)
-                                        sortMenuExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Filter chips
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(
-                        null to "Все",
-                        ScheduleTargetType.GROUP to "Группы",
-                        ScheduleTargetType.TEACHER to "Преподаватели",
-                        ScheduleTargetType.AUDITORIUM to "Аудитории"
-                    ).forEach { (type, title) ->
-                        FilterChip(
-                            selected = filterType == type,
-                            onClick = { viewModel.setFilterType(type) },
-                            label = { GlitchText(title, fontSize = 12.sp) },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                    }
-                }
+                // Поиск по добавленным расписаниям убран (репорт владельца):
+                // список обычно короткий; сортировка и фильтр — в топбаре.
 
                 Spacer(modifier = Modifier.height(6.dp))
 

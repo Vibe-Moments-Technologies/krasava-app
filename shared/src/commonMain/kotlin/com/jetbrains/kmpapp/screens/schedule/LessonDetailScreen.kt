@@ -349,6 +349,8 @@ fun LessonDetailScreen(
                         )
                     }
 
+                    Spacer(modifier = Modifier.height(14.dp))
+
                     // Добавить предмет в задачи — одна строка: плюсик + текст
                     Row(
                         modifier = Modifier
@@ -443,9 +445,15 @@ private fun NoteEditorSheet(
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
+    // Клавиатура закрывается Done и тапом вне поля — иначе приходилось
+    // свайпать её вниз или закрывать шит целиком (репорт владельца).
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     androidx.compose.material3.ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            focusManager.clearFocus()
+            onDismiss()
+        },
         sheetState = sheetState,
         dragHandle = { androidx.compose.material3.BottomSheetDefaults.DragHandle() },
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
@@ -498,7 +506,13 @@ private fun NoteEditorSheet(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 singleLine = false,
-                maxLines = 5
+                maxLines = 5,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                ),
+                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                )
             )
             Spacer(modifier = Modifier.height(8.dp))
             GlitchText(
