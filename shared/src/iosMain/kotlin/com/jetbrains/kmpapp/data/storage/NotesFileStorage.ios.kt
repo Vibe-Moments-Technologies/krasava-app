@@ -64,15 +64,23 @@ actual open class NotesFileStorage {
     @OptIn(ExperimentalForeignApi::class)
     actual open fun write(content: String): Boolean = try {
         val path = filePath() ?: return false
-        // Атомарно: временный файл + переименование. Обрыв процесса посреди
-        // записи не оставляет наполовину стёртые заметки.
+        // Прошлая схема createFileAtPath(tmp) + moveItemAtPath(tmp → path)
+        // тихо падала при повторной записи: moveItemAtPath НЕ перезаписывает
+        // существующий адресат (writeToFile:atomically: в Kotlin/Native не
+        // экспортирован). Поэтому: tmp → remove старого → move. Окно риска
+        // (между remove и move) — миллисекунды; при обрыве контент остаётся
+        // в RAM хранилища и записывается следующим сохранением.
         val tmp = "$path.tmp"
         val bytes = content.encodeToByteArray()
         val data: NSData = bytes.usePinned { pinned ->
             NSData.dataWithBytes(pinned.addressOf(0), bytes.size.toULong())
         }
-        NSFileManager.defaultManager.createFileAtPath(tmp, contents = data, attributes = null) &&
-            NSFileManager.defaultManager.moveItemAtPath(tmp, toPath = path, error = null)
+        val fm = NSFileManager.defaultManager
+        if (!fm.createFileAtPath(tmp, contents = data, attributes = null)) return false
+        if (fm.fileExistsAtPath(path)) {
+            fm.removeItemAtPath(path, error = null)
+        }
+        fm.moveItemAtPath(tmp, toPath = path, error = null)
     } catch (_: Throwable) {
         false
     }

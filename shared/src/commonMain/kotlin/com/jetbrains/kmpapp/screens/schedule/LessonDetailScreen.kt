@@ -481,11 +481,16 @@ private fun NoteEditorSheet(
         skipPartiallyExpanded = true
     )
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-    // Три уровня скрытия (репорт: «клавиатура не убирается никак»):
-    // clearFocus (Compose) + контроллер + нативный forceHideKeyboard
-    // (UIKit sendAction resignFirstResponder / Android InputMethodManager)
-    // — нативный работает даже когда Compose-мост потерял FirstResponder.
+    // Диагноз по репорту («клавиатура уходит ТОЛЬКО при выходе из шита»):
+    // на iOS CMP программные clearFocus/hide()/resignFirstResponder в
+    // модальном шите не срабатывают — клавиатура гарантированно закрывается
+    // только когда поле ПОКИДАЕТ композицию (выход из шита удаляет поле).
+    // «Готово» воспроизводит ровно этот механизм: поле временно убирается
+    // из дерева (клавиатура сворачивается), затем возвращается.
+    var fieldVisible by remember { mutableStateOf(true) }
     fun hideKeyboard() {
+        if (!fieldVisible) return
+        fieldVisible = false
         focusManager.clearFocus()
         onKeyboardHide()
         com.jetbrains.kmpapp.screens.components.forceHideKeyboard()
@@ -549,41 +554,63 @@ private fun NoteEditorSheet(
             }
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = if (format == 0) lessonNoteValue else subjectNoteValue,
-                onValueChange = { newText ->
-                    // iOS-ловушка многострочных полей: кнопка Done НЕ зовёт
-                    // KeyboardActions, а вставляет «\n». Ловим перенос —
-                    // это и есть нажатие Done: срезаем его и прячем клаву.
-                    val pressedDone = newText.text.endsWith("\n")
-                    if (pressedDone) {
-                        val trimmed = newText.text.removeSuffix("\n")
-                        val cleaned = androidx.compose.ui.text.input.TextFieldValue(
-                            text = trimmed,
-                            selection = newText.selection
+            if (fieldVisible) {
+                OutlinedTextField(
+                    value = if (format == 0) lessonNoteValue else subjectNoteValue,
+                    onValueChange = { newText ->
+                        // iOS-ловушка многострочных полей: кнопка Done НЕ зовёт
+                        // KeyboardActions, а вставляет «\n». Ловим перенос —
+                        // это и есть нажатие Done: срезаем его и прячем клаву.
+                        val pressedDone = newText.text.endsWith("\n")
+                        if (pressedDone) {
+                            val trimmed = newText.text.removeSuffix("\n")
+                            val cleaned = androidx.compose.ui.text.input.TextFieldValue(
+                                text = trimmed,
+                                selection = newText.selection
+                            )
+                            if (format == 0) onLessonNoteChange(cleaned) else onSubjectNoteChange(cleaned)
+                            hideKeyboard()
+                        } else {
+                            if (format == 0) onLessonNoteChange(newText) else onSubjectNoteChange(newText)
+                        }
+                    },
+                    placeholder = {
+                        GlitchText(
+                            if (format == 0) "Например: принести отчёт…"
+                            else "Например: всегда брать тетрадь…"
                         )
-                        if (format == 0) onLessonNoteChange(cleaned) else onSubjectNoteChange(cleaned)
-                        hideKeyboard()
-                    } else {
-                        if (format == 0) onLessonNoteChange(newText) else onSubjectNoteChange(newText)
-                    }
-                },
-                placeholder = {
-                    GlitchText(
-                        if (format == 0) "Например: принести отчёт…"
-                        else "Например: всегда брать тетрадь…"
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    maxLines = 5,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onAny = { hideKeyboard() }
                     )
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                maxLines = 5,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                ),
-                keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                    onAny = { hideKeyboard() }
                 )
-            )
+            } else {
+                // Поле вне композиции → клавиатура закрыта. Тап по карточке
+                // возвращает поле (и по тапу в поле — фокус/клавиатура).
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { fieldVisible = true }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    val text = if (format == 0) lessonNoteValue.text else subjectNoteValue.text
+                    GlitchText(
+                        text = if (text.isBlank()) "Нажмите, чтобы редактировать…" else text,
+                        fontSize = 14.sp,
+                        color = if (text.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
+                        else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(8.dp))
             GlitchText(
                 text = if (format == 0) "Показывается только у этой пары"
