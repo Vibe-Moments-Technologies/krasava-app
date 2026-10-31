@@ -3,6 +3,7 @@ package com.jetbrains.kmpapp.data.storage
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
+import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -14,18 +15,33 @@ import platform.posix.memcpy
 @OptIn(ExperimentalForeignApi::class)
 actual open class NotesFileStorage {
     /**
-     * Documents/Krasava — именованная папка приложения (решение
-     * владельца): видна пользователю в «Файлах», но явно
-     * принадлежит приложению; попадает в iCloud-бэкап.
+     * Library/Application Support/Krasava — переживёт установку
+     * обновления (в т.ч. GBox-переподпись): Documents-контейнер
+     * пересоздавался при обновлении — заметки исчезали (репорт
+     * владельца). Папка не видна в «Файлах» — надёжность важнее.
+     * Одноразовая миграция подхватывает файл из старого Documents/Krasava.
      */
     private fun filePath(): String? {
-        val docs = NSSearchPathForDirectoriesInDomains(
-            NSDocumentDirectory, NSUserDomainMask, true
+        val support = NSSearchPathForDirectoriesInDomains(
+            NSApplicationSupportDirectory, NSUserDomainMask, true
         ).firstOrNull() as? String ?: return null
-        val dir = "$docs/Krasava"
+        val dir = "$support/Krasava"
         NSFileManager.defaultManager.createDirectoryAtPath(
             dir, withIntermediateDirectories = true, attributes = null, error = null
         )
+        // Миграция из Documents/Krasava (хранилище прошлой версии).
+        val docs = NSSearchPathForDirectoriesInDomains(
+            NSDocumentDirectory, NSUserDomainMask, true
+        ).firstOrNull() as? String
+        if (docs != null) {
+            val legacy = "$docs/Krasava/$FILE_NAME"
+            val target = "$dir/$FILE_NAME"
+            if (!NSFileManager.defaultManager.fileExistsAtPath(target) &&
+                NSFileManager.defaultManager.fileExistsAtPath(legacy)
+            ) {
+                NSFileManager.defaultManager.moveItemAtPath(legacy, toPath = target, error = null)
+            }
+        }
         return "$dir/$FILE_NAME"
     }
 
@@ -46,7 +62,8 @@ actual open class NotesFileStorage {
     }
 
     @OptIn(ExperimentalForeignApi::class)
-    actual open fun write(content: String): Boolean = try {        val path = filePath() ?: return false
+    actual open fun write(content: String): Boolean = try {
+        val path = filePath() ?: return false
         // Атомарно: временный файл + переименование. Обрыв процесса посреди
         // записи не оставляет наполовину стёртые заметки.
         val tmp = "$path.tmp"

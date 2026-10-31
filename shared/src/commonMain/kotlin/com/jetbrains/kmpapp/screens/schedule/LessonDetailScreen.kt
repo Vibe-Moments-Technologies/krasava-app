@@ -82,12 +82,22 @@ fun LessonDetailScreen(
     // Персистентные заметки (R2): к паре и к предмету — единый шит
     // добавления/редактирования (решение владельца: вместо двух полей —
     // кнопка «Добавить заметку» / «Редактировать заметки»).
+    // Состояние — TextFieldValue: позиция курсора живёт с текстом, иначе
+    // первая буква «перепрыгивала» в начало строки (привет → риветп).
     val dateStr = lesson.date.toString()
     var lessonNoteText by remember(targetId, dateStr, lesson.bellNumber) {
-        mutableStateOf(notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.text ?: "")
+        mutableStateOf(
+            androidx.compose.ui.text.input.TextFieldValue(
+                notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.text ?: ""
+            )
+        )
     }
     var subjectNoteText by remember(targetId, lesson.subject) {
-        mutableStateOf(notesStorage.getSubjectNote(targetId, lesson.subject)?.text ?: "")
+        mutableStateOf(
+            androidx.compose.ui.text.input.TextFieldValue(
+                notesStorage.getSubjectNote(targetId, lesson.subject)?.text ?: ""
+            )
+        )
     }
     var showNoteSheet by remember { mutableStateOf(false) }
 
@@ -95,20 +105,22 @@ fun LessonDetailScreen(
     val currentLessonNote by androidx.compose.runtime.rememberUpdatedState(lessonNoteText)
     val currentSubjectNote by androidx.compose.runtime.rememberUpdatedState(subjectNoteText)
 
-    // Сохранение/удаление заметок + скрытие клавиатуры при выходе
+    // Сохранение/удаление заметок при выходе с экрана. НЕ при закрытии
+    // шита: пользователь может закрыть шит и продолжить просмотр пары —
+    // заметки сохраняются один раз, при уходе с экрана.
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose {
             keyboardController?.hide()
-            if (currentLessonNote.isNotBlank()) {
-                notesStorage.saveLessonNote(targetId, dateStr, lesson.bellNumber, currentLessonNote)
+            if (currentLessonNote.text.isNotBlank()) {
+                notesStorage.saveLessonNote(targetId, dateStr, lesson.bellNumber, currentLessonNote.text)
             } else {
                 notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.let {
                     notesStorage.deleteNote(it.id)
                 }
             }
-            if (currentSubjectNote.isNotBlank()) {
-                notesStorage.saveSubjectNote(targetId, lesson.subject, currentSubjectNote)
+            if (currentSubjectNote.text.isNotBlank()) {
+                notesStorage.saveSubjectNote(targetId, lesson.subject, currentSubjectNote.text)
             } else {
                 notesStorage.getSubjectNote(targetId, lesson.subject)?.let {
                     notesStorage.deleteNote(it.id)
@@ -319,7 +331,7 @@ fun LessonDetailScreen(
                     // Заметка — единая кнопка (решение владельца): нет заметок
                     // → «Добавить заметку», есть → «Редактировать заметки».
                     // Выбор формата и текст — в выдвигающемся снизу шите.
-                    val hasNotes = lessonNoteText.isNotBlank() || subjectNoteText.isNotBlank()
+                    val hasNotes = lessonNoteText.text.isNotBlank() || subjectNoteText.text.isNotBlank()
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -413,8 +425,8 @@ fun LessonDetailScreen(
             // Шит заметок: выбор формата + текст (как AddScheduleBottomSheet).
             if (showNoteSheet) {
                 NoteEditorSheet(
-                    lessonNoteText = lessonNoteText,
-                    subjectNoteText = subjectNoteText,
+                    lessonNoteValue = lessonNoteText,
+                    subjectNoteValue = subjectNoteText,
                     onLessonNoteChange = { lessonNoteText = it },
                     onSubjectNoteChange = { subjectNoteText = it },
                     onDismiss = { showNoteSheet = false }
@@ -429,24 +441,29 @@ fun LessonDetailScreen(
 /**
  * Выдвигающийся снизу шит заметок (стиль AddScheduleBottomSheet):
  * выбор формата чипами («К этой паре» / «К предмету») и одно поле
- * текста активного формата. Сохранение — при закрытии (onDismiss у
- * родителя уже пишет через DisposableEffect).
+ * текста активного формата.
+ *
+ * Поле — TextFieldValue: курсор и выделение живут вместе с текстом.
+ * Строковое значение (String) вместо этого пересоздавало курсор при
+ * каждой рекомпозиции родителя — первая буква «перепрыгивала» в
+ * начало строки (привет → риветп).
+ *
+ * Клавиатура: кнопка Done на самой клавиатуре убирает её (жест
+ * свайпа клавиатуры вниз работает системно).
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun NoteEditorSheet(
-    lessonNoteText: String,
-    subjectNoteText: String,
-    onLessonNoteChange: (String) -> Unit,
-    onSubjectNoteChange: (String) -> Unit,
+    lessonNoteValue: androidx.compose.ui.text.input.TextFieldValue,
+    subjectNoteValue: androidx.compose.ui.text.input.TextFieldValue,
+    onLessonNoteChange: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
+    onSubjectNoteChange: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var format by remember { mutableStateOf(if (lessonNoteText.isNotBlank()) 0 else 1) }
+    var format by remember { mutableStateOf(if (lessonNoteValue.text.isNotBlank()) 0 else 1) }
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
-    // Клавиатура закрывается Done и тапом вне поля — иначе приходилось
-    // свайпать её вниз или закрывать шит целиком (репорт владельца).
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     androidx.compose.material3.ModalBottomSheet(
@@ -495,8 +512,10 @@ private fun NoteEditorSheet(
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
-                value = if (format == 0) lessonNoteText else subjectNoteText,
-                onValueChange = { if (format == 0) onLessonNoteChange(it) else onSubjectNoteChange(it) },
+                value = if (format == 0) lessonNoteValue else subjectNoteValue,
+                onValueChange = {
+                    if (format == 0) onLessonNoteChange(it) else onSubjectNoteChange(it)
+                },
                 placeholder = {
                     GlitchText(
                         if (format == 0) "Например: принести отчёт…"
@@ -505,7 +524,6 @@ private fun NoteEditorSheet(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                singleLine = false,
                 maxLines = 5,
                 keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                     imeAction = androidx.compose.ui.text.input.ImeAction.Done
