@@ -9,8 +9,6 @@
 
 > [!NOTE]
 > Приложение неофициальное: сделано студентами для студентов РТУ МИРЭА и не является продуктом университета. Расписание и схемы корпусов загружаются из открытых источников.
->
-> Приложение отправляет анонимную статистику использования и отчёты о падениях (Яндекс AppMetrica) — без личных данных и аккаунтов. При первом запуске приложение спрашивает разрешение, позже его можно включить или отключить в настройках («Отправлять анонимную статистику»).
 
 **Скачать:** [APK (Android, стабильная версия)](https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.apk) · [IPA (iOS, без подписи)](https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.ipa) · [Все релизы](https://github.com/Vibe-Moments-Technologies/krasava-app/releases)
 
