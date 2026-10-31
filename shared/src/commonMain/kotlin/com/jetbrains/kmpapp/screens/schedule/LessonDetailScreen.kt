@@ -105,27 +105,31 @@ fun LessonDetailScreen(
     val currentLessonNote by androidx.compose.runtime.rememberUpdatedState(lessonNoteText)
     val currentSubjectNote by androidx.compose.runtime.rememberUpdatedState(subjectNoteText)
 
-    // Сохранение/удаление заметок при выходе с экрана. НЕ при закрытии
-    // шита: пользователь может закрыть шит и продолжить просмотр пары —
-    // заметки сохраняются один раз, при уходе с экрана.
+    // Сохранение — при закрытии шита И при уходе с экрана (двойная
+    // защита). Только-onDispose было ошибкой: закрыть шит → смахнуть
+    // приложение (процесс убит, onDispose не вызван) → заметка не
+    // записалась — «исчезает при перезапуске» (репорт владельца).
     val keyboardController = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    fun persistNotes() {
+        if (currentLessonNote.text.isNotBlank()) {
+            notesStorage.saveLessonNote(targetId, dateStr, lesson.bellNumber, currentLessonNote.text)
+        } else {
+            notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.let {
+                notesStorage.deleteNote(it.id)
+            }
+        }
+        if (currentSubjectNote.text.isNotBlank()) {
+            notesStorage.saveSubjectNote(targetId, lesson.subject, currentSubjectNote.text)
+        } else {
+            notesStorage.getSubjectNote(targetId, lesson.subject)?.let {
+                notesStorage.deleteNote(it.id)
+            }
+        }
+    }
     androidx.compose.runtime.DisposableEffect(Unit) {
         onDispose {
             keyboardController?.hide()
-            if (currentLessonNote.text.isNotBlank()) {
-                notesStorage.saveLessonNote(targetId, dateStr, lesson.bellNumber, currentLessonNote.text)
-            } else {
-                notesStorage.getLessonNote(targetId, dateStr, lesson.bellNumber)?.let {
-                    notesStorage.deleteNote(it.id)
-                }
-            }
-            if (currentSubjectNote.text.isNotBlank()) {
-                notesStorage.saveSubjectNote(targetId, lesson.subject, currentSubjectNote.text)
-            } else {
-                notesStorage.getSubjectNote(targetId, lesson.subject)?.let {
-                    notesStorage.deleteNote(it.id)
-                }
-            }
+            persistNotes()
         }
     }
 
@@ -429,7 +433,15 @@ fun LessonDetailScreen(
                     subjectNoteValue = subjectNoteText,
                     onLessonNoteChange = { lessonNoteText = it },
                     onSubjectNoteChange = { subjectNoteText = it },
-                    onDismiss = { showNoteSheet = false }
+                    onDismiss = {
+                        // Сохраняем при закрытии шита (не только экрана):
+                        // смахнутое приложение не зовёт onDispose.
+                        persistNotes()
+                        showNoteSheet = false
+                    },
+                    onKeyboardHide = {
+                        keyboardController?.hide()
+                    }
                 )
             }
 
@@ -458,17 +470,25 @@ private fun NoteEditorSheet(
     subjectNoteValue: androidx.compose.ui.text.input.TextFieldValue,
     onLessonNoteChange: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
     onSubjectNoteChange: (androidx.compose.ui.text.input.TextFieldValue) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    // Прямое скрытие системной клавиатуры: clearFocus один не сворачивает
+    // клаву на всех платформах (репорт владельца: «галочка и жест не
+    // сворачивают»); hide() гасит её принудительно.
+    onKeyboardHide: () -> Unit
 ) {
     var format by remember { mutableStateOf(if (lessonNoteValue.text.isNotBlank()) 0 else 1) }
     val sheetState = androidx.compose.material3.rememberModalBottomSheetState(
         skipPartiallyExpanded = true
     )
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    fun hideKeyboard() {
+        focusManager.clearFocus()
+        onKeyboardHide()
+    }
 
     androidx.compose.material3.ModalBottomSheet(
         onDismissRequest = {
-            focusManager.clearFocus()
+            hideKeyboard()
             onDismiss()
         },
         sheetState = sheetState,
@@ -529,7 +549,7 @@ private fun NoteEditorSheet(
                     imeAction = androidx.compose.ui.text.input.ImeAction.Done
                 ),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                    onDone = { focusManager.clearFocus() }
+                    onDone = { hideKeyboard() }
                 )
             )
             Spacer(modifier = Modifier.height(8.dp))
