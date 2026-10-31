@@ -46,6 +46,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -87,8 +90,13 @@ fun ScheduleTopBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box {
+                // Ширина капсулы группы измеряется живьём (onSizeChanged):
+                // список выбора открывается РОВНО по ширине блока группы
+                // (репорт владельца: «список теперь больше самого блока»).
+                var capsuleWidth by remember { mutableStateOf(IntSize.Zero) }
                 Row(
                     modifier = Modifier
+                        .onSizeChanged { capsuleWidth = it }
                         .clip(RoundedCornerShape(20.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .clickable { dropdownExpanded = true }
@@ -115,12 +123,18 @@ fun ScheduleTopBar(
                     expanded = dropdownExpanded,
                     onDismissRequest = { dropdownExpanded = false },
                     // Репорт владельца: меню меньше капсулы группы, с углами
-                    // «как приклеили рядышком». Ширина — не меньше капсулы,
-                    // форма/фон — в стиле капсулы (surfaceContainerHigh,
-                    // 16dp, тонкая рамка outline-variant). Меню открывается
-                    // от Box-якоря капсулы (позиция по левому краю).
+                    // «как приклеили рядышком». Ширина — ровно ширина капсулы
+                    // (не меньше min 200dp для коротких названий), форма/фон —
+                    // в стиле капсулы (surfaceContainerHigh, 16dp, тонкая
+                    // рамка outline-variant). Меню открывается от Box-якоря
+                    // капсулы (позиция по левому краю).
                     modifier = Modifier
-                        .widthIn(min = 240.dp)
+                        .widthIn(min = 200.dp)
+                        .then(
+                            if (capsuleWidth.width > 0) {
+                                Modifier.width(with(LocalDensity.current) { capsuleWidth.width.toDp() })
+                            } else Modifier
+                        )
                         .clip(RoundedCornerShape(16.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .border(
