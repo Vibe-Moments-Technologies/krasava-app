@@ -127,9 +127,9 @@ fun ScheduleTopBar(
                     // Surface меню: её квадратные углы торчали из-под
                     // скруглённой подложки. Скругляем сам попап — параметры
                     // shape/containerColor достаются внутренней Surface.
-                    // Ширина — ширина капсулы (меряется живьём) минус
-                    // внутренние горизонтальные отступы меню, чтобы пункт
-                    // попадал ровно под капсулу (min 200dp).
+                    // Ширина — ровно ширина капсулы (меряется живьём);
+                    // компенсация отступов меню не понадобилась: попап
+                    // позиционируется от якоря, а width задаёт его целиком.
                     shape = RoundedCornerShape(16.dp),
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 0.dp,
@@ -137,10 +137,7 @@ fun ScheduleTopBar(
                         .widthIn(min = 200.dp)
                         .then(
                             if (capsuleWidth.width > 0) {
-                                val menuHorizontalInsets = 16.dp
-                                Modifier.width(
-                                    with(LocalDensity.current) { capsuleWidth.width.toDp() } - menuHorizontalInsets
-                                )
+                                Modifier.width(with(LocalDensity.current) { capsuleWidth.width.toDp() })
                             } else Modifier
                         )
                 ) {
