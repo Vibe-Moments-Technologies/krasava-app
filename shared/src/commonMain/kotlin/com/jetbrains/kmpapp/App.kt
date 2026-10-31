@@ -5,6 +5,8 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.material3.MaterialTheme
@@ -26,7 +28,9 @@ import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
+import com.jetbrains.kmpapp.screens.components.GESTURE_BLOCKER_HEIGHT
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
+import com.jetbrains.kmpapp.screens.components.systemGestureBlocker
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleScreen
 import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
 import com.jetbrains.kmpapp.screens.map.MapScreen
@@ -263,6 +267,20 @@ fun App() {
 
                 val density = LocalDensity.current
                 val isImeVisible = WindowInsets.ime.getBottom(density) > 0
+
+                // Невидимый блокер системных жестов (только iOS, решение
+                // владельца): от низа экрана до середины дока. Свайп системной
+                // шторки больше не перехватывается приложением (расписание
+                // не уезжает); сам жест распознаёт система по edge-зоне.
+                // Слой над контентом, ПОД доком: клики дока работают.
+                // Визуально ничего не меняет — ничего не рисует.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(GESTURE_BLOCKER_HEIGHT)
+                        .systemGestureBlocker()
+                )
 
                 if (!isImeVisible) {
                     // Стрелка «назад» в доке: у вкладки с открытым сервисом
