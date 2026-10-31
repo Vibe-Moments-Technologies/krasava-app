@@ -126,7 +126,7 @@ fun FreeRoomsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 10.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -140,41 +140,41 @@ fun FreeRoomsScreen(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            onClick = { showDatePicker = true },
-                            shape = RoundedCornerShape(8.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        Spacer(modifier = Modifier.height(6.dp))
+                        // Дата-капсула в стиле капсулы группы расписания:
+                        // единый язык топбаров (репорт-серия по визуалу).
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                                .clickable { showDatePicker = true }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CalendarMonth,
-                                    contentDescription = "Выбрать дату",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                GlitchText(
-                                    text = if (selectedBell != null) {
-                                        "${selectedDate.day} ${DateUtils.formatMonthRu(selectedDate.month)} • Пара $selectedBell"
-                                    } else {
-                                        "${selectedDate.day} ${DateUtils.formatMonthRu(selectedDate.month)} • Все пары"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Spacer(modifier = Modifier.width(2.dp))
-                                Icon(
-                                    imageVector = Icons.Default.ArrowDropDown,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                            Icon(
+                                imageVector = Icons.Default.CalendarMonth,
+                                contentDescription = "Выбрать дату",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            GlitchText(
+                                text = if (selectedBell != null) {
+                                    "${selectedDate.day} ${DateUtils.formatMonthRu(selectedDate.month)} • $selectedBell пара"
+                                } else {
+                                    "${selectedDate.day} ${DateUtils.formatMonthRu(selectedDate.month)} • Все пары"
+                                },
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
 
@@ -199,27 +199,82 @@ fun FreeRoomsScreen(
                 .padding(innerPadding)
                 .clickable { focusManager.clearFocus() }
         ) {
-            // Search field
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { viewModel.setSearchQuery(it) },
-                placeholder = { GlitchText("Номер аудитории (например: 349, А-1)", fontSize = 13.sp) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
-                trailingIcon = {
-                    if (searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.setSearchQuery("") }) {
-                            Icon(Icons.Default.Close, contentDescription = "Очистить", modifier = Modifier.size(18.dp))
-                        }
-                    }
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(16.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+            var showCampusDialog by remember { mutableStateOf(false) }
+            var showBellDialog by remember { mutableStateOf(false) }
+            var showFloorDialog by remember { mutableStateOf(false) }
+            var searchActive by remember { mutableStateOf(false) }
+
+            // Строка управления: компактный поиск-капсула + счётчик.
+            // Поиск свёрнут в иконку (список аудиторий короткий, поиск
+            // нужен редко); при тапе разворачивается в полноценное поле —
+            // редизайн: экран освобождён от постоянного большого поля.
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp)
-            )
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                if (searchActive || searchQuery.isNotEmpty()) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { viewModel.setSearchQuery(it) },
+                        placeholder = { GlitchText("Номер (349, А-1)", fontSize = 13.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(20.dp)) },
+                        trailingIcon = {
+                            IconButton(onClick = {
+                                if (searchQuery.isNotEmpty()) {
+                                    viewModel.setSearchQuery("")
+                                } else {
+                                    searchActive = false
+                                    focusManager.clearFocus()
+                                }
+                            }) {
+                                Icon(Icons.Default.Close, contentDescription = "Закрыть поиск", modifier = Modifier.size(18.dp))
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                        modifier = Modifier.weight(1f)
+                    )
+                } else {
+                    // Свободные аудитории: счётчик живёт со поиском в одном
+                    // ряду — «N свободно» виден всегда, крупно и по делу.
+                    GlitchText(
+                        text = if (selectedBell != null) {
+                            "На $selectedBell пару свободно: ${filteredRooms.size}"
+                        } else {
+                            "Всего аудиторий: ${filteredRooms.size}"
+                        },
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { searchActive = true }
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                            .clickable {
+                                focusManager.clearFocus()
+                                searchActive = true
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Search,
+                            contentDescription = "Поиск аудитории",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                }
+            }
 
             // Sunday Friendly Banner
             val isSunday = selectedDate.dayOfWeek == kotlinx.datetime.DayOfWeek.SUNDAY
@@ -259,15 +314,11 @@ fun FreeRoomsScreen(
                 }
             }
 
-            var showCampusDialog by remember { mutableStateOf(false) }
-            var showBellDialog by remember { mutableStateOf(false) }
-            var showFloorDialog by remember { mutableStateOf(false) }
-
             // Compact Filter Row matching schedule target selector style
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Campus Selector
@@ -286,9 +337,9 @@ fun FreeRoomsScreen(
                 val currentSlot = bellSlots.firstOrNull { it.bell == selectedBell }
                 FilterDropdownButton(
                     title = "Пара",
-                    value = selectedBell?.let { "$it пара (${currentSlot?.start ?: ""})" } ?: "Все пары",
+                    value = selectedBell?.let { "$it (${currentSlot?.start ?: ""})" } ?: "Все пары",
                     icon = Icons.Default.AccessTime,
-                    modifier = Modifier.weight(1.3f),
+                    modifier = Modifier.weight(1.1f),
                     onClick = {
                         focusManager.clearFocus()
                         showBellDialog = true
@@ -344,22 +395,6 @@ fun FreeRoomsScreen(
                 )
             }
 
-            // Results count
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 18.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                GlitchText(
-                    text = if (selectedBell != null) "Свободно на $selectedBell пару: ${filteredRooms.size}" else "Всего аудиторий: ${filteredRooms.size}",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
             // Grid of Rooms
             if (isLoading && filteredRooms.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -397,7 +432,7 @@ fun FreeRoomsScreen(
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 105.dp),
+                    columns = GridCells.Adaptive(minSize = 150.dp),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 120.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -458,52 +493,75 @@ private fun FreeRoomGridCard(
     bellSlots: List<FreeRoomBellSlot>,
     onClick: () -> Unit
 ) {
+    // Редизайн: карточка крупнее и читабельнее — крупный номер аудитории
+    // слева, этаж-бейдж и статус свободности крупным шрифтом (старые
+    // 10.5sp было не разобрать). Форма/цвета — общий язык карточек app.
+    val untilText = if (currentBell != null) {
+        room.getFreeUntilDescription(dateIso, currentBell, bellSlots)
+    } else {
+        room.getFreeSummaryDescription(dateIso, bellSlots.size.coerceAtLeast(7))
+    }
+    val isBusy = untilText.startsWith("Занята")
     Card(
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isBusy) {
+                MaterialTheme.colorScheme.surfaceContainer
+            } else {
+                MaterialTheme.colorScheme.surfaceContainerHigh
+            }
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.Start
         ) {
-            GlitchText(
-                text = room.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 GlitchText(
-                    text = if (room.floor != null) "${room.floor} эт" else room.campus,
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    text = room.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isBusy) {
+                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f)
+                    } else {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                    }
+                ) {
+                    GlitchText(
+                        text = if (room.floor != null) "${room.floor} эт" else room.campus,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isBusy) {
+                            MaterialTheme.colorScheme.onErrorContainer
+                        } else {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        },
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            val untilText = if (currentBell != null) {
-                room.getFreeUntilDescription(dateIso, currentBell, bellSlots)
-            } else {
-                room.getFreeSummaryDescription(dateIso, bellSlots.size.coerceAtLeast(7))
-            }
             GlitchText(
                 text = untilText,
-                fontSize = 10.5.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = if (untilText.startsWith("Занята")) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center
+                color = if (isBusy) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
