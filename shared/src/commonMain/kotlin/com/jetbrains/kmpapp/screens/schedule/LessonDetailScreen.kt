@@ -515,42 +515,34 @@ private fun NoteEditorSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // Весь контент шита — зона закрытия жестом (iOS-паттерн):
+                // быстрый свайп вниз в ЛЮБОМ месте шторки (не только за
+                // шапку-«ручку») закрывает её. Встроенный порог закрытия
+                // ModalBottomSheet почти у низа экрана — привычный
+                // «маленький» свайп пружинил обратно (репорт владельца).
+                // Жест сработает раньше встроенного drag-детектора: наш
+                // pointerInput стоит на Column, детектор шита — выше.
+                .sheetDragDismiss(
+                    onDismiss = {
+                        hideKeyboard()
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            onDismiss()
+                        }
+                    }
+                )
                 .padding(horizontal = 20.dp)
                 .imePadding()
                 .padding(bottom = 24.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    // Зона шапки = «ручка» шторки (iOS-паттерн): потянуть вниз
-                    // ~90dp или флик — закрыть шит. Встроенный порог закрытия
-                    // ModalBottomSheet почти у низа экрана — «маленький» жест
-                    // отскакивал обратно (репорт владельца).
-                    .height(48.dp)
-                    .sheetDragDismiss(
-                        onDismiss = {
-                            hideKeyboard()
-                            scope.launch { sheetState.hide() }.invokeOnCompletion {
-                                onDismiss()
-                            }
-                        }
-                    ),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 GlitchText(
                     text = "Заметка",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    fontWeight = FontWeight.Bold
                 )
-                // «Готово» видно только при открытом поле ввода; когда поле
-                // свёрнуто в карточку, клавиатуры уже нет — кнопка была
-                // мертва в этом состоянии (репорт владельца).
-                if (fieldVisible) {
-                    androidx.compose.material3.TextButton(onClick = { hideKeyboard() }) {
-                        GlitchText("Готово", color = MaterialTheme.colorScheme.primary)
-                    }
-                }
             }
             Spacer(modifier = Modifier.height(12.dp))
 
