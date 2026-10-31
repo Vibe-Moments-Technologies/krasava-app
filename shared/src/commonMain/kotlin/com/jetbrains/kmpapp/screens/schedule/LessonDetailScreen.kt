@@ -481,9 +481,14 @@ private fun NoteEditorSheet(
         skipPartiallyExpanded = true
     )
     val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+    // Три уровня скрытия (репорт: «клавиатура не убирается никак»):
+    // clearFocus (Compose) + контроллер + нативный forceHideKeyboard
+    // (UIKit sendAction resignFirstResponder / Android InputMethodManager)
+    // — нативный работает даже когда Compose-мост потерял FirstResponder.
     fun hideKeyboard() {
         focusManager.clearFocus()
         onKeyboardHide()
+        com.jetbrains.kmpapp.screens.components.forceHideKeyboard()
     }
 
     androidx.compose.material3.ModalBottomSheet(
@@ -546,8 +551,22 @@ private fun NoteEditorSheet(
 
             OutlinedTextField(
                 value = if (format == 0) lessonNoteValue else subjectNoteValue,
-                onValueChange = {
-                    if (format == 0) onLessonNoteChange(it) else onSubjectNoteChange(it)
+                onValueChange = { newText ->
+                    // iOS-ловушка многострочных полей: кнопка Done НЕ зовёт
+                    // KeyboardActions, а вставляет «\n». Ловим перенос —
+                    // это и есть нажатие Done: срезаем его и прячем клаву.
+                    val pressedDone = newText.text.endsWith("\n")
+                    if (pressedDone) {
+                        val trimmed = newText.text.removeSuffix("\n")
+                        val cleaned = androidx.compose.ui.text.input.TextFieldValue(
+                            text = trimmed,
+                            selection = newText.selection
+                        )
+                        if (format == 0) onLessonNoteChange(cleaned) else onSubjectNoteChange(cleaned)
+                        hideKeyboard()
+                    } else {
+                        if (format == 0) onLessonNoteChange(newText) else onSubjectNoteChange(newText)
+                    }
                 },
                 placeholder = {
                     GlitchText(
@@ -562,7 +581,7 @@ private fun NoteEditorSheet(
                     imeAction = androidx.compose.ui.text.input.ImeAction.Done
                 ),
                 keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                    onDone = { hideKeyboard() }
+                    onAny = { hideKeyboard() }
                 )
             )
             Spacer(modifier = Modifier.height(8.dp))
