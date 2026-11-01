@@ -199,6 +199,11 @@ fun App() {
             // диалог ДАЖЕ при подавлении — в нём галочку можно снять.
             val updateSuppressedVersion by com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppressedVersion.collectAsState()
             var updateDialogShownFor by remember { mutableStateOf<String?>(null) }
+            // Чекбокс отражает ТЕКУЩЕЕ состояние (репорт владельца:
+            // «при открытии с подавленной версией галочка уже снята»):
+            // при каждом открытии диалога синхронизируется с фактом
+            // подавления — подавлена → стоит; нет → снята. «Понятно»
+            // сохраняет то, что на галочке сейчас.
             var suppressThisVersion by remember { mutableStateOf(false) }
             // Ручной показ: request — счётчик тапов; последний обработанный
             // номер храним тут. НЕТ consume-вызовов из композиции: смена
@@ -292,13 +297,18 @@ fun App() {
                 )
             }
 
-            // Новый ручной запрос диалога → чекбокс стартует снятым
-            // (пользователь решает сам). LaunchedEffect, не композиция:
-            // запись состояния внутри композиции мгновенно закрывала
-            // только что открытый диалог (репорт владельца).
-            androidx.compose.runtime.LaunchedEffect(updateDialogRequest) {
-                if (updateDialogRequest > 0) {
-                    suppressThisVersion = false
+            // Синхронизация чекбокса с фактом подавления при каждом открытии
+            // диалога (репорт владельца: «при открытии галочка уже снята» —
+            // должна стоять, если версия подавлена). LaunchedEffect, не
+            // композиция: запись состояния в композиции закрывала диалог.
+            androidx.compose.runtime.LaunchedEffect(
+                updateDialogRequest,
+                updateDialogShownFor,
+                updateSuppressedVersion
+            ) {
+                // Диалог вот-вот откроется или открыт: галочка = факт подавления.
+                if (updateResult?.hasUpdate == true) {
+                    suppressThisVersion = suppressedNow
                 }
             }
 
