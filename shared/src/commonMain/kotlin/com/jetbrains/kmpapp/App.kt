@@ -190,12 +190,28 @@ fun App() {
             // автопроверка на старте нашла NEW_VERSION/CRITICAL →
             // AlertDialog поверх всего, один раз на запуск. MINOR_BUILD
             // (новая сборка того же канала) молчит — это шум для dev.
+            // Чекбокс «Не показывать для этой версии» (репорт владельца):
+            // подавление пишется в PlatformStorage и живёт до СЛЕДУЮЩЕЙ
+            // новой версии — версия в фиде станет больше подавленной, и
+            // диалог вернётся. Сброс — кнопкой в меню отладки.
+            val updateSuppressedVersion by com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppressedVersion.collectAsState()
             var updateDialogShownFor by remember { mutableStateOf<String?>(null) }
+            var suppressThisVersion by remember { mutableStateOf(false) }
             val updateResult by otherViewModel.updateResult.collectAsState()
+            // Подавление активно, только пока фид показывает ту же версию
+            // (или старее): вышла более новая — снова показываем.
+            val suppressedNow = updateSuppressedVersion?.let { sup ->
+                updateResult?.let { res ->
+                    com.jetbrains.kmpapp.data.update.VersionComparator.compare(
+                        res.latestVersion, sup
+                    ) <= 0
+                } == true
+            } == true
             val showUpdateDialog = updateResult?.let { res ->
                 res.hasUpdate &&
                     res.urgency != com.jetbrains.kmpapp.data.update.UpdateUrgency.MINOR_BUILD &&
-                    updateDialogShownFor != res.latestVersion + "_" + res.latestBuild
+                    updateDialogShownFor != res.latestVersion + "_" + res.latestBuild &&
+                    !suppressedNow
             } == true
             if (showUpdateDialog) {
                 val res = updateResult!!
@@ -212,23 +228,42 @@ fun App() {
                         )
                     },
                     text = {
-                        com.jetbrains.kmpapp.theme.GlitchText(
-                            text = buildString {
-                                append("Доступна версия ${res.latestVersion}")
-                                if (isCritical) append(" — содержит важные исправления")
-                                append(". Обновитесь в магазине приложений")
-                                if (isCritical) append(", старая версия может работать нестабильно")
-                                append(".")
-                                res.changelog?.takeIf { it.isNotBlank() }?.let { ch ->
-                                    append("\n\n")
-                                    append(ch)
-                                }
-                            },
-                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
-                        )
+                        androidx.compose.foundation.layout.Column {
+                            com.jetbrains.kmpapp.theme.GlitchText(
+                                text = buildString {
+                                    append("Доступна версия ${res.latestVersion}")
+                                    if (isCritical) append(" — содержит важные исправления")
+                                    append(".")
+                                    res.changelog?.takeIf { it.isNotBlank() }?.let { ch ->
+                                        append("\n\n")
+                                        append(ch)
+                                    }
+                                    // Пометка владельца: если приложение ставили из
+                                    // стора — новая версия появляется там позже
+                                    // (модерация платформы); GitHub-сборка уже вышла.
+                                    append("\n\nЕсли вы устанавливали приложение из магазина приложений, подождите: новая версия появится в нём после модерации платформы. Прямая сборка уже доступна на GitHub.")
+                                },
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                            )
+                            androidx.compose.foundation.layout.Row(
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+                            ) {
+                                androidx.compose.material3.Checkbox(
+                                    checked = suppressThisVersion,
+                                    onCheckedChange = { suppressThisVersion = it }
+                                )
+                                com.jetbrains.kmpapp.theme.GlitchText(
+                                    text = "Не показывать для этой версии",
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall
+                                )
+                            }
+                        }
                     },
                     confirmButton = {
                         androidx.compose.material3.Button(onClick = {
+                            if (suppressThisVersion) {
+                                com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppress(res.latestVersion)
+                            }
                             updateDialogShownFor = res.latestVersion + "_" + res.latestBuild
                         }) {
                             com.jetbrains.kmpapp.theme.GlitchText("Понятно")
