@@ -299,11 +299,14 @@ private fun OtherMainContent(
                 // Мини-виджет: капсула-овал, слева иконка статуса
                 // (галочка/обновление/спиннер), справа версия — текущая
                 // или новая, если вышла. Заливка — та же 3-ступенчатая
-                // палитра бывшей большой карточки. Тап — ручная проверка.
+                // палитра бывшей большой карточки. Тап: нет обновления —
+                // ручная проверка; есть — открыть предупреждение (в нём
+                // чекбоксом можно снять подавление).
                 UpdateMiniBadge(
                     updateResult = updateResult,
                     isCheckingUpdate = isCheckingUpdate,
-                    onCheckForUpdates = { viewModel.checkForUpdates() }
+                    onCheckForUpdates = { viewModel.checkForUpdates() },
+                    onShowUpdateDialog = { viewModel.requestShowUpdateDialog() }
                 )
             }
         },

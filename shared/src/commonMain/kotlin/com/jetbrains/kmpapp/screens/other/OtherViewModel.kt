@@ -288,6 +288,20 @@ class OtherViewModel(
     private val _isCheckingUpdate = MutableStateFlow(false)
     val isCheckingUpdate: StateFlow<Boolean> = _isCheckingUpdate.asStateFlow()
 
+    // Запрос показать диалог «Вышла новая версия» вручную (тап по
+    // оранжевому/красному мини-виджету, репорт владельца): открывается
+    // ДАЖЕ если подавлен чекбоксом — в диалоге галочку можно снять.
+    private val _showUpdateDialogRequest = MutableStateFlow(0)
+    val showUpdateDialogRequest: StateFlow<Int> = _showUpdateDialogRequest.asStateFlow()
+
+    fun requestShowUpdateDialog() {
+        _showUpdateDialogRequest.value += 1
+    }
+
+    fun consumeShowUpdateDialogRequest() {
+        _showUpdateDialogRequest.value = 0
+    }
+
     fun checkForUpdates() {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {

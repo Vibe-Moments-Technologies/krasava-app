@@ -193,11 +193,15 @@ fun App() {
             // Чекбокс «Не показывать для этой версии» (репорт владельца):
             // подавление пишется в PlatformStorage и живёт до СЛЕДУЮЩЕЙ
             // новой версии — версия в фиде станет больше подавленной, и
-            // диалог вернётся. Сброс — кнопкой в меню отладки.
+            // диалог вернётся.
+            // Ручной показ (репорт: «красный виджет не кликается»): тап по
+            // оранжевому/красному мини-виджету в шапке «Другого» открывает
+            // диалог ДАЖЕ при подавлении — в нём галочку можно снять.
             val updateSuppressedVersion by com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppressedVersion.collectAsState()
             var updateDialogShownFor by remember { mutableStateOf<String?>(null) }
             var suppressThisVersion by remember { mutableStateOf(false) }
             val updateResult by otherViewModel.updateResult.collectAsState()
+            val updateDialogRequest by otherViewModel.showUpdateDialogRequest.collectAsState()
             // Подавление активно, только пока фид показывает ту же версию
             // (или старее): вышла более новая — снова показываем.
             val suppressedNow = updateSuppressedVersion?.let { sup ->
@@ -207,14 +211,23 @@ fun App() {
                     ) <= 0
                 } == true
             } == true
+            val manualRequested = updateDialogRequest > 0
             val showUpdateDialog = updateResult?.let { res ->
-                res.hasUpdate &&
+                val autoShow = res.hasUpdate &&
                     res.urgency != com.jetbrains.kmpapp.data.update.UpdateUrgency.MINOR_BUILD &&
                     updateDialogShownFor != res.latestVersion + "_" + res.latestBuild &&
                     !suppressedNow
+                // Ручной тап по виджету: есть обновление — показать всегда.
+                (autoShow) || (manualRequested && res.hasUpdate)
             } == true
             if (showUpdateDialog) {
                 val res = updateResult!!
+                if (manualRequested) {
+                    otherViewModel.consumeShowUpdateDialogRequest()
+                    // Открыли вручную при подавлении: чекбокс стартует снятым,
+                    // пользователь решает сам, вернуть ли показ.
+                    suppressThisVersion = false
+                }
                 val isCritical = res.urgency == com.jetbrains.kmpapp.data.update.UpdateUrgency.CRITICAL
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = {
@@ -263,6 +276,11 @@ fun App() {
                         androidx.compose.material3.Button(onClick = {
                             if (suppressThisVersion) {
                                 com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppress(res.latestVersion)
+                            } else {
+                                // Галочка снята: подавление сбрасывается (открыли
+                                // вручную при подавлении и передумали) — диалог
+                                // снова показывается при следующих запусках.
+                                com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.reset()
                             }
                             updateDialogShownFor = res.latestVersion + "_" + res.latestBuild
                         }) {

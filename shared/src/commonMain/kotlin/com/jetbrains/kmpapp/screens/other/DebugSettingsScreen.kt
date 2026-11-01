@@ -144,37 +144,10 @@ fun DebugSettingsScreen(
                 enabled = AppVersion.BUILD_CHANNEL !in setOf("stable", "rc"),
                 onCheckedChange = DebugConfig::setTestVersionFeed
             )
-            // Сброс подавления диалога «Вышла новая версия» (репорт
-            // владельца): чекбокс «не показывать для этой версии» гасит
-            // диалог до следующей новой версии — кнопка возвращает его.
-            val suppressedVersion by com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppressedVersion.collectAsState()
-            DebugCard {
-                GlitchText(
-                    "Диалог о новой версии",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                GlitchText(
-                    if (suppressedVersion != null) {
-                        "Подавлен для версии $suppressedVersion. Сброс — диалог снова " +
-                            "показывается при проверке."
-                    } else {
-                        "Не подавлен: диалог показывается при каждой новой версии " +
-                            "(один раз на запуск)."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                OutlinedButton(
-                    onClick = {
-                        com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.reset()
-                    },
-                    enabled = suppressedVersion != null,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    GlitchText("Сбросить подавление")
-                }
-            }
+            // Подавление диалога «Вышла новая версия» сбрасывается тапом по
+            // оранжевому/красному мини-виджету в шапке «Другого» (репорт
+            // владельца): диалог открывается даже при подавлении, галочка
+            // в нём управляет показом. Отдельная кнопка сброса убрана.
 
             // Диагностика (Sentry): opt-in для тестировщиков. Выключена —
             // наружу не уходит ничего вообще. На тестовых каналах (dev/beta/

@@ -95,13 +95,17 @@ internal fun HiddenTabsCard(
  * капсула-овал, слева иконка статуса (галочка / обновление / спиннер),
  * справа версия — текущая или новая, если вышла. Заливка — та же
  * 3-ступенчатая палитра, что была у большой карточки обновлений.
- * Тап — ручная проверка (когда нет найденного обновления).
+ *
+ * Тап: нет обновления — ручная проверка; есть (репорт владельца:
+ * «красный не кликается») — открывает предупреждение о новой версии
+ * (там же чекбоксом можно снять подавление).
  */
 @Composable
 internal fun UpdateMiniBadge(
     updateResult: UpdateCheckResult?,
     isCheckingUpdate: Boolean,
-    onCheckForUpdates: () -> Unit
+    onCheckForUpdates: () -> Unit,
+    onShowUpdateDialog: () -> Unit = {}
 ) {
     val urgency = updateResult?.urgency ?: UpdateUrgency.UP_TO_DATE
     val hasUpdate = updateResult?.hasUpdate == true
@@ -145,7 +149,11 @@ internal fun UpdateMiniBadge(
         modifier = Modifier
             .clip(RoundedCornerShape(18.dp))
             .background(containerColor)
-            .clickable(enabled = !hasUpdate && !isCheckingUpdate) { onCheckForUpdates() }
+            // Есть обновление — тап открывает предупреждение (репорт
+            // владельца: «красный не кликается»); нет — ручная проверка.
+            .clickable(enabled = !isCheckingUpdate) {
+                if (hasUpdate) onShowUpdateDialog() else onCheckForUpdates()
+            }
             .padding(start = 10.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
