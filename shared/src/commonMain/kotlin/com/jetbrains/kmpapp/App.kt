@@ -185,6 +185,58 @@ fun App() {
         ) {
             var currentTab by remember { mutableStateOf(AppTab.SCHEDULE) }
 
+            // Предупреждение о новой версии по экрану (репорт владельца:
+            // «нет никаких предупреждений о том, что вышла новая версия»):
+            // автопроверка на старте нашла NEW_VERSION/CRITICAL →
+            // AlertDialog поверх всего, один раз на запуск. MINOR_BUILD
+            // (новая сборка того же канала) молчит — это шум для dev.
+            var updateDialogShownFor by remember { mutableStateOf<String?>(null) }
+            val updateResult by otherViewModel.updateResult.collectAsState()
+            val showUpdateDialog = updateResult?.let { res ->
+                res.hasUpdate &&
+                    res.urgency != com.jetbrains.kmpapp.data.update.UpdateUrgency.MINOR_BUILD &&
+                    updateDialogShownFor != res.latestVersion + "_" + res.latestBuild
+            } == true
+            if (showUpdateDialog) {
+                val res = updateResult!!
+                val isCritical = res.urgency == com.jetbrains.kmpapp.data.update.UpdateUrgency.CRITICAL
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = {
+                        updateDialogShownFor = res.latestVersion + "_" + res.latestBuild
+                    },
+                    title = {
+                        com.jetbrains.kmpapp.theme.GlitchText(
+                            text = if (isCritical) "Важное обновление!" else "Вышла новая версия!",
+                            style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                        )
+                    },
+                    text = {
+                        com.jetbrains.kmpapp.theme.GlitchText(
+                            text = buildString {
+                                append("Доступна версия ${res.latestVersion}")
+                                if (isCritical) append(" — содержит важные исправления")
+                                append(". Обновитесь в магазине приложений")
+                                if (isCritical) append(", старая версия может работать нестабильно")
+                                append(".")
+                                res.changelog?.takeIf { it.isNotBlank() }?.let { ch ->
+                                    append("\n\n")
+                                    append(ch)
+                                }
+                            },
+                            style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                        )
+                    },
+                    confirmButton = {
+                        androidx.compose.material3.Button(onClick = {
+                            updateDialogShownFor = res.latestVersion + "_" + res.latestBuild
+                        }) {
+                            com.jetbrains.kmpapp.theme.GlitchText("Понятно")
+                        }
+                    }
+                )
+            }
+
             LaunchedEffect(Unit) {
                 // Мост для виджетов: платформенный код забирает снапшот через него.
                 com.jetbrains.kmpapp.data.widget.WidgetBridge.attach(repository)
