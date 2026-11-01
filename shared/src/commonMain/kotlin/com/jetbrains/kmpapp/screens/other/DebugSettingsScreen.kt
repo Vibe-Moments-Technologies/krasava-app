@@ -61,6 +61,7 @@ fun DebugSettingsScreen(
     PlatformBackHandler(onBack = onBack)
     val simulateOffline by DebugConfig.isOfflineSimulated.collectAsState()
     val mapCoordinatePlane by DebugConfig.isMapCoordinatePlaneEnabled.collectAsState()
+    val testVersionFeed by DebugConfig.isTestVersionFeed.collectAsState()
     val diagnosticsEnabled by viewModel.diagnosticsEnabled.collectAsState()
     val storageStats by viewModel.storageStats.collectAsState()
     var showClearCacheDialog by remember { mutableStateOf(false) }
@@ -121,6 +122,27 @@ fun DebugSettingsScreen(
                 subtitle = "Сетка координат поверх карт для отладки геометрии",
                 checked = mapCoordinatePlane,
                 onCheckedChange = DebugConfig::setMapCoordinatePlaneEnabled
+            )
+
+            // Тестовый фид версионирования (репорт владельца): проверка
+            // обновлений читает version-test.json на gh-pages — версии
+            // меняются в файле как угодно, смотрим поведение приложения
+            // (бейдж, срочность, новая версия). Жёсткое правило: только
+            // dev/beta/contrib; стабильный релиз всегда на официальном
+            // version.json — тумблер недоступен и флаг погашен.
+            SectionTitle("Версионирование")
+            DebugSwitchCard(
+                title = "Тестовый фид версий",
+                subtitle = if (AppVersion.BUILD_CHANNEL in setOf("stable", "rc")) {
+                    "Недоступно в стабильном релизе: приложение всегда проверяет официальный version.json."
+                } else {
+                    "Проверка обновлений читает version-test.json на gh-pages " +
+                        "(меняйте версии в файле как угодно). Перезапуск не нужен: " +
+                        "выключите — вернётся официальный фид."
+                },
+                checked = testVersionFeed,
+                enabled = AppVersion.BUILD_CHANNEL !in setOf("stable", "rc"),
+                onCheckedChange = DebugConfig::setTestVersionFeed
             )
 
             // Диагностика (Sentry): opt-in для тестировщиков. Выключена —

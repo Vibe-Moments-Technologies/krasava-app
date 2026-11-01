@@ -19,7 +19,26 @@ object DebugConfig {
         _isMapCoordinatePlaneEnabled.value = enabled
     }
 
+    /**
+     * Тестовый фид версионирования (репорт владельца): проверка обновлений
+     * читает version-test.json на gh-pages вместо официального version.json.
+     * Правило: работает ТОЛЬКО на dev/beta/contrib-сборках; в стабильном
+     * релизе тумблер недоступен и флаг принудительно false — офидийный фид
+     * защищён от подмены.
+     */
+    private val _isTestVersionFeed = MutableStateFlow(false)
+    val isTestVersionFeed: StateFlow<Boolean> = _isTestVersionFeed.asStateFlow()
+
+    // Стабильный релиз: тестовый фид недопустим (правило владельца).
+    private val testFeedAllowed: Boolean =
+        com.jetbrains.kmpapp.data.model.AppVersion.BUILD_CHANNEL !in setOf("stable", "rc")
+
+    fun setTestVersionFeed(enabled: Boolean) {
+        _isTestVersionFeed.value = enabled && testFeedAllowed
+    }
+
     fun reset() {
         _isOfflineSimulated.value = false
+        _isTestVersionFeed.value = false
     }
 }

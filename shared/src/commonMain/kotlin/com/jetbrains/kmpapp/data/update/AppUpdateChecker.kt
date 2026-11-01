@@ -76,12 +76,23 @@ class AppUpdateChecker(
     }
 
     suspend fun checkForUpdates(): UpdateCheckResult? = withContext(Dispatchers.IO) {
-        fetchFeedResult() ?: fetchLatestReleaseResult()
+        // Тестовый фид (меню отладки): файл version-test.json на gh-pages —
+        // версии крутятся как угодно для проверки поведения приложения.
+        // Тумблер доступен только на dev/beta/contrib; DebugConfig сам
+        // принудительно гасит флаг на стабильном релизе.
+        val testFeed = com.jetbrains.kmpapp.data.DebugConfig.isTestVersionFeed.value
+        if (testFeed) {
+            fetchFeedResult(AppVersion.TEST_UPDATE_FEED_URL)
+        } else {
+            fetchFeedResult() ?: fetchLatestReleaseResult()
+        }
     }
 
-    private suspend fun fetchFeedResult(): UpdateCheckResult? {
+    private suspend fun fetchFeedResult(
+        feedUrl: String = AppVersion.UPDATE_FEED_URL
+    ): UpdateCheckResult? {
         return try {
-            val response = client.get(AppVersion.UPDATE_FEED_URL) {
+            val response = client.get(feedUrl) {
                 header("User-Agent", "Krasava-App")
             }
             if (response.status.value !in 200..299) return null
