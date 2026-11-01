@@ -94,10 +94,18 @@ class AppUpdateChecker(
         return try {
             val response = client.get(feedUrl) {
                 header("User-Agent", "Krasava-App")
+                // raw.githubusercontent отдаёт max-age=300: NSURLSession (iOS)
+                // и OkHttp-кеш могли отдавать СТАРЫЙ JSON из локального кеша
+                // до 5 минут после правки фида — «тестовый фид не работает»
+                // (репорт владельца). no-cache заставляет кеш свериться
+                // с сервером: файл правки виден сразу.
+                header("Cache-Control", "no-cache")
             }
             if (response.status.value !in 200..299) return null
             val feed = json.decodeFromString<VersionFeed>(response.body<String>())
             if (feed.version.isBlank()) return null
+            // Диагностика (в т.ч. тестового фида): что реально прочитано.
+            println("UpdateFeed $feedUrl -> ${feed.version} build=${feed.build}")
 
             val hasNewerVersion = VersionComparator.compare(feed.version, AppVersion.VERSION_NAME) > 0
             val hasNewerBuild = feed.build > AppVersion.BUILD_NUMBER
