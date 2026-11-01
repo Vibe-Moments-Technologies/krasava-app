@@ -298,10 +298,6 @@ class OtherViewModel(
         _showUpdateDialogRequest.value += 1
     }
 
-    fun consumeShowUpdateDialogRequest() {
-        _showUpdateDialogRequest.value = 0
-    }
-
     fun checkForUpdates() {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             try {

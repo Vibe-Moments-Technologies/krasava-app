@@ -200,6 +200,11 @@ fun App() {
             val updateSuppressedVersion by com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppressedVersion.collectAsState()
             var updateDialogShownFor by remember { mutableStateOf<String?>(null) }
             var suppressThisVersion by remember { mutableStateOf(false) }
+            // Ручной показ: request — счётчик тапов; последний обработанный
+            // номер храним тут. НЕТ consume-вызовов из композиции: смена
+            // состояния внутри композиции убивала диалог мгновенно
+            // (репорт владельца: «открывается и сразу закрывается»).
+            var updateDialogRequestHandled by remember { mutableStateOf(0) }
             val updateResult by otherViewModel.updateResult.collectAsState()
             val updateDialogRequest by otherViewModel.showUpdateDialogRequest.collectAsState()
             // Подавление активно, только пока фид показывает ту же версию
@@ -211,26 +216,22 @@ fun App() {
                     ) <= 0
                 } == true
             } == true
-            val manualRequested = updateDialogRequest > 0
+            val manualRequested = updateDialogRequest > updateDialogRequestHandled
             val showUpdateDialog = updateResult?.let { res ->
                 val autoShow = res.hasUpdate &&
                     res.urgency != com.jetbrains.kmpapp.data.update.UpdateUrgency.MINOR_BUILD &&
                     updateDialogShownFor != res.latestVersion + "_" + res.latestBuild &&
                     !suppressedNow
-                // Ручной тап по виджету: есть обновление — показать всегда.
+                // Ручной тап по виджету: есть обновление — показать всегда
+                // (даже при подавлении — в диалоге галочку можно снять).
                 (autoShow) || (manualRequested && res.hasUpdate)
             } == true
             if (showUpdateDialog) {
                 val res = updateResult!!
-                if (manualRequested) {
-                    otherViewModel.consumeShowUpdateDialogRequest()
-                    // Открыли вручную при подавлении: чекбокс стартует снятым,
-                    // пользователь решает сам, вернуть ли показ.
-                    suppressThisVersion = false
-                }
                 val isCritical = res.urgency == com.jetbrains.kmpapp.data.update.UpdateUrgency.CRITICAL
                 androidx.compose.material3.AlertDialog(
                     onDismissRequest = {
+                        updateDialogRequestHandled = updateDialogRequest
                         updateDialogShownFor = res.latestVersion + "_" + res.latestBuild
                     },
                     title = {
@@ -274,6 +275,7 @@ fun App() {
                     },
                     confirmButton = {
                         androidx.compose.material3.Button(onClick = {
+                            updateDialogRequestHandled = updateDialogRequest
                             if (suppressThisVersion) {
                                 com.jetbrains.kmpapp.data.update.UpdateDialogPrefs.suppress(res.latestVersion)
                             } else {
@@ -288,6 +290,16 @@ fun App() {
                         }
                     }
                 )
+            }
+
+            // Новый ручной запрос диалога → чекбокс стартует снятым
+            // (пользователь решает сам). LaunchedEffect, не композиция:
+            // запись состояния внутри композиции мгновенно закрывала
+            // только что открытый диалог (репорт владельца).
+            androidx.compose.runtime.LaunchedEffect(updateDialogRequest) {
+                if (updateDialogRequest > 0) {
+                    suppressThisVersion = false
+                }
             }
 
             LaunchedEffect(Unit) {
