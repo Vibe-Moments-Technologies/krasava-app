@@ -16,14 +16,25 @@ object MapRepository {
     }
 
     suspend fun loadFloorSvg(campusId: String, floor: Int): String? = withContext(Dispatchers.IO) {
-        val cacheKey = "$campusId-$floor"
+        // Новая сьёмка МП-1 (тумблер в отладке, репорт владельца): по
+        // умолчанию — старые карты mp-1; включён тумблер — mp-1-new
+        // (6 этажей 0..5: новый «Этаж 0» — бывший -1). Ключ кеша различает
+        // версии, чтобы переключение не подмешивало старые этажи.
+        val newMp1 = com.jetbrains.kmpapp.data.DebugConfig.isNewMp1MapEnabled.value
+        val cacheKey = "$campusId-$floor" + if (campusId == "mp-1" && newMp1) "-new" else ""
         svgCache[cacheKey]?.let { return@withContext it }
 
         val path = when (campusId) {
             "s-20" -> "files/maps/s-20/floor_$floor.svg"
             "v-78" -> "files/maps/v-78/floor_$floor.svg"
             "v-86" -> "files/maps/v-86/floor_$floor.svg"
-            "mp-1" -> if (floor == -1) "files/maps/mp-1/floor_m1.svg" else "files/maps/mp-1/floor_$floor.svg"
+            "mp-1" -> if (newMp1) {
+                // Новая сьёмка: этажи 0..5; «Этаж 0» замещает старый -1.
+                if (floor == -1) "files/maps/mp-1-new/floor_0.svg"
+                else "files/maps/mp-1-new/floor_$floor.svg"
+            } else {
+                if (floor == -1) "files/maps/mp-1/floor_m1.svg" else "files/maps/mp-1/floor_$floor.svg"
+            }
             else -> return@withContext null
         }
 

@@ -123,6 +123,16 @@ fun DebugSettingsScreen(
                 checked = mapCoordinatePlane,
                 onCheckedChange = DebugConfig::setMapCoordinatePlaneEnabled
             )
+            // Новая сьёмка МП-1 (репорт владельца): по умолчанию старые
+            // карты; тумблер переключает на mp-1-new (этажи 0..5, «Этаж 0»
+            // = бывший -1). Персистентен; старые карты не удаляются.
+            val newMp1Map by DebugConfig.isNewMp1MapEnabled.collectAsState()
+            DebugSwitchCard(
+                title = "Новая съёмка МП-1",
+                subtitle = "Карты Малой Пироговской из новой выгрузки (этажи 0–5, «0» — бывший подвал). Выключено — прежняя версия.",
+                checked = newMp1Map,
+                onCheckedChange = DebugConfig::setNewMp1MapEnabled
+            )
 
             // Тестовый фид версионирования (репорт владельца): проверка
             // обновлений читает version-test.json на gh-pages — версии

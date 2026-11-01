@@ -60,4 +60,22 @@ object DebugConfig {
         _isTestVersionFeed.value = false
         runCatching { storage.remove(KEY_TEST_VERSION_FEED) }
     }
+
+    /**
+     * Новая сьёмка Малой Пироговской (репорт владельца): карты mp-1-new
+     * вместо старых mp-1. По умолчанию — СТАРАЯ версия (решение владельца:
+     * «старую не убирай, по умолчанию — старая, новую включать в отладке»).
+     * Тумблер в «Отладке и экспериментах», персистентен (как тестовый фид).
+     */
+    private const val KEY_NEW_MP1_MAP = "krasava_debug_new_mp1_map"
+
+    private val _isNewMp1MapEnabled = MutableStateFlow(
+        runCatching { storage.getString(KEY_NEW_MP1_MAP) == "1" }.getOrDefault(false)
+    )
+    val isNewMp1MapEnabled: StateFlow<Boolean> = _isNewMp1MapEnabled.asStateFlow()
+
+    fun setNewMp1MapEnabled(enabled: Boolean) {
+        _isNewMp1MapEnabled.value = enabled
+        runCatching { storage.saveString(KEY_NEW_MP1_MAP, if (enabled) "1" else "0") }
+    }
 }
