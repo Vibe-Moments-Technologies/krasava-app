@@ -62,20 +62,20 @@ object DebugConfig {
     }
 
     /**
-     * Новая сьёмка Малой Пироговской (репорт владельца): карты mp-1-new
-     * вместо старых mp-1. По умолчанию — СТАРАЯ версия (решение владельца:
-     * «старую не убирай, по умолчанию — старая, новую включать в отладке»).
-     * Тумблер в «Отладке и экспериментах», персистентен (как тестовый фид).
+     * Карты Малой Пироговской (репорт владельца): ПО УМОЛЧАНИЮ — новая
+     * съёмка mp-1-new (инверсия исходного тумблера); старые карты mp-1
+     * включаются тумблером «Старая съёмка МП-1» в «Отладке и
+     * экспериментах». Персистентен (как тестовый фид).
      */
-    private const val KEY_NEW_MP1_MAP = "krasava_debug_new_mp1_map"
+    private const val KEY_OLD_MP1_MAP = "krasava_debug_old_mp1_map"
 
-    private val _isNewMp1MapEnabled = MutableStateFlow(
-        runCatching { storage.getString(KEY_NEW_MP1_MAP) == "1" }.getOrDefault(false)
+    private val _isOldMp1MapEnabled = MutableStateFlow(
+        runCatching { storage.getString(KEY_OLD_MP1_MAP) == "1" }.getOrDefault(false)
     )
-    val isNewMp1MapEnabled: StateFlow<Boolean> = _isNewMp1MapEnabled.asStateFlow()
+    val isOldMp1MapEnabled: StateFlow<Boolean> = _isOldMp1MapEnabled.asStateFlow()
 
-    fun setNewMp1MapEnabled(enabled: Boolean) {
-        _isNewMp1MapEnabled.value = enabled
-        runCatching { storage.saveString(KEY_NEW_MP1_MAP, if (enabled) "1" else "0") }
+    fun setOldMp1MapEnabled(enabled: Boolean) {
+        _isOldMp1MapEnabled.value = enabled
+        runCatching { storage.saveString(KEY_OLD_MP1_MAP, if (enabled) "1" else "0") }
     }
 }

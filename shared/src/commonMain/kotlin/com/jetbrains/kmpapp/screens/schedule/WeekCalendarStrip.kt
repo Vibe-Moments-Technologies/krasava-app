@@ -102,8 +102,18 @@ fun WeekCalendarStrip(
     val currentWeekEnd = currentWeekMonday.plus(DatePeriod(days = 7))
     val todayInCurrentWeek = today >= currentWeekMonday && today < currentWeekEnd
     val weekInfo = DateUtils.getWeekInfo(currentWeekMonday)
-    val monthTitle = DateUtils.formatMonthTitle(currentWeekMonday.month)
-    val year = currentWeekMonday.year
+    // Месяц в заголовке — от ВЫБРАННОГО дня, не от понедельника недели
+    // (репорт владельца: пограничная неделя 27 окт–1 ноя показывала
+    // «Октябрь», хотя пользователь на Вс=1 ноября). Выбран день другой
+    // недели (листнули, но не тапнули) — берём середину видимой недели,
+    // чтобы заголовок следовал за листанием.
+    val headerDate = if (selectedDate >= currentWeekMonday && selectedDate < currentWeekEnd) {
+        selectedDate
+    } else {
+        currentWeekMonday.plus(DatePeriod(days = 3))
+    }
+    val monthTitle = DateUtils.formatMonthTitle(headerDate.month)
+    val year = headerDate.year
 
     // Состояние и колбэки жеста обязаны читаться через rememberUpdatedState:
     // pointerInput запускается ОДИН раз, а состояние меняется (неделя → две
