@@ -114,9 +114,9 @@ object NotificationsManager {
                 if (fireAt <= nowLocal) return@forEach // время показа уже прошло
                 eng.schedule(
                     id = "lesson-${lesson.date}-${lesson.bellNumber}",
-                    title = "Скоро занятие",
-                    // Субтитл «через N мин» убран (решение владельца): iOS
-                    // рендерит его строкой под заголовком, дублируя смысл.
+                    // Заголовок = «Через N мин» (репорт владельца): смысл
+                    // сразу при взгляде; детали — в тексте ниже.
+                    title = "Через $minutesBefore мин",
                     subtitle = "",
                     body = formatter(lesson),
                     dateEpochMillis = fireAt.toInstant(TimeZone.currentSystemDefault())
