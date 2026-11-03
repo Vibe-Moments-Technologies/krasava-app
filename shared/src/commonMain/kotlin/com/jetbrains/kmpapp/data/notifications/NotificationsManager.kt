@@ -28,8 +28,21 @@ object NotificationsManager {
          * только когда здесь true (решение владельца: не врать переключателем).
          */
         fun isAuthorized(): Boolean
-        /** Запланировать уведомление с идентификатором; dateEpochMillis — время показа. */
-        fun schedule(id: String, title: String, body: String, dateEpochMillis: Long)
+        /**
+         * Запланировать уведомление с идентификатором; dateEpochMillis —
+         * время показа; subtitle — мелкий подзаголовок: iOS рендерит его
+         * в строке заголовка (визуально «в углу» баннера) — так
+         * Apple-календарь пишет «через 5 мин» (репорт владельца):
+         * относительное будущее время — не в body. Пустая строка — без
+         * субтитла. Android-движок параметр игнорирует.
+         */
+        fun schedule(
+            id: String,
+            title: String,
+            subtitle: String,
+            body: String,
+            dateEpochMillis: Long
+        )
         /** Снять все запланированные (в т.ч. предыдущую партию). */
         fun cancelAll()
     }
@@ -68,6 +81,7 @@ object NotificationsManager {
         eng.schedule(
             id = if (delayMillis <= 2_000L) "test-now" else "test-delayed",
             title = "Тестовое уведомление",
+            subtitle = "",
             body = if (delayMillis <= 2_000L) {
                 "Доставка уведомлений работает"
             } else {
@@ -101,6 +115,10 @@ object NotificationsManager {
                 eng.schedule(
                     id = "lesson-${lesson.date}-${lesson.bellNumber}",
                     title = "Скоро занятие",
+                    // Субтитл «через N мин» — iOS рисует его у заголовка,
+                    // как Apple-календарь (репорт владельца). N ровно
+                    // настройке: уведомление уходит ровно за N минут.
+                    subtitle = "через $minutesBefore мин",
                     body = formatter(lesson),
                     dateEpochMillis = fireAt.toInstant(TimeZone.currentSystemDefault())
                         .toEpochMilliseconds()

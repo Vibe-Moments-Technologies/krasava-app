@@ -224,6 +224,9 @@ class ScheduleRepository(
                             NotificationsManager.reschedule(targetLessons, p.minutes) { lesson ->
                                 // «СДО» — сайт вуза, не аудитория: в тексте
                                 // напоминания подпись формата, а не «ауд. СДО».
+                                // «Через N мин» из текста убрано (репорт владельца):
+                                // относительное время показывает САМА система в
+                                // углу баннера — текст не дублирует.
                                 val room = when {
                                     lesson.isRemote -> ", дистанционно (СДО)"
                                     lesson.classrooms.isNotEmpty() ->
@@ -234,7 +237,7 @@ class ScheduleRepository(
                                 val type = if (lesson.lessonType.shortName.isNotBlank()) {
                                     " (${lesson.lessonType.shortName})"
                                 } else ""
-                                "Через ${p.minutes} мин — ${lesson.subject}$type в $time$room"
+                                "${lesson.subject}$type в $time$room"
                             }
                             scheduledTargetId = target.id
                         }

@@ -34,7 +34,15 @@ object AndroidNotificationsEngine : NotificationsManager.NotificationEngine {
         return NotificationManagerCompat.from(ctx).areNotificationsEnabled()
     }
 
-    override fun schedule(id: String, title: String, body: String, dateEpochMillis: Long) {
+    override fun schedule(
+        id: String,
+        title: String,
+        subtitle: String,
+        body: String,
+        dateEpochMillis: Long
+    ) {
+        // subtitle — iOS-механика («через N мин» в углу баннера);
+        // Android-компакт-баннер субтитла не имеет: параметр игнорируем.
         val ctx = context ?: return
         val intent = alarmIntent(ctx, id, title, body)
         // Ближний тест из отладки: без разрешения на точные будильники

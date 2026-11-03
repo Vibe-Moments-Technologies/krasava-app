@@ -72,9 +72,15 @@ final class NotificationsEngine: NotificationsManagerNotificationEngine {
         scheduledLessonIds = Set(UserDefaults.standard.stringArray(forKey: scheduledIdsKey) ?? [])
     }
 
-    func schedule(id: String, title: String, body: String, dateEpochMillis: Int64) {
+    /// Субтитл: iOS рендерит его мелким текстом рядом с заголовком
+    /// («в углу» баннера) — так Apple-календарь пишет «через 5 мин»
+    /// (репорт владельца). Относительное будущее время — не в body.
+    func schedule(id: String, title: String, subtitle: String, body: String, dateEpochMillis: Int64) {
         let content = UNMutableNotificationContent()
         content.title = title
+        if !subtitle.isEmpty {
+            content.subtitle = subtitle
+        }
         content.body = body
         content.sound = .default
         // Ближние уведомления (тест из отладки) — интервальный триггер:
