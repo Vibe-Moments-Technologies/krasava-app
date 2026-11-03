@@ -115,10 +115,9 @@ object NotificationsManager {
                 eng.schedule(
                     id = "lesson-${lesson.date}-${lesson.bellNumber}",
                     title = "Скоро занятие",
-                    // Субтитл «через N мин» — iOS рисует его у заголовка,
-                    // как Apple-календарь (репорт владельца). N ровно
-                    // настройке: уведомление уходит ровно за N минут.
-                    subtitle = "через $minutesBefore мин",
+                    // Субтитл «через N мин» убран (решение владельца): iOS
+                    // рендерит его строкой под заголовком, дублируя смысл.
+                    subtitle = "",
                     body = formatter(lesson),
                     dateEpochMillis = fireAt.toInstant(TimeZone.currentSystemDefault())
                         .toEpochMilliseconds()
