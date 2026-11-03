@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp.data.notifications
 
 import com.jetbrains.kmpapp.data.model.Lesson
+import com.jetbrains.kmpapp.data.model.LessonType
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
@@ -74,21 +75,55 @@ object NotificationsManager {
      * Отладка: тестовое уведомление через [delayMillis] (сейчас ≈ 1.5 с).
      * Фиксированные id — повторные тесты заменяют предыдущие, партию
      * напоминаний о занятиях не трогают.
+     *
+     * Вид — СТРУКТУРНО как боевое напоминание (репорт владельца: «отправлял
+     * не свой тип, а такой же, как для расписания, — тестить вид не ждя
+     * пары»): фиктивная пара + заголовок «Через N мин» + текст в формате
+     * ScheduleRepository (предмет, тип, время, аудитория).
      */
-    fun sendTest(delayMillis: Long) {
+    fun sendTest(delayMillis: Long, minutesBefore: Int = 5) {
         val eng = engine ?: return
         requestAuthorization()
+
+        // Фиктивная пара «сейчас + N минут»: время начала подогнано, чтобы
+        // текст был правдоподобным относительно настройки напоминаний.
+        val nowLocal = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        val lessonStart = nowLocal.time.let { LocalTime(it.hour, it.minute) }
+        val fakeLesson = Lesson(
+            id = "test-lesson",
+            subject = "Тестовое напоминание",
+            lessonType = LessonType.PRACTICE,
+            teachers = emptyList(),
+            classrooms = listOf("353"),
+            bellNumber = 3,
+            startTime = "${lessonStart.hour.toString().padStart(2, '0')}:${lessonStart.minute.toString().padStart(2, '0')}",
+            endTime = "00:00",
+            date = nowLocal.date
+        )
+        val body = formatLessonBody(fakeLesson)
+
         eng.schedule(
             id = if (delayMillis <= 2_000L) "test-now" else "test-delayed",
-            title = "Тестовое уведомление",
+            title = "Через $minutesBefore мин",
             subtitle = "",
-            body = if (delayMillis <= 2_000L) {
-                "Доставка уведомлений работает"
-            } else {
-                "Запланировано на минуту вперёд — проверка будильника"
-            },
+            body = body,
             dateEpochMillis = Clock.System.now().toEpochMilliseconds() + delayMillis
         )
+    }
+
+    /** Текст напоминания о паре — общий формат для боевых и тестовых увед. */
+    private fun formatLessonBody(lesson: Lesson): String {
+        val room = when {
+            lesson.isRemote -> ", дистанционно (СДО)"
+            lesson.classrooms.isNotEmpty() ->
+                ", ауд. ${lesson.classrooms.joinToString(", ")}"
+            else -> ""
+        }
+        val time = "${lesson.startTime}"
+        val type = if (lesson.lessonType.shortName.isNotBlank()) {
+            " (${lesson.lessonType.shortName})"
+        } else ""
+        return "${lesson.subject}$type в $time$room"
     }
 
     /**
