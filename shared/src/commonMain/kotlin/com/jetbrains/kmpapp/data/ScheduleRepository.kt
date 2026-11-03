@@ -230,7 +230,11 @@ class ScheduleRepository(
                                         ", ауд. ${lesson.classrooms.joinToString(", ")}"
                                     else -> ""
                                 }
-                                "Через ${p.minutes} мин: ${lesson.subject}$room"
+                                val time = "${lesson.startTime}"
+                                val type = if (lesson.lessonType.shortName.isNotBlank()) {
+                                    " (${lesson.lessonType.shortName})"
+                                } else ""
+                                "Через ${p.minutes} мин — ${lesson.subject}$type в $time$room"
                             }
                             scheduledTargetId = target.id
                         }
