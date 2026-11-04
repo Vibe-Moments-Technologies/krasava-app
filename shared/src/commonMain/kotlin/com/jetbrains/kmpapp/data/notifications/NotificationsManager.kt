@@ -119,11 +119,9 @@ object NotificationsManager {
                 ", ауд. ${lesson.classrooms.joinToString(", ")}"
             else -> ""
         }
-        val time = "${lesson.startTime}"
-        val type = if (lesson.lessonType.shortName.isNotBlank()) {
-            " (${lesson.lessonType.shortName})"
-        } else ""
-        return "${lesson.subject}$type в $time$room"
+        // Тип пары в текст НЕ пишем (репорт владельца): предмет и время
+        // достаточно; тип виден цветом карточки в приложении.
+        return "${lesson.subject} в ${lesson.startTime}$room"
     }
 
     /**

@@ -37,7 +37,12 @@ enum class LessonType(val displayName: String, val shortName: String) {
     CONSULTATION("Консультация", "КОНС"),
     INDIVIDUAL_WORK("Самост. работа", "СР"),
     OTHER("Занятие", "ДР"),
-    ADDITIONAL("Доп. занятие", "ДОП")
+    ADDITIONAL("Доп. занятие", "ДОП"),
+    /**
+     * «Мероприятие» (код МР в фиде, FULL_LESSON_TYPE: «Мероприятие»):
+     * внеучебные события в расписании. Найден в живом фиде (ауд. 249, С-20).
+     */
+    EVENT("Мероприятие", "МР")
 }
 
 @Serializable

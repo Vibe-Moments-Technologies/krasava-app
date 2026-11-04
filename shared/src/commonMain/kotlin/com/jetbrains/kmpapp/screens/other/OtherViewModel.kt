@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 import com.jetbrains.kmpapp.data.update.AppUpdateChecker
@@ -161,6 +162,23 @@ class OtherViewModel(
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
     val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = repository.lessonTypeColors
+
+    /**
+     * Типы занятий, реально присутствующие в ДОБАВЛЕННЫХ расписаниях
+     * (репорт владельца: «в меню цветов ставить только те, что есть в
+     * расписаниЯХ»). Пусто (нет расписаний) — все типы, чтобы настройки
+     * не пустовали на первом запуске.
+     */
+    val presentLessonTypes: StateFlow<List<LessonType>> = repository.cachedLessons
+        .map { cache ->
+            val present = cache.values
+                .asSequence()
+                .flatMap { lessons -> lessons.asSequence().map { it.lessonType } }
+                .toSet()
+            if (present.isEmpty()) LessonType.entries.toList()
+            else LessonType.entries.filter { it in present }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), LessonType.entries.toList())
     /** Вариант палитры «Киберпанка»: NEON (новая) или CLASSIC (старая). */
     val cyberpunkVariant: StateFlow<CyberpunkVariant> = repository.cyberpunkVariant
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed

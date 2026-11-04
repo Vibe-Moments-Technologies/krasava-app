@@ -226,18 +226,15 @@ class ScheduleRepository(
                                 // напоминания подпись формата, а не «ауд. СДО».
                                 // «Через N мин» из текста убрано (репорт владельца):
                                 // относительное время показывает САМА система в
-                                // углу баннера — текст не дублирует.
+                                // углу баннера — текст не дублирует. Тип пары
+                                // тоже не пишем: он виден цветом карточки.
                                 val room = when {
                                     lesson.isRemote -> ", дистанционно (СДО)"
                                     lesson.classrooms.isNotEmpty() ->
                                         ", ауд. ${lesson.classrooms.joinToString(", ")}"
                                     else -> ""
                                 }
-                                val time = "${lesson.startTime}"
-                                val type = if (lesson.lessonType.shortName.isNotBlank()) {
-                                    " (${lesson.lessonType.shortName})"
-                                } else ""
-                                "${lesson.subject}$type в $time$room"
+                                "${lesson.subject} в ${lesson.startTime}$room"
                             }
                             scheduledTargetId = target.id
                         }

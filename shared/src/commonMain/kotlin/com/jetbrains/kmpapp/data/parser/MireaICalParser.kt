@@ -189,6 +189,8 @@ object MireaICalParser {
             v.startsWith("курсовой") -> LessonType.COURSE_WORK
             v.startsWith("консультац") -> LessonType.CONSULTATION
             v.startsWith("самостоятельн") -> LessonType.INDIVIDUAL_WORK
+            // «Мероприятие» (код МР) — внеучебные события в фиде.
+            v.startsWith("мероприят") -> LessonType.EVENT
             else -> null
         }
     }
@@ -206,6 +208,9 @@ object MireaICalParser {
             v.contains("КР") -> LessonType.COURSE_WORK
             v.contains("КОНС") || v.contains("КТ") -> LessonType.CONSULTATION
             v.contains("СР") -> LessonType.INDIVIDUAL_WORK
+            // «МР» — точное совпадение: «мероприят…» уже покрыт полным
+            // именем выше; подстрока «МР» встречается в других словах.
+            v == "МР" -> LessonType.EVENT
             else -> LessonType.OTHER
         }
     }
