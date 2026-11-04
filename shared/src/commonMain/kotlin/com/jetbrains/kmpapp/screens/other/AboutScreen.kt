@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -190,6 +191,9 @@ fun AboutScreen(
 /** Почта проекта: пишем письма через mailto. */
 private const val PROJECT_EMAIL = "vibe.moments.technologies@gmail.com"
 
+/** TG-бот поддержки (репорт владельца): быстрый канал вопросов. */
+private const val SUPPORT_BOT_URL = "https://t.me/krasava_sbot"
+
 @Composable
 private fun ContactsCard() {
     val uriHandler = LocalUriHandler.current
@@ -205,6 +209,14 @@ private fun ContactsCard() {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(10.dp))
+            // TG-бот поддержки — первый: самый быстрый путь для вопроса.
+            ContactRow(
+                icon = Icons.Default.Send,
+                tint = MaterialTheme.colorScheme.primary,
+                text = "Бот поддержки",
+                onClick = { uriHandler.openUri(SUPPORT_BOT_URL) }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
             ContactRow(
                 icon = Icons.Default.Email,
                 tint = MaterialTheme.colorScheme.primary,
