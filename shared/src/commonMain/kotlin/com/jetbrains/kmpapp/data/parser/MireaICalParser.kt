@@ -100,13 +100,19 @@ object MireaICalParser {
             return null
         }
 
-        val subject = props["X-META-DISCIPLINE"]?.firstOrNull()
+        val rawSubject = props["X-META-DISCIPLINE"]?.firstOrNull()
             ?: props["SUMMARY"]?.firstOrNull()
             ?: return null
 
         val rawType = props["X-META-LESSON_TYPE"]?.firstOrNull() ?: ""
         val fullType = props["X-META-FULL_LESSON_TYPE"]?.firstOrNull() ?: ""
         val lessonType = resolveLessonType(rawType, fullType)
+
+        // SUMMARY сервер пишет с префиксом типа («ЛК Формализованные модели…»),
+        // X-META-DISCIPLINE — уже чистое название. Чистим оба: тип живёт в
+        // отдельном поле и показывается бейджем/цветом, дублировать его в
+        // названии предмета не нужно (репорт владельца: «ЛК и потом (ЛК)»).
+        val subject = stripTypePrefix(rawSubject, rawType)
 
         val teachers = props["X-META-TEACHER"] ?: emptyList()
         val classrooms = props["X-META-AUDITORIUM"] ?: props["LOCATION"] ?: emptyList()
@@ -213,6 +219,22 @@ object MireaICalParser {
             v == "МР" -> LessonType.EVENT
             else -> LessonType.OTHER
         }
+    }
+
+    /**
+     * Срезает ведущий код типа из названия предмета («ЛК Базы данных» →
+     * «Базы данных»). Только если префикс РЕАЛЬНО совпадает с типом этого
+     * события: «ЛК» в начале «ЛКБ»-подобного названия не трогаем. Границу
+     * проверяем: за кодом должен идти пробел.
+     */
+    private fun stripTypePrefix(subject: String, rawType: String): String {
+        val prefix = rawType.trim().uppercase()
+        if (prefix.isEmpty()) return subject.trim()
+        val upper = subject.trim().uppercase()
+        if (!upper.startsWith(prefix)) return subject.trim()
+        val after = subject.trim().substring(prefix.length)
+        if (!after.startsWith(" ") && !after.startsWith("\u00A0")) return subject.trim()
+        return after.trim()
     }
 
     private fun parseDate(raw: String): LocalDate? {
