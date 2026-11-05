@@ -3,6 +3,9 @@ package com.jetbrains.kmpapp
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -100,6 +103,12 @@ internal val DarkColors = darkColorScheme(
     surfaceContainer = Color(0xFF1D2026),
     surfaceContainerHigh = Color(0xFF282A30)
 )
+
+/** Отступ между смысловыми блоками диалога обновлений. */
+@Composable
+private fun Spacer12() {
+    Spacer(modifier = Modifier.height(12.dp))
+}
 
 @Composable
 fun App() {
@@ -251,24 +260,23 @@ fun App() {
                         androidx.compose.foundation.layout.Column {
                             com.jetbrains.kmpapp.theme.GlitchText(
                                 text = buildString {
-                                    append("Доступна версия ${res.latestVersion}")
-                                    if (isCritical) append(" — содержит важные исправления")
+                                    append("Версия ${res.latestVersion} уже доступна")
+                                    if (isCritical) append(" — в ней есть важные исправления")
                                     append(".")
-                                    res.changelog?.takeIf { it.isNotBlank() }?.let { ch ->
-                                        append("\n\n")
-                                        append(ch)
-                                    }
-                                    // Пометка владельца: если приложение ставили из
-                                    // стора — новая версия появляется там позже
-                                    // (модерация платформы); GitHub-сборка уже вышла.
-                                    append("\n\nЕсли вы устанавливали приложение из магазина приложений, подождите: новая версия появится в нём после модерации платформы. Прямая сборка уже доступна на GitHub.")
                                 },
                                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
                             )
+                            res.changelog?.takeIf { it.isNotBlank() }?.let { ch ->
+                                Spacer12()
+                                com.jetbrains.kmpapp.theme.GlitchText(
+                                    text = "Изменения:\n$ch",
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                            // Ссылка на подробный ченджлог версии (файл в репо:
+                            // changelogs/vX.Y.Z.md) — кликабельная, отдельной строкой.
                             val changelogUrl = res.changelogUrl?.takeIf { it.isNotBlank() }
                             if (changelogUrl != null) {
-                                // Ссылка на подробный ченджлог версии (файл в репо:
-                                // changelogs/vX.Y.Z.md, публикуется на gh-pages).
                                 val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
                                 androidx.compose.material3.TextButton(
                                     onClick = { runCatching { uriHandler.openUri(changelogUrl) } },
@@ -277,12 +285,21 @@ fun App() {
                                     )
                                 ) {
                                     com.jetbrains.kmpapp.theme.GlitchText(
-                                        text = "Полный список изменений",
+                                        text = "Подробный список изменений на GitHub",
                                         style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                                         color = androidx.compose.material3.MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
+                            // Пометка владельца: если приложение ставили из
+                            // магазина — новая версия появится там позже
+                            // (модерация платформы); сборка с GitHub уже вышла.
+                            Spacer12()
+                            com.jetbrains.kmpapp.theme.GlitchText(
+                                text = "Если вы установили приложение из магазина, обновление появится там чуть позже — после проверки на стороне магазина. Прямо сейчас новую версию можно скачать с GitHub.",
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                             androidx.compose.foundation.layout.Row(
                                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                             ) {
