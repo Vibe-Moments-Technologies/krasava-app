@@ -3,5 +3,12 @@
   "build": 1893456000,
   "critical": false,
   "min_supported_build": 1,
-  "changelog": "https://github.com/Vibe-Moments-Technologies/krasava-app/blob/main/changelogs/v26.4.0.md"
+  "changelog": "В приложении появились игры «Сапёр» и «Тетрис» и тема Error. Виджеты расписания для iPhone, iPad и Android. Новые темы — «Кавай» и Хэллоуин.",
+  "changelog_url": "https://github.com/Vibe-Moments-Technologies/krasava-app/blob/main/changelogs/v26.4.0.md",
+  "download_url": "https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest",
+  "apk_url": "https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.apk",
+  "ipa_url": "https://github.com/Vibe-Moments-Technologies/krasava-app/releases/latest/download/Krasava.ipa",
+  "channel": "stable",
+  "prerelease": false,
+  "updated_at": "2026-11-05T20:30:00+00:00"
 }
