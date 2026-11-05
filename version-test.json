@@ -3,5 +3,5 @@
   "build": 1893456000,
   "critical": false,
   "min_supported_build": 1,
-  "changelog": "Симуляция: стабильный релиз 26.4.0 вышел (сборка из будущего относительно dev). Мини-виджет должен показать оранжевую реакцию."
+  "changelog": "https://github.com/Vibe-Moments-Technologies/krasava-app/blob/main/changelogs/v26.4.0.md"
 }
