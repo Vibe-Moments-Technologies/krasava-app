@@ -110,6 +110,9 @@ private fun Spacer12() {
     Spacer(modifier = Modifier.height(12.dp))
 }
 
+/** Ченджлог, состоящий ИЗ ОДНОЙ ссылки (тестовый фид version-test.json). */
+private val BARE_URL = Regex("""https?://\S+""")
+
 @Composable
 fun App() {
     val repository: ScheduleRepository = koinInject()
@@ -266,16 +269,26 @@ fun App() {
                                 },
                                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
                             )
-                            res.changelog?.takeIf { it.isNotBlank() }?.let { ch ->
+                            // Ссылка на подробный ченджлог версии (файл в репо:
+                            // changelogs/vX.Y.Z.md) — кликабельная, отдельной строкой.
+                            // Приходит полем changelog_url; но тестовый фид кладёт
+                            // ссылку прямо в changelog (version-test.json) —
+                            // распознаём и этот случай, чтобы кнопка работала
+                            // и на тестах владельца.
+                            val rawChangelog = res.changelog?.takeIf { it.isNotBlank() }
+                            val bareChangelogUrl = rawChangelog?.let {
+                                BARE_URL.matchEntire(it.trim())?.value
+                            }
+                            val changelogUrl = res.changelogUrl?.takeIf { it.isNotBlank() }
+                                ?: bareChangelogUrl
+                            val changelogText = if (bareChangelogUrl != null) null else rawChangelog
+                            if (changelogText != null) {
                                 Spacer12()
                                 com.jetbrains.kmpapp.theme.GlitchText(
-                                    text = "Изменения:\n$ch",
+                                    text = "Изменения:\n$changelogText",
                                     style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
                                 )
                             }
-                            // Ссылка на подробный ченджлог версии (файл в репо:
-                            // changelogs/vX.Y.Z.md) — кликабельная, отдельной строкой.
-                            val changelogUrl = res.changelogUrl?.takeIf { it.isNotBlank() }
                             if (changelogUrl != null) {
                                 val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
                                 androidx.compose.material3.TextButton(
