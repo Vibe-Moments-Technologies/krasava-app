@@ -213,7 +213,7 @@ internal fun UpdateStatusCard(
     }
 
     val titleText = when {
-        isCheckingUpdate -> "Проверка обновлений..."
+        isCheckingUpdate -> "Проверяем обновления..."
         urgency == UpdateUrgency.CRITICAL -> "Важное обновление!"
         urgency == UpdateUrgency.NEW_VERSION -> "Вышла новая версия!"
         urgency == UpdateUrgency.MINOR_BUILD -> "Доступна новая сборка"
@@ -224,7 +224,7 @@ internal fun UpdateStatusCard(
         urgency == UpdateUrgency.CRITICAL ->
             "Версия ${updateResult?.latestVersion} • Важные исправления безопасности"
         hasUpdate ->
-            "Версия ${updateResult?.latestVersion} • Обновитесь в магазине приложений"
+            "Версия ${updateResult?.latestVersion} • Новую версию можно обновить в магазине приложений"
         else -> AppVersion.DISPLAY_VERSION
     }
 
