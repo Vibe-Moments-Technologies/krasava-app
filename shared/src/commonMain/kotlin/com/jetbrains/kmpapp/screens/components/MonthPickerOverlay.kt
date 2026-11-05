@@ -27,8 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -105,15 +103,18 @@ fun MonthPickerOverlay(
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 6.dp,
             modifier = Modifier
-                .width(320.dp)
+                // Немного крупнее (запрос владельца): ячейки растут
+                // автоматически — сетка держит aspectRatio(1).
+                .width(352.dp)
                 // Тап по карточке не должен закрывать календарь.
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
                 ) {}
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                // Заголовок: стрелки + «Месяц Год»
+            Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)) {
+                // Заголовок: стрелки + «Месяц Год» + «Сегодня» (пилюля как в
+                // ленточном календаре; видна только когда выбран не сегодня).
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -136,11 +137,34 @@ fun MonthPickerOverlay(
                         )
                     }
 
-                    GlitchText(
-                        text = "${DateUtils.formatMonthTitle(Month.entries[displayedMonth - 1])} $displayedYear",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GlitchText(
+                            text = "${DateUtils.formatMonthTitle(Month.entries[displayedMonth - 1])} $displayedYear",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        if (highlighted != today) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.primaryContainer,
+                                modifier = Modifier.clickable {
+                                    displayedYear = today.year
+                                    displayedMonth = today.month.ordinal + 1
+                                    highlighted = today
+                                }
+                            ) {
+                                GlitchText(
+                                    text = "Сегодня",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                    }
 
                     IconButton(
                         onClick = {
@@ -264,48 +288,45 @@ fun MonthPickerOverlay(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                // Легенда типов пар в одну строку — короткие названия, как на
-                // карточках пар (полные не влезают в ширину карточки).
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    LessonType.entries.forEach { type ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(getLessonDotColor(type, isDark))
-                            )
-                            Spacer(modifier = Modifier.width(3.dp))
-                            GlitchText(
-                                text = type.shortName,
-                                fontSize = 9.5.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                // Легенда типов пар — только типы, реально есть в показанном
+                // расписании (запрос владельца): меняется при смене или
+                // изменении расписания, т.к. пересобирается из lessonSummaries.
+                // Пусто (нет расписаний/нет пар) — не показываем вовсе.
+                val legendTypes = remember(lessonSummaries) {
+                    lessonSummaries.values
+                        .asSequence()
+                        .flatMap { it.lessonTypes.asSequence() }
+                        .distinct()
+                        .toList()
                 }
-
-                // Кнопки
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = {
-                        displayedYear = today.year
-                        displayedMonth = today.month.ordinal + 1
-                        highlighted = today
-                    }) {
-                        GlitchText("Сегодня", fontWeight = FontWeight.SemiBold)
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    TextButton(onClick = onDismiss) {
-                        GlitchText("Отмена")
+                if (legendTypes.isNotEmpty()) {
+                    // Short names may not fit on one line — wrap, up to 6 in a row.
+                    legendTypes.chunked(6).forEach { rowTypes ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            rowTypes.forEach { type ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(CircleShape)
+                                            .background(getLessonDotColor(type, isDark))
+                                    )
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    GlitchText(
+                                        text = type.shortName,
+                                        fontSize = 9.5.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(3.dp))
                     }
                 }
             }

@@ -62,10 +62,9 @@ fun LessonColorSettingsScreen(
 ) {
     PlatformBackHandler(onBack = onBack)
     val overrides by viewModel.lessonTypeColors.collectAsState()
-    // Только типы, реально встречающиеся в добавленных расписаниях
-    // (репорт владельца): «Лекции» без единой лекции в приложении не
-    // показываем. Нет расписаний — показываем всё.
-    val presentTypes by viewModel.presentLessonTypes.collectAsState()
+    // Все поддерживаемые типы, включая ещё не встречавшиеся в расписаниях
+    // (запрос тестеров): цвет можно назначить заранее, чтобы новый тип
+    // не «занял» чужой цвет.
     var editing by remember { mutableStateOf<LessonType?>(null) }
 
     Scaffold(
@@ -117,7 +116,7 @@ fun LessonColorSettingsScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
-                    presentTypes.forEachIndexed { index, type ->
+                    LessonType.entries.forEachIndexed { index, type ->
                         if (index > 0) {
                             HorizontalDivider(
                                 modifier = Modifier.padding(vertical = 2.dp),

@@ -209,19 +209,20 @@ private fun ContactsCard() {
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(10.dp))
-            // TG-бот поддержки — первый: самый быстрый путь для вопроса.
-            ContactRow(
-                icon = Icons.Default.Send,
-                tint = MaterialTheme.colorScheme.primary,
-                text = "Бот поддержки",
-                onClick = { uriHandler.openUri(SUPPORT_BOT_URL) }
-            )
-            Spacer(modifier = Modifier.height(4.dp))
+            // Почта — первая, далее TG-бот поддержки (запрос владельца:
+            // переименован и переставлен после почты), затем Issue.
             ContactRow(
                 icon = Icons.Default.Email,
                 tint = MaterialTheme.colorScheme.primary,
                 text = PROJECT_EMAIL,
                 onClick = { uriHandler.openUri("mailto:$PROJECT_EMAIL") }
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            ContactRow(
+                icon = Icons.Default.Send,
+                tint = MaterialTheme.colorScheme.primary,
+                text = "Telegram Support Bot",
+                onClick = { uriHandler.openUri(SUPPORT_BOT_URL) }
             )
             Spacer(modifier = Modifier.height(4.dp))
             ContactRow(
