@@ -307,10 +307,11 @@ fun App() {
                             // Пометка владельца: если приложение ставили из
                             // магазина — новая версия появится там позже
                             // (модерация платформы); сборка с GitHub уже вышла.
+                            // Запрос владельца: текст крупнее bodySmall.
                             Spacer12()
                             com.jetbrains.kmpapp.theme.GlitchText(
                                 text = "Если вы установили приложение из магазина, обновление появится там чуть позже — после проверки на стороне магазина. Прямо сейчас новую версию можно скачать с GitHub.",
-                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
                                 color = androidx.compose.material3.MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             androidx.compose.foundation.layout.Row(
