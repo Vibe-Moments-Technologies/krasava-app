@@ -26,7 +26,10 @@ data class VersionFeed(
     val critical: Boolean = false,
     @SerialName("min_supported_build")
     val minSupportedBuild: Int = 0,
-    val changelog: String? = null
+    val changelog: String? = null,
+    /** Ссылка на подробный ченджлог версии (changelogs/vX.Y.Z.md на gh-pages). */
+    @SerialName("changelog_url")
+    val changelogUrl: String? = null
 )
 
 @Serializable
@@ -49,7 +52,9 @@ data class UpdateCheckResult(
     val currentVersion: String = AppVersion.VERSION_NAME,
     val currentBuild: Int = AppVersion.BUILD_NUMBER,
     val isCritical: Boolean = false,
-    val changelog: String? = null
+    val changelog: String? = null,
+    /** Ссылка на подробный ченджлог версии (changelogs/vX.Y.Z.md на gh-pages). */
+    val changelogUrl: String? = null
 ) {
     val hasUpdate: Boolean get() = urgency != UpdateUrgency.UP_TO_DATE
 }
@@ -127,7 +132,8 @@ class AppUpdateChecker(
                 latestVersion = feed.version,
                 latestBuild = feed.build,
                 isCritical = isCritical,
-                changelog = feed.changelog
+                changelog = feed.changelog,
+                changelogUrl = feed.changelogUrl
             )
         } catch (e: Throwable) {
             println("Feed check error: ${e.message}")

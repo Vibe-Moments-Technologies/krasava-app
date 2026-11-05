@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.ScheduleRepository
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
@@ -264,6 +265,24 @@ fun App() {
                                 },
                                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
                             )
+                            val changelogUrl = res.changelogUrl?.takeIf { it.isNotBlank() }
+                            if (changelogUrl != null) {
+                                // Ссылка на подробный ченджлог версии (файл в репо:
+                                // changelogs/vX.Y.Z.md, публикуется на gh-pages).
+                                val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
+                                androidx.compose.material3.TextButton(
+                                    onClick = { runCatching { uriHandler.openUri(changelogUrl) } },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                                        start = 0.dp, end = 0.dp, top = 4.dp, bottom = 0.dp
+                                    )
+                                ) {
+                                    com.jetbrains.kmpapp.theme.GlitchText(
+                                        text = "Полный список изменений",
+                                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                        color = androidx.compose.material3.MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
                             androidx.compose.foundation.layout.Row(
                                 verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
                             ) {

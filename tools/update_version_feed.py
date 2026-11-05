@@ -52,11 +52,29 @@ def parse_app_version(path):
     m = (re.search(r'const\s+val\s+CHANGELOG\s*=\s*"""([\s\S]*?)"""', content)
          or re.search(r'const\s+val\s+CHANGELOG\s*=\s*"([^"]*)"', content))
     changelog = m.group(1).strip() if m else ""
+    m = re.search(r'const\s+val\s+RELEASE_VERSION\s*=\s*"([^"]+)"', content)
+    release_version = m.group(1) if m else ""
     m = re.search(r'const\s+val\s+IS_CRITICAL\s*=\s*(true|false)', content)
     critical = (m.group(1) == "true") if m else False
     m = re.search(r'const\s+val\s+MIN_SUPPORTED_BUILD\s*=\s*(\d+)', content)
     min_supported = int(m.group(1)) if m else 1
-    return repo, changelog, critical, min_supported
+    return repo, changelog, critical, min_supported, release_version
+
+
+def changelog_urls(repo, release_version):
+    """Ссылки на подробный ченджлог версии (запрос владельца): в фиде и
+    релизе — не текст, а ссылка на файл changelogs/vX.Y.Z.md.
+
+    Два адреса одного файла:
+      * changelog_url — blob на github.com (сайт с рендерингом Markdown);
+      * changelog_raw — raw.githubusercontent (программное чтение).
+    """
+    base = f"https://github.com/{repo}"
+    version_file = f"changelogs/v{release_version}.md"
+    return {
+        "changelog_url": f"{base}/blob/main/{version_file}",
+        "changelog_raw": f"https://raw.githubusercontent.com/{repo}/main/{version_file}",
+    }
 
 
 def asset_urls(repo, channel, version):
@@ -160,12 +178,13 @@ def main():
     ap.add_argument("--app-version-file", default=APP_VERSION_FILE)
     args = ap.parse_args()
 
-    repo, changelog, critical, min_supported = parse_app_version(args.app_version_file)
+    repo, changelog, critical, min_supported, release_version = parse_app_version(args.app_version_file)
     channel = args.channel
     is_stable = channel == "stable"
     # beta и rc пишут один и тот же фид: бета-канал приложения читает beta.json
     is_beta = channel in ("beta", "rc")
     urls = asset_urls(repo, channel, args.version)
+    cl_urls = changelog_urls(repo, release_version)
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -173,12 +192,16 @@ def main():
 
     # 1) Канальные фиды обновлений приложения
     if is_stable or is_beta:
+        # Ченджлог в фиде — короткий текст + ССЫЛКА на подробный файл
+        # changelogs/vX.Y.Z.md (запрос владельца: «не ченджлог текстом,
+        # а ссылка на содержимое файла ченджлога версии»).
         feed = {
             "version": args.version,
             "build": args.build_number,
             "critical": critical and is_stable,
             "min_supported_build": min_supported if is_stable else 1,
             "changelog": changelog,
+            "changelog_url": cl_urls["changelog_url"],
             "download_url": urls["download_url"],
             "apk_url": urls["apk_url"],
             "ipa_url": urls["ipa_url"],
