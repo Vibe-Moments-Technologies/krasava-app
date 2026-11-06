@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.FilledIconButton
@@ -46,24 +46,21 @@ import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kotlinx.coroutines.delay
 
 /**
- * Экран сканера QR: отмечается пара на «Пульсе» — код с доски часто
- * мелкий/бликует, системная камера не справляется; наш декодер читает
- * тяжелее, а фонарик подсвечивает доску.
+ * Сканер QR — полноценная страница-раздел (для дока).
  *
- * Рамка-прицел — не фиксированный квадрат, а четыре уголка с
- * АВТОНАВЕДЕНИЕМ: следят за кодом в кадре (координаты от платформы),
- * при захвате «замораживаются» и подсвечиваются, дрожание сглаживается
- * анимацией. Антидребезг: код засчитывается, когда распознан
- * стабильно (порог [STABLE_FRAMES] подряд), — только после этого
- * открывается ссылка (сразу, без подтверждения: коды меняются на ходу).
+ * Единый экран: открыта как раздел дока/шапки — просто страница с
+ * шапкой «Сканер QR» без кнопок закрытия (док переключает сам);
+ * открыта из «Сервисов»/«Другого» — с «назад» ([onBack]).
  *
- * Закрытие — крестик в шапке; системная кнопка «назад» тоже закрывает
- * ([onBack]). Везде один и тот же полноэкранный экран: из дока,
- * из сервисов и из шапки расписания (там значок QR — toggle).
+ * Рамка-прицел: четыре уголка с автонаведением — следят за кодом в
+ * кадре (координаты от платформы), дрожание сглаживается анимацией.
+ * Антидребезг: код засчитывается после [STABLE_FRAMES] стабильных
+ * кадров, при захвате рамка замирает и зеленеет, ссылка открывается
+ * сразу (коды «Пульса» меняются на ходу — подтверждать некогда).
  */
 @Composable
 fun QrScannerScreen(
-    onBack: (() -> Unit)?,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (onBack != null) PlatformBackHandler(onBack = onBack)
@@ -78,7 +75,7 @@ fun QrScannerScreen(
     var candidateValue by remember { mutableStateOf<String?>(null) }
     var candidateStability by remember { mutableStateOf(0) }
 
-    // ---- Автонаведение рамки (нормализованные x/y/w/h, -1 — кода нет).
+    // ---- Автонаведение рамки (нормализованные x/y/w/h, null — кода нет).
     var targetBounds by remember { mutableStateOf<FloatArray?>(null) }
     // Плавная рамка: к target через анимацию (глушит дрожание руки).
     val animX by animateFloatAsState(targetBounds?.get(0) ?: 0.5f, tween(120))
@@ -142,7 +139,7 @@ fun QrScannerScreen(
         }
     }
 
-    // Код пропал из кадра (платформа шлёт -1/-1/-1/-1) — сбрасываем цель,
+    // Код пропал из кадра (платформа шлёт -1) — сбрасываем цель,
     // рамка мягко возвращается к исходной позиции.
     fun onBounds(x: Float, y: Float, w: Float, h: Float) {
         if (x < 0f) {
@@ -171,51 +168,47 @@ fun QrScannerScreen(
             )
 
             // Рамка-прицел: четыре уголка, следящие за кодом.
-            Box(modifier = Modifier.fillMaxSize()) {
-                CornerSights(
-                    x01 = animX, y01 = animY, w01 = animW, h01 = animH,
-                    locked = locked,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            CornerSights(
+                x01 = animX, y01 = animY, w01 = animW, h01 = animH,
+                locked = locked,
+                modifier = Modifier.fillMaxSize()
+            )
 
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                // Шапка: заголовок + крестик закрытия. Кнопки «назад» нет
-                // нигде (владелец: «Куда назад?»): закрытие — крестик,
-                // во встроенном режиме — ещё и повторный тап по значку
-                // QR в шапке расписания (toggle).
+                // Шапка страницы: как у остальных разделов. «Назад» —
+                // только когда сканер открыт как подстраница
+                // («Сервисы»/«Другое»); раздел дока закрывается самим
+                // доком, крестик не нужен.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    GlitchText(
-                        text = "Сканер QR",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.weight(1f)
-                    )
                     if (onBack != null) {
                         IconButton(onClick = onBack) {
                             Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Закрыть",
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Назад",
                                 tint = Color.White
                             )
                         }
                     }
+                    GlitchText(
+                        text = "Сканер QR",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // Подсказка + фонарик: подняты над доком (запрос владельца:
-                // «кнопка молнии прилипла к доку, надпись уходит под док»).
+                // Подсказка + фонарик: подняты над доком.
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -254,7 +247,7 @@ private const val STABLE_FRAMES = 3
 
 /**
  * Четыре уголка-прицела вокруг (x01, y01, w01, h01) — нормализованных
- * координат кода. [locked]: зелёные, толще, с лёгким свечением.
+ * координат кода. [locked]: зелёные, с чуть более толстой обводкой.
  */
 @Composable
 private fun CornerSights(
@@ -266,16 +259,14 @@ private fun CornerSights(
     modifier: Modifier = Modifier
 ) {
     val cornerColor = if (locked) Color(0xFF34D399) else Color.White
-    val cornerAlpha by animateFloatAsState(if (locked) 1f else 0.9f, tween(120))
-    val cornerWidth = 4.dp
+    val cornerWidth = if (locked) 5.dp else 4.dp
     val cornerLen = 22.dp
 
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        // Полу-прозрачное поле чуть больше рамки — «зона поиска».
-        val rectW = w01 * w
-        val rectH = h01 * h
+        val rectW = (w01 * w).coerceAtLeast(cornerLen.toPx() * 1.5f)
+        val rectH = (h01 * h).coerceAtLeast(cornerLen.toPx() * 1.5f)
         val left = (x01 * w).coerceIn(0f, w - rectW)
         val top = (y01 * h).coerceIn(0f, h - rectH)
         val right = (left + rectW).coerceAtMost(w)
@@ -304,7 +295,7 @@ private fun CornerSights(
         path.lineTo(left, bottom - lenPx)
         drawPath(
             path,
-            color = cornerColor.copy(alpha = cornerAlpha),
+            color = cornerColor,
             style = Stroke(width = strokePx, cap = StrokeCap.Round)
         )
     }

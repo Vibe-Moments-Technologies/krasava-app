@@ -405,7 +405,12 @@ fun App() {
                 Crossfade(targetState = currentTab) { tab ->
                     when (tab) {
                         AppTab.SCHEDULE -> {
-                            ScheduleScreen(viewModel = scheduleViewModel)
+                            ScheduleScreen(
+                                viewModel = scheduleViewModel,
+                                // Значок QR в шапке: открывает раздел
+                                // сканера (единую страницу).
+                                onOpenQrScanner = { currentTab = AppTab.QR_SCANNER }
+                            )
                         }
                         AppTab.FREE_ROOMS -> {
                             FreeRoomsScreen(viewModel = freeRoomsViewModel)
@@ -426,7 +431,7 @@ fun App() {
                             GamesScreen(viewModel = gamesViewModel)
                         }
                         AppTab.QR_SCANNER -> {
-                            com.jetbrains.kmpapp.screens.qr.QrScannerScreen(onBack = { currentTab = AppTab.SCHEDULE })
+                            com.jetbrains.kmpapp.screens.qr.QrScannerScreen()
                         }
                         AppTab.SERVICES -> {
                             ServicesScreen(

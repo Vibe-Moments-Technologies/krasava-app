@@ -76,7 +76,10 @@ fun ScheduleScreen(
     viewModel: ScheduleViewModel,
     modifier: Modifier = Modifier,
     // Не null при скрытом доке: шестерёнка в топбаре открывает «Другое».
-    onOpenOther: (() -> Unit)? = null
+    onOpenOther: (() -> Unit)? = null,
+    // Значок QR в шапке: переход в раздел сканера (не null, когда
+    // настройка «Кнопка сканера QR» включена).
+    onOpenQrScanner: (() -> Unit)? = null
 ) {
     val selectedLessonForDetail by viewModel.selectedLessonForDetail.collectAsState()
 
@@ -86,7 +89,13 @@ fun ScheduleScreen(
         onBackToParent = { viewModel.selectLessonForDetail(null) },
         // Возврат из другой вкладки с открытым детальным экраном — без въезда.
         initiallyRevealed = remember { selectedLessonForDetail != null },
-        rootContent = { ScheduleMainContent(viewModel = viewModel, onOpenOther = onOpenOther) },
+        rootContent = {
+            ScheduleMainContent(
+                viewModel = viewModel,
+                onOpenOther = onOpenOther,
+                onOpenQrScanner = onOpenQrScanner
+            )
+        },
         screenContent = { detailLesson, back ->
             LessonDetailScreen(
                 lesson = detailLesson as Lesson,
@@ -103,7 +112,8 @@ fun ScheduleScreen(
 private fun ScheduleMainContent(
     viewModel: ScheduleViewModel,
     modifier: Modifier = Modifier,
-    onOpenOther: (() -> Unit)? = null
+    onOpenOther: (() -> Unit)? = null,
+    onOpenQrScanner: (() -> Unit)? = null
 ) {
     val savedTargets by viewModel.savedTargets.collectAsState()
     val selectedTarget by viewModel.selectedTarget.collectAsState()
@@ -131,10 +141,6 @@ private fun ScheduleMainContent(
     val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
     val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
     var isVpnBannerDismissed by remember(isVpnActive, vpnWarningEnabled) { mutableStateOf(false) }
-
-    // Сканер QR — оверлей поверх расписания (не вкладка): из шапки
-    // попадаем в него в один тап, закрытие возвращает расписание как было.
-    var showQrScanner by remember { mutableStateOf(false) }
 
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -190,7 +196,11 @@ private fun ScheduleMainContent(
                 onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
                 onCalendarBadgeLongClick = { showMonthPicker = true },
                 onOpenOtherClick = onOpenOther,
-                onQrScannerClick = if (qrButtonEnabled) { { showQrScanner = !showQrScanner } } else null
+                // Шапка: значок QR открывает РАЗДЕЛ сканера (не оверлей)
+                // — когда колбэк передан и настройка включена.
+                onQrScannerClick = if (qrButtonEnabled) {
+                    onOpenQrScanner
+                } else null
             )
         },
         modifier = modifier.fillMaxSize()
@@ -429,15 +439,6 @@ private fun ScheduleMainContent(
                 lessonSummaries = dayLessonSummaries,
                 onDatePicked = { viewModel.selectDate(it) },
                 onDismiss = { showMonthPicker = false }
-            )
-        }
-
-        // Сканер QR из шапки: полноэкранный оверлей с крестиком
-        // (владелец: встроенный режим «шапка без выхода — бред»).
-        // Значок QR в шапке работает как toggle: тап открыл — тап закрыл.
-        if (showQrScanner) {
-            com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
-                onBack = { showQrScanner = false }
             )
         }
         }
