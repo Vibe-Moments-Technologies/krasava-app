@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp.screens.other
 import com.jetbrains.kmpapp.theme.GlitchText
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Domain
@@ -35,7 +37,10 @@ import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material.icons.filled.Interests
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.RocketLaunch
@@ -75,6 +80,18 @@ import coil3.compose.SubcomposeAsyncImage
 import com.jetbrains.kmpapp.data.VkAvatarLoader
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import kmp_app_template.shared.generated.resources.Res
+import kmp_app_template.shared.generated.resources.res_logo_cloud
+import kmp_app_template.shared.generated.resources.res_logo_fund
+import kmp_app_template.shared.generated.resources.res_logo_ibc
+import kmp_app_template.shared.generated.resources.res_logo_lk
+import kmp_app_template.shared.generated.resources.res_logo_mirea
+import kmp_app_template.shared.generated.resources.res_logo_pulse
+import kmp_app_template.shared.generated.resources.res_logo_sdo
+import kmp_app_template.shared.generated.resources.res_logo_student
+import kmp_app_template.shared.generated.resources.res_logo_vote
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
 
 data class StudentResource(
@@ -84,45 +101,56 @@ data class StudentResource(
     val icon: ImageVector,
     val accentColor: Color,
     /** Фон плитки иконки; null — светлый оттенок [accentColor]. */
-    val iconBackground: Color? = null
+    val iconBackground: Color? = null,
+    /** Логотип сервиса; если задан — показывается вместо [icon]. */
+    val logo: DrawableResource? = null
 )
 
 val STUDENT_RESOURCES = listOf(
+    StudentResource(
+        title = "Сайт РТУ МИРЭА",
+        description = "Официальный сайт университета: новости, структура, документы и контакты.",
+        url = "https://mirea.ru/",
+        icon = Icons.Default.Language,
+        accentColor = Color(0xFF007AFF),
+        iconBackground = Color.White,
+        logo = Res.drawable.res_logo_mirea
+    ),
     StudentResource(
         title = "Личный кабинет студента",
         description = "Доступ к оценкам, приказам, договорам и электронным сервисам университета.",
         url = "https://lk.mirea.ru/",
         icon = Icons.Default.AccountCircle,
-        accentColor = Color(0xFF007AFF)
+        accentColor = Color(0xFF007AFF),
+        iconBackground = Color.White,
+        logo = Res.drawable.res_logo_lk
     ),
     StudentResource(
         title = "СДО МИРЭА",
         description = "Система дистанционного обучения: курсы, тесты, лекционные материалы и задания.",
         url = "https://online-edu.mirea.ru/",
         icon = Icons.Default.School,
-        accentColor = Color(0xFF5856D6)
+        accentColor = Color(0xFF5856D6),
+        iconBackground = Color.White,
+        logo = Res.drawable.res_logo_sdo
     ),
     StudentResource(
         title = "Пульс МИРЭА",
         description = "Сервис для отметок посещаемости на парах, контроля успеваемости и баллов БРС.",
         url = "https://pulse.mirea.ru/",
         icon = Icons.Default.MonitorHeart,
-        accentColor = Color(0xFFFF2D55)
+        accentColor = Color(0xFFFF2D55),
+        iconBackground = Color.White,
+        logo = Res.drawable.res_logo_pulse
     ),
     StudentResource(
         title = "Справочник студента",
         description = "База знаний и инструкций: контакты отделений, регламенты и ответы на вопросы.",
-        url = "https://student.mirea.ru/help/ ",
+        url = "https://student.mirea.ru/help/",
         icon = Icons.AutoMirrored.Filled.MenuBook,
-        accentColor = Color(0xFFFF9500)
-    ),
-    StudentResource(
-        title = "Киберзона",
-        description = "Бронирование VR-зон, компьютерных классов и настольных игр в киберпространстве РТУ МИРЭА.",
-        url = "https://esports.mirea.app/",
-        icon = CyberzoneDragon,
-        accentColor = Color.White,
-        iconBackground = Color(0xFF0B0B0F)
+        accentColor = Color(0xFFFF9500),
+        iconBackground = Color.White,
+        logo = Res.drawable.res_logo_student
     )
 )
 
@@ -151,7 +179,11 @@ data class ResourceLink(
     val accentColor: Color,
     val fetchAvatarFrom: String? = null,
     /** Иконка вместо эмодзи-символа; null — рисуем [symbol]. */
-    val icon: ImageVector? = null
+    val icon: ImageVector? = null,
+    /** Логотип ресурса; показывается вместо [icon]/[symbol]. */
+    val logo: DrawableResource? = null,
+    /** Фон аватара-иконки; null — светлый оттенок [accentColor]. */
+    val iconBackground: Color? = null
 ) : ResourceEntry
 
 private fun vkLink(title: String, description: String, symbol: String, url: String, accent: Color) =
@@ -272,7 +304,9 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     symbol = "☁️",
                     url = "https://cloud.mirea.ru/",
                     accentColor = Color(0xFF00C7BE),
-                    icon = Icons.Default.Cloud
+                    icon = Icons.Default.Cloud,
+                    logo = Res.drawable.res_logo_cloud,
+                    iconBackground = Color.White
                 ),
                 ResourceLink(
                     title = "Предложение идей университету",
@@ -280,7 +314,9 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     symbol = "💡",
                     url = "https://vote.mirea.ru/",
                     accentColor = Color(0xFFFFCC00),
-                    icon = Icons.Default.Lightbulb
+                    icon = Icons.Default.Lightbulb,
+                    logo = Res.drawable.res_logo_vote,
+                    iconBackground = Color.White
                 ),
                 ResourceLink(
                     title = "Фонд целевого капитала",
@@ -288,7 +324,9 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     symbol = "🌳",
                     url = "https://fund.mirea.ru/",
                     accentColor = Color(0xFF007AFF),
-                    icon = Icons.Default.Park
+                    icon = Icons.Default.Park,
+                    logo = Res.drawable.res_logo_fund,
+                    iconBackground = Color.White
                 ),
                 ResourceLink(
                     title = "Информационный библиотечный центр",
@@ -296,7 +334,19 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     symbol = "📚",
                     url = "https://ibc.mirea.ru/",
                     accentColor = Color(0xFFFF9500),
-                    icon = Icons.AutoMirrored.Filled.MenuBook
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    logo = Res.drawable.res_logo_ibc,
+                    iconBackground = Color.White
+                ),
+                ResourceLink(
+                    title = "Ректорат",
+                    description = "Руководство университета, состав ректората, контакты и приёмные часы.",
+                    symbol = "🏛️",
+                    url = "https://www.mirea.ru/about/administration/rektorat/",
+                    accentColor = Color(0xFF5856D6),
+                    icon = Icons.Default.AccountBalance,
+                    logo = Res.drawable.res_logo_mirea,
+                    iconBackground = Color.White
                 )
             )
         ),
@@ -350,11 +400,37 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             url = "https://sumirea.ru/",
                             accentColor = Color(0xFF007AFF)
                         ),
+                        vkLink(
+                            title = "ОВК",
+                            description = "Отчётно-выборные Конференции Студенческого союза МИРЭА",
+                            symbol = "🗳️",
+                            url = "https://vk.ru/ovksumirea",
+                            accent = Color(0xFF007AFF)
+                        ),
                         ResourceFolder(
                             title = "Структуры",
                             icon = Icons.Default.Groups,
                             accentColor = Color(0xFF34C759),
-                            children = emptyList()
+                            children = listOf(
+                                ResourceFolder(
+                                    title = "Подразделения",
+                                    icon = Icons.Default.AccountTree,
+                                    accentColor = Color(0xFF007AFF),
+                                    children = emptyList()
+                                ),
+                                ResourceFolder(
+                                    title = "Клубы по интересам",
+                                    icon = Icons.Default.Interests,
+                                    accentColor = Color(0xFFFF2D55),
+                                    children = emptyList()
+                                ),
+                                ResourceFolder(
+                                    title = "Отряды",
+                                    icon = Icons.Default.MilitaryTech,
+                                    accentColor = Color(0xFF34C759),
+                                    children = emptyList()
+                                )
+                            )
                         ),
                         ResourceFolder(
                             title = "Проекты",
@@ -425,8 +501,24 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             accentColor = Color(0xFFFF9500)
                         )
                     )
+                ),
+                vkLink(
+                    title = "Команда Арктики",
+                    description = "Студенческое объединение «Команда Арктики» РТУ МИРЭА",
+                    symbol = "🐻‍❄️",
+                    url = "https://vk.ru/arcticcenter",
+                    accent = Color(0xFF5AC8FA)
                 )
             )
+        ),
+        ResourceLink(
+            title = "Киберзона",
+            description = "Бронирование VR-зон, компьютерных классов и настольных игр в киберпространстве РТУ МИРЭА.",
+            symbol = "🐉",
+            url = "https://esports.mirea.app/",
+            accentColor = Color.White,
+            icon = CyberzoneDragon,
+            iconBackground = Color(0xFF0B0B0F)
         )
     )
 )
@@ -445,6 +537,10 @@ fun ResourcesScreen(
     // последний слой с общим выездом анимации.
     val folderStack = remember { mutableStateListOf<ResourceFolder>() }
     val stackSnapshot = folderStack.toList().takeIf { it.isNotEmpty() }
+    // Папка, которая закроется по текущему «назад». Снимаем именно её, даже
+    // если во время анимации успели открыть следующую: иначе поздний pop
+    // удалил бы только что открытую папку и вернул предыдущую.
+    var pendingPopFolder by remember { mutableStateOf<ResourceFolder?>(null) }
     // Скролл корня переживает переходы по папкам: хост перерисовывает корень
     // в другом слое (под дочерней папкой).
     val rootScrollState = rememberScrollState()
@@ -456,8 +552,19 @@ fun ResourcesScreen(
     LayeredNavHost(
         screen = stackSnapshot,
         parentScreen = stackSnapshot?.dropLast(1)?.takeIf { it.isNotEmpty() },
+        onBackStarted = { path ->
+            @Suppress("UNCHECKED_CAST")
+            pendingPopFolder = (path as? List<ResourceFolder>)?.lastOrNull()
+        },
         onBackToParent = {
-            if (folderStack.isNotEmpty()) folderStack.removeAt(folderStack.lastIndex)
+            val target = pendingPopFolder
+            pendingPopFolder = null
+            if (target != null) {
+                val index = folderStack.indexOfLast { it === target }
+                if (index >= 0) folderStack.removeAt(index)
+            } else if (folderStack.isNotEmpty()) {
+                folderStack.removeAt(folderStack.lastIndex)
+            }
         },
         rootContent = {
             ResourcesRootContent(
@@ -629,12 +736,22 @@ private fun OfficialResourceCard(
                         .background(res.iconBackground ?: res.accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = res.icon,
-                        contentDescription = null,
-                        tint = res.accentColor,
-                        modifier = Modifier.size(24.dp)
-                    )
+                    val logo = res.logo
+                    if (logo != null) {
+                        Image(
+                            painter = painterResource(logo),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = res.icon,
+                            contentDescription = null,
+                            tint = res.accentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.width(14.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -879,12 +996,27 @@ private fun LinkAvatar(link: ResourceLink, resolvedAvatar: String?) {
             loading = { SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor) },
             error = { SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor) }
         )
+    } else if (link.logo != null) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(link.iconBackground ?: link.accentColor.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(link.logo),
+                contentDescription = link.title,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(32.dp)
+            )
+        }
     } else if (link.icon != null) {
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(link.accentColor.copy(alpha = 0.15f)),
+                .background(link.iconBackground ?: link.accentColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(

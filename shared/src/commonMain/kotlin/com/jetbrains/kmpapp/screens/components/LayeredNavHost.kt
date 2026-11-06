@@ -49,6 +49,10 @@ fun LayeredNavHost(
     screen: Any?,
     parentScreen: Any?,
     onBackToParent: () -> Unit,
+    // Вызывается в момент старта возврата (до анимации): экран, который
+    // сейчас закроется. Нужен, чтобы при тапе по новой карточке во время
+    // анимации снять именно старый слой, а не только что открытый.
+    onBackStarted: (screen: Any?) -> Unit = {},
     // Возврат из другой вкладки с уже открытой подстраницей: показать её
     // сразу, без повторной анимации въезда («настройки сами открываются»).
     initiallyRevealed: Boolean = false,
@@ -97,6 +101,7 @@ fun LayeredNavHost(
 
         val back: (Float) -> Unit = { initialVelocity ->
             committed = true
+            onBackStarted(screen)
             scope.launch {
                 animate(
                     layerX.floatValue, widthPx, initialVelocity,
