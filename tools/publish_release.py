@@ -29,12 +29,6 @@ def parse_repo(app_version_file):
     return m.group(1) if m else "Vibe-Moments-Technologies/krasava-app"
 
 
-def parse_release_version(app_version_file):
-    content = Path(app_version_file).read_text(encoding="utf-8")
-    m = re.search(r'const\s+val\s+RELEASE_VERSION\s*=\s*"([^"]+)"', content)
-    return m.group(1) if m else ""
-
-
 def parse_changelog(app_version_file):
     content = Path(app_version_file).read_text(encoding="utf-8")
     m = (re.search(r'const\s+val\s+CHANGELOG\s*=\s*"""([\s\S]*?)"""', content)
@@ -131,7 +125,10 @@ def publish_immutable(args, files, date):
 
     repo = parse_repo(args.app_version_file)
     changelog = parse_changelog(args.app_version_file)
-    release_version = parse_release_version(args.app_version_file)
+    # Файл ченджлога — по версии РЕЛИЗА (тег v26.4.1 -> changelogs/
+    # v26.4.1.md), а не линии разработки: патч собирается из main, где
+    # RELEASE_VERSION мог быть другим. Суффикс канала отрезаем.
+    release_version = args.version.split("-")[0]
     notes = build_release_notes(args.version, args.build_number, date, repo, tag, files, changelog)
     if release_version:
         # Ссылка на подробный файл ченджлога версии (changelogs/vX.Y.Z.md).

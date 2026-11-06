@@ -61,7 +61,7 @@ def parse_app_version(path):
     return repo, changelog, critical, min_supported, release_version
 
 
-def changelog_urls(repo, release_version):
+def changelog_urls(repo, version):
     """Ссылки на подробный ченджлог версии (запрос владельца): в фиде и
     релизе — не текст, а ссылка на файл changelogs/vX.Y.Z.md.
 
@@ -70,11 +70,25 @@ def changelog_urls(repo, release_version):
       * changelog_raw — raw.githubusercontent (программное чтение).
     """
     base = f"https://github.com/{repo}"
-    version_file = f"changelogs/v{release_version}.md"
+    version_file = f"changelogs/v{version}.md"
     return {
         "changelog_url": f"{base}/blob/main/{version_file}",
         "changelog_raw": f"https://raw.githubusercontent.com/{repo}/main/{version_file}",
     }
+
+
+def changelog_version_for(channel, tag_version, release_version):
+    """Из какой версии строится имя файла ченджлога.
+
+    Релиз (stable/beta/rc): версия тега — тег v26.4.1 выпускает файл
+    v26.4.1.md даже при разогнанной вперёд линии разработки (патч
+    собирается из main, где RELEASE_VERSION — текущая линия).
+    Суффикс канала отрезаем: v26.4.0-beta.2 -> 26.4.0.
+    Preview (dev): версия линии разработки.
+    """
+    if channel in ("stable", "beta", "rc") and tag_version:
+        return tag_version.split("-")[0]
+    return release_version
 
 
 def asset_urls(repo, channel, version):
@@ -184,7 +198,10 @@ def main():
     # beta и rc пишут один и тот же фид: бета-канал приложения читает beta.json
     is_beta = channel in ("beta", "rc")
     urls = asset_urls(repo, channel, args.version)
-    cl_urls = changelog_urls(repo, release_version)
+    # Имя файла ченджлога: у релизов — версия тега (v26.4.1 -> v26.4.1.md),
+    # у preview — версия линии разработки.
+    cl_version = changelog_version_for(channel, args.version, release_version)
+    cl_urls = changelog_urls(repo, cl_version)
 
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)

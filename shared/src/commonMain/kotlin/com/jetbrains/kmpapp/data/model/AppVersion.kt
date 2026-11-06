@@ -14,9 +14,9 @@ object AppVersion {
      * заметки к парам, группировка настроек, информационные обновления.
      * v26.4.0 выпущен (06.11.2026): игры, виджеты, темы, типы занятий,
      * уведомления, новая съёмка МП-1, Sentry opt-in, ченджлоги по версиям.
-     * Текущая линия: 26.5.0.
+     * Текущая линия: 26.4.1 (микрофикс-патч: оптимизация размера сборок).
      */
-    const val RELEASE_VERSION = "26.5.0"
+    const val RELEASE_VERSION = "26.4.1"
     const val VERSION_NAME = RELEASE_VERSION
 
     /** stable | beta | rc | dev | contrib — подставляет CI через tools/versioning.py */
@@ -47,13 +47,13 @@ object AppVersion {
     const val IS_CRITICAL = false
     const val MIN_SUPPORTED_BUILD = 1
     /**
-     * Короткий ченджлог линии 26.4.0: показывается в диалоге обновлений
+     * Короткий ченджлог текущей линии: показывается в диалоге обновлений
      * (после подписи «Изменения:») и в заметках GitHub Release. Ссылка на
      * подробный файл changelogs/vX.Y.Z.md приходит отдельным полем
      * changelog_url (tools/update_version_feed.py) и в диалоге отображается
      * кнопкой ниже текста. Оглавление версий — CHANGELOG.md в корне.
      */
-    const val CHANGELOG = "В этой версии мы много чего добавили, переработали, кое-что удалили и исправили. Подробнее можно узнать в списке изменений по ссылке ниже."
+    const val CHANGELOG = "Приложение стало заметно легче: сжаты иконки-превью и убраны лишние библиотеки из сборки для Android. Функциональных изменений нет — подробности по ссылке ниже."
 
     const val DISPLAY_VERSION = "Версия $VERSION_NAME (сборка $BUILD_NUMBER)"
     const val GITHUB_REPO = "Vibe-Moments-Technologies/krasava-app"
