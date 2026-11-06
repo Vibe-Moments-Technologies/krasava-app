@@ -72,7 +72,7 @@ fun IconPickerScreen(
         IconOption(
             key = AppIconManager.ICON_ALT,
             title = "Тестовая",
-            subtitle = "Альтернативный вариант (только iOS)",
+            subtitle = "Альтернативный вариант (iOS и Android)",
             preview = Res.drawable.appicon_alt_light
         )
     )
