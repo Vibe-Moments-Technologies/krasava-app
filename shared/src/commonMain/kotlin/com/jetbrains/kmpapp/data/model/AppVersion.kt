@@ -53,7 +53,7 @@ object AppVersion {
      * changelog_url (tools/update_version_feed.py) и в диалоге отображается
      * кнопкой ниже текста. Оглавление версий — CHANGELOG.md в корне.
      */
-    const val CHANGELOG = "Приложение стало заметно легче: сжаты иконки-превью и убраны лишние библиотеки из сборки для Android. Функциональных изменений нет — подробности по ссылке ниже."
+    const val CHANGELOG = "Новый сервис «Сканер QR»: отмечайтесь на «Пульсе» прямо из приложения — наш сканер справляется даже с мелкими и поблёкшими кодами. Плюс приложение стало заметно легче. Функционально всё остальное без изменений."
 
     const val DISPLAY_VERSION = "Версия $VERSION_NAME (сборка $BUILD_NUMBER)"
     const val GITHUB_REPO = "Vibe-Moments-Technologies/krasava-app"

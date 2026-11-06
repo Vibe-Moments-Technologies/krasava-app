@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.screens.qr
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -11,32 +12,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.interop.UIKitView
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
+import platform.AVFoundation.AVAuthorizationStatusAuthorized
+import platform.AVFoundation.AVAuthorizationStatusDenied
+import platform.AVFoundation.AVAuthorizationStatusNotDetermined
+import platform.AVFoundation.AVAuthorizationStatusRestricted
+import platform.AVFoundation.AVCaptureConnection
 import platform.AVFoundation.AVCaptureDevice
+import platform.AVFoundation.AVCaptureDeviceInput
 import platform.AVFoundation.AVCaptureMetadataOutput
 import platform.AVFoundation.AVCaptureMetadataOutputObjectsDelegateProtocol
-import platform.AVFoundation.AVCaptureMetadataObjectTypeQRCode
+import platform.AVFoundation.AVCaptureOutput
 import platform.AVFoundation.AVCaptureSession
+import platform.AVFoundation.AVCaptureSessionPresetHigh
+import platform.AVFoundation.AVCaptureVideoGravityResizeAspectFill
 import platform.AVFoundation.AVCaptureVideoPreviewLayer
-import platform.AVFoundation.AVCaptureVideoOrientationPortrait
 import platform.AVFoundation.AVMediaTypeVideo
-import platform.AVFoundation.authorizationStatusForMediaType
-import platform.AVFoundation.requestAccessForMediaType
-import platform.AVFoundation.sessionPresetHigh
-import platform.AVFoundation.torchModeAlwaysOn
-import platform.AVFoundation.torchModeOff
-import platform.Foundation.NSNotification
-import platform.Foundation.NSNotificationCenter
-import platform.Foundation.NSSelectorFromString
-import platform.QuartzCore.CATransaction
+import platform.AVFoundation.AVMetadataMachineReadableCodeObject
+import platform.AVFoundation.avMetadataObjectTypeQRCode
+import platform.Foundation.NSErrorVar
+import platform.UIKit.UIView
 import platform.darwin.NSObject
 import platform.darwin.dispatch_get_main_queue
 
 /**
  * Камера-сканер (iOS): AVCaptureSession + QR-метаданные.
  *
- * Делегат-объект живёт дольше композиции (session его удерживает);
- * результаты глушатся при [paused] так же, как на Android: preview
- * живёт, дешифровка стопорится и мгновенно возобновляется.
+ * Делегат-мост удерживается remember-холдером; результаты глушатся при
+ * [paused] (как на Android): preview живёт, дешифровка стопорится и
+ * мгновенно возобновляется при возврате на экран сканера.
  */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 @Composable
@@ -49,37 +52,33 @@ actual fun QrCameraView(
     val currentOnScanned by rememberUpdatedState(onCodeScanned)
     val currentPaused by rememberUpdatedState(paused)
 
-    // Статус разрешения: стартуем без камеры, если не выдано — экран
-    // сканера рисует сообщение поверх.
+    // Статус разрешения: без камеры стартуем только если отказано —
+    // экран сканера рисует сообщение поверх пустой подложки.
     var authorized by remember {
         mutableStateOf(
             AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo) ==
-                platform.AVFoundation.AVAuthorizationStatusAuthorized
+                AVAuthorizationStatusAuthorized
         )
     }
 
     val session = remember { AVCaptureSession() }
-    // Делегат-мост: session удерживает слабую ссылку, поэтому обычный
-    // remember с retention через DelegateHolder.
-    val delegateHolder = remember { MetadataDelegateHolder() }
-    DisposableEffect(delegateHolder) {
-        delegateHolder.onScanned = { value -> if (!currentPaused) currentOnScanned(value) }
+    val holder = remember { ScannerDelegateHolder() }
+    DisposableEffect(holder) {
+        holder.onScanned = { value -> if (!currentPaused) currentOnScanned(value) }
         onDispose {
-            delegateHolder.onScanned = null
+            holder.onScanned = null
             session.stopRunning()
         }
     }
 
-    // Запрос разрешения, если ещё не решали.
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         when (AVCaptureDevice.authorizationStatusForMediaType(AVMediaTypeVideo)) {
-            platform.AVFoundation.AVAuthorizationStatusNotDetermined -> {
+            AVAuthorizationStatusNotDetermined -> {
                 AVCaptureDevice.requestAccessForMediaType(AVMediaTypeVideo) { granted ->
                     authorized = granted
                 }
             }
-            platform.AVFoundation.AVAuthorizationStatusDenied,
-            platform.AVFoundation.AVAuthorizationStatusRestricted -> authorized = false
+            AVAuthorizationStatusDenied, AVAuthorizationStatusRestricted -> authorized = false
             else -> authorized = true
         }
     }
@@ -91,11 +90,10 @@ actual fun QrCameraView(
 
     UIKitView(
         factory = {
-            session.sessionPreset = sessionPresetHigh
-            val device = AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo)
-            if (device != null) {
-                val input = platform.AVFoundation.AVCaptureDeviceInput
-                    .deviceInputWithDevice(device, error = null)
+            session.sessionPreset = AVCaptureSessionPresetHigh
+            AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo)?.let { device ->
+                val errorPtr = NSErrorVar()
+                val input = AVCaptureDeviceInput.deviceInputWithDevice(device, error = errorPtr)
                 if (input != null && session.canAddInput(input)) {
                     session.addInput(input)
                 }
@@ -103,47 +101,52 @@ actual fun QrCameraView(
                 if (session.canAddOutput(output)) {
                     session.addOutput(output)
                     output.setMetadataObjectsDelegate(
-                        delegateHolder.delegate, queue = dispatch_get_main_queue()
+                        holder.delegate, queue = dispatch_get_main_queue()
                     )
-                    output.metadataObjectTypes = listOf(AVCaptureMetadataObjectTypeQRCode)
+                    output.metadataObjectTypes = listOf(avMetadataObjectTypeQRCode)
                 }
             }
             val layer = AVCaptureVideoPreviewLayer(session = session)
-            layer.videoGravity = platform.AVFoundation.AVCaptureVideoGravityResizeAspectFill
-            platform.UIKit.UIView().apply {
+            layer.videoGravity = AVCaptureVideoGravityResizeAspectFill
+            UIView().apply {
                 layer.frame = bounds
                 this.layer.addSublayer(layer)
                 session.startRunning()
             }
         },
         update = { _ ->
-            // Фонарик: без транзакции, режим идемпотентен.
+            // Фонарик: блики/тусклая доска лечатся подсветкой; режимы
+            // идемпотентны, транзакция не нужна.
             AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo)?.let { device ->
-                device.lockForConfiguration(null)
-                device.torchMode = if (torchEnabled) torchModeAlwaysOn else torchModeOff
-                device.unlockForConfiguration()
+                if (device.hasTorch()) {
+                    device.lockForConfiguration(null)
+                    device.torchMode = if (torchEnabled) {
+                        platform.AVFoundation.AVCaptureTorchModeOn
+                    } else {
+                        platform.AVFoundation.AVCaptureTorchModeOff
+                    }
+                    device.unlockForConfiguration()
+                }
             }
         },
         modifier = modifier
     )
 }
 
-/** Удержание делегата + актуальный колбэк (rememberUpdatedState для ObjC). */
-private class MetadataDelegateHolder {
+/** Мост колбэка метаданных в Kotlin-лямбду. */
+private class ScannerDelegateHolder {
     var onScanned: ((String) -> Unit)? = null
 
-    val delegate: NSObject =
-        object : NSObject(), AVCaptureMetadataOutputObjectsDelegateProtocol {
-            override fun captureOutput(
-                output: platform.AVFoundation.AVCaptureOutput,
-                didOutputMetadataObjects: List<*>,
-                fromConnection: platform.AVFoundation.AVCaptureConnection
-            ) {
-                didOutputMetadataObjects.forEach { obj ->
-                    (obj as? platform.AVFoundation.AVMetadataMachineReadableCodeObject)
-                        ?.stringValue
-                        ?.let { onScanned?.invoke(it) }
-                }
+    val delegate: NSObject = object : NSObject(), AVCaptureMetadataOutputObjectsDelegateProtocol {
+        override fun captureOutput(
+            output: AVCaptureOutput,
+            didOutputMetadataObjects: List<*>,
+            fromConnection: AVCaptureConnection
+        ) {
+            didOutputMetadataObjects.forEach { obj ->
+                (obj as? AVMetadataMachineReadableCodeObject)?.stringValue
+                    ?.let { value -> onScanned?.invoke(value) }
             }
         }
+    }
 }
