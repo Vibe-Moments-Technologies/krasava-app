@@ -121,9 +121,16 @@ fun IconPickerScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            val introText = if (AppIconManager.deferredApply) {
+                "Выбери, какая иконка будет выглядеть на рабочем столе. " +
+                    "Изменение применится, когда свернёшь приложение; " +
+                    "если приложение закроется раньше — при следующем запуске."
+            } else {
+                "Выбери, какая иконка будет выглядеть на рабочем столе. " +
+                    "Изменение применится сразу."
+            }
             GlitchText(
-                text = "Выбери, какая иконка будет выглядеть на рабочем столе. " +
-                    "Изменение применится сразу.",
+                text = introText,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp)
