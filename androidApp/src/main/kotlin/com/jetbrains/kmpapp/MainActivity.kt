@@ -25,6 +25,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Если процесс убили до того, как иконка успела примениться в onStop,
+        // добираем сохранённое состояние при следующем запуске (до показа UI).
+        applyPendingIconIfNeeded()
         // Разрешение POST_NOTIFICATIONS (API 33+) просится только в момент,
         // когда пользователь включает тумблер напоминаний в настройках.
         // lifecycle-контекст обязателен: launch вне RESUMED кидает
@@ -63,6 +66,21 @@ class MainActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         publishWidgetSnapshot()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Ушли в фон — можно безопасно переключить activity-alias:
+        // «применено» фиксируется только после проверки состояния компонентов.
+        runCatching { ScheduleApp.appIconEngine.applyPending() }
+    }
+
+    private fun applyPendingIconIfNeeded() {
+        runCatching {
+            if (ScheduleApp.appIconEngine.hasPending()) {
+                ScheduleApp.appIconEngine.applyPending()
+            }
+        }
     }
 
     private fun publishWidgetSnapshot() {

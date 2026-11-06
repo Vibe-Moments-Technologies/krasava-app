@@ -29,6 +29,12 @@ object AppIconManager {
     /** true там, где платформа умеет менять иконку (сейчас iOS и Android). */
     val supportsSwitching: Boolean get() = engine != null
 
+    /**
+     * true, если движок применяет иконку отложенно (Android: при уходе в фон),
+     * а не сразу по нажатию. Используется только для подсказки в UI.
+     */
+    var deferredApply: Boolean = false
+
     fun setEngine(newEngine: IconEngine) {
         engine = newEngine
     }

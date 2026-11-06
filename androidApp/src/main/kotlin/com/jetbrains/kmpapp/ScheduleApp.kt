@@ -25,7 +25,10 @@ class ScheduleApp : Application() {
         // Диагностика (Sentry) поднимется сама, если включён тумблер в отладке.
         AppDiagnostics.setEngine(AndroidDiagnostics())
         AppRuntimeInfo.setEngine(AndroidAppRuntimeInfo())
-        AppIconManager.setEngine(AndroidAppIconEngine(this))
+        val iconEngine = AndroidAppIconEngine(this)
+        appIconEngine = iconEngine
+        AppIconManager.setEngine(iconEngine)
+        AppIconManager.deferredApply = true
         // Движок напоминаний: секция «Уведомления» в настройках видна там,
         // где движок зарегистрирован (Android и iOS симметричны).
         NotificationsManager.setEngine(AndroidNotificationsEngine)
@@ -51,5 +54,11 @@ class ScheduleApp : Application() {
                 Class.forName("androidx.compose.ui.text.input.EditProcessor")
             } catch (_: Throwable) {}
         }
+    }
+
+    companion object {
+        /** Движок иконки: MainActivity применяет отложенное состояние на старте и в onStop. */
+        lateinit var appIconEngine: AndroidAppIconEngine
+            private set
     }
 }
