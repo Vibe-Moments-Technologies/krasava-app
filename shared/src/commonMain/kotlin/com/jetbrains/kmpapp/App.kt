@@ -197,6 +197,9 @@ fun App() {
             color = MaterialTheme.colorScheme.background
         ) {
             var currentTab by remember { mutableStateOf(AppTab.SCHEDULE) }
+            // Сканер открыт значком из шапки расписания (не из дока):
+            // тогда у страницы есть «назад» в расписание.
+            var qrFromSchedule by remember { mutableStateOf(false) }
 
             // Предупреждение о новой версии по экрану (репорт владельца:
             // «нет никаких предупреждений о том, что вышла новая версия»):
@@ -407,9 +410,12 @@ fun App() {
                         AppTab.SCHEDULE -> {
                             ScheduleScreen(
                                 viewModel = scheduleViewModel,
-                                // Значок QR в шапке: открывает раздел
-                                // сканера (единую страницу).
-                                onOpenQrScanner = { currentTab = AppTab.QR_SCANNER }
+                                // Значок QR в шапке: открывает страницу
+                                // сканера с «назад» в расписание.
+                                onOpenQrScanner = {
+                                    qrFromSchedule = true
+                                    currentTab = AppTab.QR_SCANNER
+                                }
                             )
                         }
                         AppTab.FREE_ROOMS -> {
@@ -431,7 +437,16 @@ fun App() {
                             GamesScreen(viewModel = gamesViewModel)
                         }
                         AppTab.QR_SCANNER -> {
-                            com.jetbrains.kmpapp.screens.qr.QrScannerScreen()
+                            com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
+                                // Из дока — чистый раздел; из шапки
+                                // расписания — с «назад» в расписание.
+                                onBack = if (qrFromSchedule) {
+                                    {
+                                        qrFromSchedule = false
+                                        currentTab = AppTab.SCHEDULE
+                                    }
+                                } else null
+                            )
                         }
                         AppTab.SERVICES -> {
                             ServicesScreen(
@@ -482,6 +497,9 @@ fun App() {
                     FloatingDock(
                         currentTab = currentTab,
                         onTabSelected = {
+                            // Переход через док — сканер открывается как
+                            // чистый раздел (без «назад»).
+                            if (it != AppTab.QR_SCANNER) qrFromSchedule = false
                             currentTab = it
                         },
                         onTabReselected = { tab ->

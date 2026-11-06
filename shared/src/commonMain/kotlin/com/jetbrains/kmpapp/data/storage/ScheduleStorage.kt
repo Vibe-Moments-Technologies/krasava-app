@@ -227,7 +227,7 @@ class ScheduleStorage(
      * Кнопка сканера QR в шапке расписания (сервис по умолчанию включён;
      * прячется настройкой «Дополнительный функционал», запрос владельца).
      */
-    private val _qrButtonEnabled = MutableStateFlow(true)
+    private val _qrButtonEnabled = MutableStateFlow(false)
     val qrButtonEnabled: StateFlow<Boolean> = _qrButtonEnabled.asStateFlow()
 
     private val _notifyMinutesBefore = MutableStateFlow(15)
@@ -294,7 +294,7 @@ class ScheduleStorage(
         _notificationsEnabled.value = loadBooleanFlag(KEY_NOTIFICATIONS_ENABLED, false)
         _notificationsTargetId.value = platformStorage.getString(KEY_NOTIFICATIONS_TARGET_ID)?.toIntOrNull()
         _vpnWarningEnabled.value = loadBooleanFlag(KEY_VPN_WARNING_ENABLED, true)
-        _qrButtonEnabled.value = loadBooleanFlag(KEY_QR_BUTTON_ENABLED, true)
+        _qrButtonEnabled.value = loadBooleanFlag(KEY_QR_BUTTON_ENABLED, false)
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
@@ -1099,7 +1099,7 @@ class ScheduleStorage(
         _notificationsEnabled.value = notificationsEnabledBefore
         _notificationsTargetId.value = null
         _vpnWarningEnabled.value = true
-        _qrButtonEnabled.value = true
+        _qrButtonEnabled.value = false
         _notifyMinutesBefore.value = notifyMinutesBeforeBefore
         _askBeforeNoteDelete.value = askBeforeNoteDeleteBefore
         _notePages.value = com.jetbrains.kmpapp.data.model.defaultNotePages()

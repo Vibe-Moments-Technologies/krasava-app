@@ -684,7 +684,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         GlitchText(
-                            text = "Значок сканера в шапке расписания — для отметок на «Пульсе»",
+                            text = "Значок сканера в шапке расписания",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )

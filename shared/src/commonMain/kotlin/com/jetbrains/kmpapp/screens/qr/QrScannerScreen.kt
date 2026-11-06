@@ -179,14 +179,14 @@ fun QrScannerScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                // Шапка страницы: как у остальных разделов. «Назад» —
-                // только когда сканер открыт как подстраница
-                // («Сервисы»/«Другое»); раздел дока закрывается самим
-                // доком, крестик не нужен.
+                // Шапка страницы: слева «назад» (только для подстраницы
+                // из «Сервисов»/«Другого») и заголовок, справа фонарик
+                // (по фидбеку владельца: «молнию — вверх, в правый угол
+                // на уровень заголовка»).
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (onBack != null) {
@@ -202,41 +202,21 @@ fun QrScannerScreen(
                         text = "Сканер QR",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
-                        color = Color.White
+                        color = Color.White,
+                        modifier = Modifier
+                            .padding(start = if (onBack != null) 0.dp else 16.dp)
+                            .weight(1f)
                     )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                // Подсказка + фонарик: подняты над доком.
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(bottom = 120.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
-                ) {
-                    FilledIconButton(
-                        onClick = { torch = !torch },
-                        modifier = Modifier.size(56.dp)
-                    ) {
+                    IconButton(onClick = { torch = !torch }) {
                         Icon(
                             imageVector = if (torch) Icons.Default.FlashOff else Icons.Default.FlashOn,
                             contentDescription = if (torch) "Выключить фонарик" else "Включить фонарик",
-                            modifier = Modifier.size(26.dp)
+                            tint = Color.White
                         )
                     }
-                    GlitchText(
-                        text = if (locked) {
-                            "Код распознан — открываю…"
-                        } else {
-                            "Наведите камеру на код — рамка сама найдёт его"
-                        },
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
                 }
+
+                Spacer(modifier = Modifier.weight(1f))
             }
         }
     }
@@ -248,6 +228,11 @@ private const val STABLE_FRAMES = 3
 /**
  * Четыре уголка-прицела вокруг (x01, y01, w01, h01) — нормализованных
  * координат кода. [locked]: зелёные, с чуть более толстой обводкой.
+ *
+ * Рамка ВСЕГДА квадратная в пикселях: QR-код квадратный, а
+ * нормализованный бокс платформы зависит от вытянутости экрана
+ * (баг-репорт владельца: «рамка прямоугольная и не наводится»).
+ * Центр и сторона берутся из центра бокса и его среднего размера.
  */
 @Composable
 private fun CornerSights(
@@ -265,14 +250,19 @@ private fun CornerSights(
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val rectW = (w01 * w).coerceAtLeast(cornerLen.toPx() * 1.5f)
-        val rectH = (h01 * h).coerceAtLeast(cornerLen.toPx() * 1.5f)
-        val left = (x01 * w).coerceIn(0f, w - rectW)
-        val top = (y01 * h).coerceIn(0f, h - rectH)
-        val right = (left + rectW).coerceAtMost(w)
-        val bottom = (top + rectH).coerceAtMost(h)
+        // Центр бокса кода.
+        val cx = (x01 + w01 / 2f) * w
+        val cy = (y01 + h01 / 2f) * h
+        // Сторона: средний из размеров бокса (в пикселях) — квадрат.
+        val sidePx = ((w01 * w + h01 * h) / 2f)
+            .coerceAtLeast(cornerLen.toPx() * 2f)
+            .coerceAtMost(minOf(w, h) * 0.9f)
+        val left = (cx - sidePx / 2f).coerceIn(0f, w - sidePx)
+        val top = (cy - sidePx / 2f).coerceIn(0f, h - sidePx)
+        val right = left + sidePx
+        val bottom = top + sidePx
 
-        val lenPx = cornerLen.toPx()
+        val lenPx = cornerLen.toPx().coerceAtMost(sidePx / 2.5f)
         val strokePx = cornerWidth.toPx()
 
         // Четыре уголка: каждый — два отрезка от вершины.
