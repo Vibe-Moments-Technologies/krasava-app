@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -135,7 +136,12 @@ fun LayeredNavHost(
         ) {
             if (parentScreen != null) {
                 // back недостижим: родитель полностью закрыт дочерним экраном.
-                screenContent(parentScreen) {}
+                // Отключаем его PlatformBackHandler, иначе он, будучи добавлен
+                // позже дочернего, перехватывает системный «назад» и делает
+                // вид, что кнопка не работает.
+                CompositionLocalProvider(LocalBackHandlerEnabled provides false) {
+                    screenContent(parentScreen) {}
+                }
             } else {
                 rootContent()
             }

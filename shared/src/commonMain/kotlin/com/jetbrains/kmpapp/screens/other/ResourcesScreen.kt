@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Handshake
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Park
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Science
@@ -81,7 +82,9 @@ data class StudentResource(
     val description: String,
     val url: String,
     val icon: ImageVector,
-    val accentColor: Color
+    val accentColor: Color,
+    /** Фон плитки иконки; null — светлый оттенок [accentColor]. */
+    val iconBackground: Color? = null
 )
 
 val STUDENT_RESOURCES = listOf(
@@ -107,13 +110,6 @@ val STUDENT_RESOURCES = listOf(
         accentColor = Color(0xFFFF2D55)
     ),
     StudentResource(
-        title = "Облако студента",
-        description = "Корпоративное облачное хранилище Nextcloud для учебных файлов и совместной работы.",
-        url = "https://cloud.mirea.ru/",
-        icon = Icons.Default.Cloud,
-        accentColor = Color(0xFF00C7BE)
-    ),
-    StudentResource(
         title = "Справочник студента",
         description = "База знаний и инструкций: контакты отделений, регламенты и ответы на вопросы.",
         url = "https://student.mirea.ru/help/ ",
@@ -121,11 +117,12 @@ val STUDENT_RESOURCES = listOf(
         accentColor = Color(0xFFFF9500)
     ),
     StudentResource(
-        title = "Предложение идей университету",
-        description = "Платформа студенческих инициатив для предложений по улучшению вуза.",
-        url = "https://vote.mirea.ru/",
-        icon = Icons.Default.Lightbulb,
-        accentColor = Color(0xFFFFCC00)
+        title = "Киберзона",
+        description = "Бронирование VR-зон, компьютерных классов и настольных игр в киберпространстве РТУ МИРЭА.",
+        url = "https://esports.mirea.app/",
+        icon = CyberzoneDragon,
+        accentColor = Color.White,
+        iconBackground = Color(0xFF0B0B0F)
     )
 )
 
@@ -152,7 +149,9 @@ data class ResourceLink(
     val symbol: String,
     val url: String?,
     val accentColor: Color,
-    val fetchAvatarFrom: String? = null
+    val fetchAvatarFrom: String? = null,
+    /** Иконка вместо эмодзи-символа; null — рисуем [symbol]. */
+    val icon: ImageVector? = null
 ) : ResourceEntry
 
 private fun vkLink(title: String, description: String, symbol: String, url: String, accent: Color) =
@@ -182,6 +181,7 @@ private val INSTITUTE_VK_LINKS = listOf(
     vkLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", "🦁", "https://vk.ru/iptip_sumirea", Color(0xFFFFCC00)),
     vkLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", "🐦‍🔥", "https://vk.ru/itht_sumirea", Color(0xFFFF2D55)),
     vkLink("ИРИ", "Институте радиоэлектроники и информатики", "🦇", "https://vk.ru/iri_sumirea", Color(0xFFAF52DE)),
+    plannedLink("ИРИП", "Институт радиоэлектроники и индустриального программирования", Color(0xFF5856D6)),
     vkLink("КПК", "Колледж программирования и кибербезопасности", "🐦‍⬛", "https://vk.ru/college_sumirea", Color(0xFFFF9500)),
     plannedLink("ПИШ", "Передовые инженерные школы", Color(0xFFFF2D55)),
     plannedLink("Фрязино", "Филиал РТУ МИРЭА в г. Фрязино", Color(0xFF5AC8FA)),
@@ -202,6 +202,7 @@ private val INSTITUTE_TG_LINKS = listOf(
     plannedLink("ИПТИП", "Институт перспективных технологий и индустриального программирования", Color(0xFFFFCC00)),
     plannedLink("ИТХТ имени М.В. Ломоносова", "Институт тонких химических технологий имени М.В. Ломоносова", Color(0xFFFF2D55)),
     plannedLink("ИРИ", "Институте радиоэлектроники и информатики", Color(0xFFAF52DE)),
+    plannedLink("ИРИП", "Институт радиоэлектроники и индустриального программирования", Color(0xFF5856D6)),
     plannedLink("КПК", "Колледж программирования и кибербезопасности", Color(0xFFFF9500)),
     plannedLink("ПИШ", "Передовые инженерные школы", Color(0xFFFF2D55)),
     plannedLink("Фрязино", "Филиал РТУ МИРЭА в г. Фрязино", Color(0xFF5AC8FA)),
@@ -264,7 +265,40 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
             title = "Университет",
             icon = Icons.Default.AccountBalance,
             accentColor = Color(0xFF5856D6),
-            children = emptyList()
+            children = listOf(
+                ResourceLink(
+                    title = "Облако студента",
+                    description = "Корпоративное облачное хранилище Nextcloud для учебных файлов и совместной работы.",
+                    symbol = "☁️",
+                    url = "https://cloud.mirea.ru/",
+                    accentColor = Color(0xFF00C7BE),
+                    icon = Icons.Default.Cloud
+                ),
+                ResourceLink(
+                    title = "Предложение идей университету",
+                    description = "Платформа студенческих инициатив для предложений по улучшению вуза.",
+                    symbol = "💡",
+                    url = "https://vote.mirea.ru/",
+                    accentColor = Color(0xFFFFCC00),
+                    icon = Icons.Default.Lightbulb
+                ),
+                ResourceLink(
+                    title = "Фонд целевого капитала",
+                    description = "Поддержка университета, стипендий и образовательных проектов через фонд целевого капитала.",
+                    symbol = "🌳",
+                    url = "https://fund.mirea.ru/",
+                    accentColor = Color(0xFF007AFF),
+                    icon = Icons.Default.Park
+                ),
+                ResourceLink(
+                    title = "Информационный библиотечный центр",
+                    description = "Электронные каталоги, учебники, научные базы и сервисы библиотеки РТУ МИРЭА.",
+                    symbol = "📚",
+                    url = "https://ibc.mirea.ru/",
+                    accentColor = Color(0xFFFF9500),
+                    icon = Icons.AutoMirrored.Filled.MenuBook
+                )
+            )
         ),
         ResourceFolder(
             title = "Институты",
@@ -294,7 +328,41 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     title = "Студенческий союз РТУ МИРЭА",
                     icon = Icons.Default.GroupAdd,
                     accentColor = Color(0xFF007AFF),
-                    children = emptyList()
+                    children = listOf(
+                        vkLink(
+                            title = "ВК сообщество",
+                            description = "ВК группа, где публикуются новости об организации",
+                            symbol = "🤝",
+                            url = "https://vk.ru/sumirea",
+                            accent = Color(0xFF007AFF)
+                        ),
+                        ResourceLink(
+                            title = "ТГ сообщество",
+                            description = "Официальный ТГ канал организации",
+                            symbol = "📢",
+                            url = "https://t.me/sumirea",
+                            accentColor = Color(0xFF007AFF)
+                        ),
+                        ResourceLink(
+                            title = "Сайт",
+                            description = "Официальный сайт Студенческого союза РТУ МИРЭА",
+                            symbol = "🌐",
+                            url = "https://sumirea.ru/",
+                            accentColor = Color(0xFF007AFF)
+                        ),
+                        ResourceFolder(
+                            title = "Структуры",
+                            icon = Icons.Default.Groups,
+                            accentColor = Color(0xFF34C759),
+                            children = emptyList()
+                        ),
+                        ResourceFolder(
+                            title = "Проекты",
+                            icon = Icons.Default.RocketLaunch,
+                            accentColor = Color(0xFFFF9500),
+                            children = emptyList()
+                        )
+                    )
                 ),
                 ResourceFolder(
                     title = "Профсоюзная организация РТУ МИРЭА",
@@ -314,6 +382,13 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             symbol = "📢",
                             url = "https://t.me/mireaprofkom",
                             accentColor = Color(0xFF5856D6)
+                        ),
+                        vkLink(
+                            title = "Априори",
+                            description = "Педагогический отряд",
+                            symbol = "🎓",
+                            url = "https://vk.ru/apriori.moscow",
+                            accent = Color(0xFF34C759)
                         )
                     )
                 ),
@@ -551,7 +626,7 @@ private fun OfficialResourceCard(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(res.accentColor.copy(alpha = 0.15f)),
+                        .background(res.iconBackground ?: res.accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -804,6 +879,21 @@ private fun LinkAvatar(link: ResourceLink, resolvedAvatar: String?) {
             loading = { SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor) },
             error = { SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor) }
         )
+    } else if (link.icon != null) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(link.accentColor.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = link.icon,
+                contentDescription = null,
+                tint = link.accentColor,
+                modifier = Modifier.size(22.dp)
+            )
+        }
     } else {
         SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor)
     }
