@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material3.FilledIconButton
@@ -57,14 +57,14 @@ import kotlinx.coroutines.delay
  * стабильно (порог [STABLE_FRAMES] подряд), — только после этого
  * открывается ссылка (сразу, без подтверждения: коды меняются на ходу).
  *
- * [embedded] — режим из шапки расписания: экран живёт внутри страницы
- * расписания (шапка расписания остаётся сверху), «назад» не нужен.
+ * Закрытие — крестик в шапке; системная кнопка «назад» тоже закрывает
+ * ([onBack]). Везде один и тот же полноэкранный экран: из дока,
+ * из сервисов и из шапки расписания (там значок QR — toggle).
  */
 @Composable
 fun QrScannerScreen(
     onBack: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    embedded: Boolean = false
+    modifier: Modifier = Modifier
 ) {
     if (onBack != null) PlatformBackHandler(onBack = onBack)
     val uriHandler = LocalUriHandler.current
@@ -184,30 +184,32 @@ fun QrScannerScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
-                if (!embedded && onBack != null) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                // Шапка: заголовок + крестик закрытия. Кнопки «назад» нет
+                // нигде (владелец: «Куда назад?»): закрытие — крестик,
+                // во встроенном режиме — ещё и повторный тап по значку
+                // QR в шапке расписания (toggle).
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    GlitchText(
+                        text = "Сканер QR",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.weight(1f)
+                    )
+                    if (onBack != null) {
                         IconButton(onClick = onBack) {
                             Icon(
-                                Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Назад",
+                                Icons.Default.Close,
+                                contentDescription = "Закрыть",
                                 tint = Color.White
                             )
                         }
-                        Spacer(modifier = Modifier.size(4.dp))
-                        GlitchText(
-                            text = "Сканер QR",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
                     }
-                } else {
-                    Spacer(modifier = Modifier.height(12.dp))
                 }
 
                 Spacer(modifier = Modifier.weight(1f))

@@ -203,16 +203,7 @@ private fun ScheduleMainContent(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-            // Встроенный сканер QR (из шапки): живёт ВНУТРИ страницы
-            // расписания под шапкой — шапка, выбор расписания и плюс
-            // остаются доступны; тап по значку QR закрывает (toggle).
-            if (showQrScanner) {
-                com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
-                    onBack = { showQrScanner = false },
-                    embedded = true,
-                    modifier = Modifier.fillMaxSize()
-                )
-            } else if (selectedTarget == null) {
+            if (selectedTarget == null) {
                 // No schedule selected yet
                 Box(
                     modifier = Modifier
@@ -438,6 +429,15 @@ private fun ScheduleMainContent(
                 lessonSummaries = dayLessonSummaries,
                 onDatePicked = { viewModel.selectDate(it) },
                 onDismiss = { showMonthPicker = false }
+            )
+        }
+
+        // Сканер QR из шапки: полноэкранный оверлей с крестиком
+        // (владелец: встроенный режим «шапка без выхода — бред»).
+        // Значок QR в шапке работает как toggle: тап открыл — тап закрыл.
+        if (showQrScanner) {
+            com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
+                onBack = { showQrScanner = false }
             )
         }
         }

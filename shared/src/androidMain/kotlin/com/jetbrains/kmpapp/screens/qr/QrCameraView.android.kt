@@ -110,8 +110,12 @@ actual fun QrCameraView(
                 val scanner = BarcodeScanning.getClient(options)
 
                 // Нормализация бокса кода в координаты вью (FILL_CENTER).
-                // Размеры кадра берём прямо из imageProxy (sensor-кадр),
-                // rotationDegrees — из imageInfo.
+                // КЛЮЧЕВОЕ: boundingBox ML Kit уже в координатах
+                // ОТОВРАЩЁННОГО кадра (InputImage.fromMediaImage с
+                // rotationDegrees) — то есть в экранной ориентации,
+                // такой же, как у вью. Никакого повторного поворота
+                // бокса делать НЕЛЬЗЯ (первая версия крутила его ещё
+                // раз — рамка уезжала в угол и растягивалась).
                 fun reportBounds(box: Rect?, frameW: Int, frameH: Int, rotation: Int) {
                     val pv = previewViewRef[0] ?: return
                     val callback = currentOnBounds ?: return
@@ -119,18 +123,15 @@ actual fun QrCameraView(
                         pv.post { callback(-1f, -1f, -1f, -1f) }
                         return
                     }
-                    // Экранная система: кадр повёрнут к ориентации вью.
+                    // Кадр в экранной ориентации: sensor-кадр повёрнут
+                    // на rotationDegrees.
                     val rotated = rotation == 90 || rotation == 270
                     val fw = if (rotated) frameH else frameW
                     val fh = if (rotated) frameW else frameH
-                    // boundingBox ML Kit — в координатах повёрнутого кадра,
-                    // переводим в sensor-систему при 90/270.
-                    val bx: Int; val by: Int; val bw: Int; val bh: Int
-                    if (rotated) {
-                        bx = box.top; by = box.left; bw = box.height(); bh = box.width()
-                    } else {
-                        bx = box.left; by = box.top; bw = box.width(); bh = box.height()
-                    }
+                    val bx = box.left
+                    val by = box.top
+                    val bw = box.width()
+                    val bh = box.height()
                     pv.post {
                         val vw = pv.width.coerceAtLeast(1)
                         val vh = pv.height.coerceAtLeast(1)
