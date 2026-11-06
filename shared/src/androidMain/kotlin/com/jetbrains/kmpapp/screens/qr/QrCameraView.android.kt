@@ -34,17 +34,14 @@ import java.util.concurrent.Executors
  * Камера-сканер (Android): CameraX Preview + ML Kit Barcode Scanning.
  *
  * Поиск кода — по ВСЕМУ КАДРУ (баркоды ищутся во всём входном
- * изображении, не в зоне рамки). Пауза ([paused]) — внутри
- * analyzer-колбэка через rememberUpdatedState: preview и сессия
- * живут, результаты глушатся; возврат на экран сканера возобновляет
- * дешифровку без пересборки камеры.
+ * изображении, не в зоне рамки). Пауза [paused] глушит выдачу,
+ * preview и сессия живут. Фонарика нет (решение владельца).
  */
 @OptIn(ExperimentalGetImage::class)
 @Composable
 actual fun QrCameraView(
     modifier: Modifier,
     paused: Boolean,
-    torchEnabled: Boolean,
     onCodeScanned: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -80,8 +77,6 @@ actual fun QrCameraView(
         androidx.compose.foundation.layout.Box(modifier = modifier)
         return
     }
-
-    var cameraRef by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
 
     AndroidView(
         factory = { ctx ->
@@ -125,7 +120,7 @@ actual fun QrCameraView(
 
                 try {
                     provider.unbindAll()
-                    cameraRef = provider.bindToLifecycle(
+                    provider.bindToLifecycle(
                         lifecycleOwner,
                         CameraSelector.DEFAULT_BACK_CAMERA,
                         preview,
@@ -138,9 +133,7 @@ actual fun QrCameraView(
             }, ContextCompat.getMainExecutor(ctx))
             previewView
         },
-        update = {
-            cameraRef?.cameraControl?.enableTorch(torchEnabled)
-        },
+        update = { },
         modifier = modifier
     )
 }

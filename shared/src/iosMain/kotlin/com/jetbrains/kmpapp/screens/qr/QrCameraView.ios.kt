@@ -28,8 +28,6 @@ import platform.AVFoundation.AVCaptureMetadataOutputObjectsDelegateProtocol
 import platform.AVFoundation.AVCaptureOutput
 import platform.AVFoundation.AVCaptureSession
 import platform.AVFoundation.AVCaptureSessionPresetHigh
-import platform.AVFoundation.AVCaptureTorchModeOff
-import platform.AVFoundation.AVCaptureTorchModeOn
 import platform.AVFoundation.AVCaptureVideoPreviewLayer
 import platform.AVFoundation.AVLayerVideoGravityResizeAspectFill
 import platform.AVFoundation.AVMediaTypeVideo
@@ -38,9 +36,7 @@ import platform.AVFoundation.AVMetadataObjectTypeQRCode
 // Category-расширения Objective-C: в cinterop резолвятся ТОЛЬКО явным
 // импортом — без него будет Unresolved reference даже на валидном устройстве.
 import platform.AVFoundation.authorizationStatusForMediaType
-import platform.AVFoundation.hasTorch
 import platform.AVFoundation.requestAccessForMediaType
-import platform.AVFoundation.torchMode
 import platform.CoreGraphics.CGRectZero
 import platform.Foundation.NSError
 import platform.QuartzCore.CATransaction
@@ -53,10 +49,10 @@ import platform.darwin.dispatch_queue_create
 /**
  * Камера-сканер (iOS): AVCaptureSession + QR-метаданные.
  *
- * Поиск кода — по ВСЕМУ КАДРУ (метаданные-вывод не ограничен зоной:
- * rectOfInterest не задан). Результаты глушатся при [paused]: preview
- * и сессия живут; возврат на экран сканера возобновляет дешифровку.
- * Фонарик — через update при смене [torchEnabled].
+ * Поиск кода — по ВСЕМУ КАДРУ (rectOfInterest не задан). Результаты
+ * глушатся при [paused]; preview и сессия живут. Фонарика нет
+ * (решение владельца: в аудитории вспышкой не пользуются, блики
+ * она только усиливает).
  *
  * Имена cinterop-символов сверены компиляцией (konanc 2.4.10, ios_arm64)
  * и рабочими KMP-сканерами: animeko QrCodeScanner.ios.kt, KScan,
@@ -68,7 +64,6 @@ import platform.darwin.dispatch_queue_create
 actual fun QrCameraView(
     modifier: Modifier,
     paused: Boolean,
-    torchEnabled: Boolean,
     onCodeScanned: (String) -> Unit
 ) {
     val currentOnScanned = rememberUpdatedState(onCodeScanned)
@@ -148,19 +143,7 @@ actual fun QrCameraView(
                 dispatch_async(sessionQueue) { session.startRunning() }
             }
         },
-        update = { _ ->
-            // Фонарик: блики/тусклая доска лечатся подсветкой; идемпотентно.
-            AVCaptureDevice.defaultDeviceWithMediaType(AVMediaTypeVideo)?.let { device ->
-                if (device.hasTorch && device.lockForConfiguration(null)) {
-                    device.torchMode = if (torchEnabled) {
-                        AVCaptureTorchModeOn
-                    } else {
-                        AVCaptureTorchModeOff
-                    }
-                    device.unlockForConfiguration()
-                }
-            }
-        },
+        update = { _ -> },
         modifier = modifier
     )
 }

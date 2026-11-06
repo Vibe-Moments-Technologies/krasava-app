@@ -12,13 +12,13 @@ import androidx.compose.ui.Modifier
  *
  * Поиск кода идёт ПО ВСЕМУ КАДРУ камеры, рамка на экране — только
  * визуальный ориентир (где держать телефон). Дешифровки шлются в
- * [onCodeScanned]; пауза [paused] глушит выдачу (камера живёт).
+ * [onCodeScanned] непрерывно — экран сам решает, что с ними делать.
+ * Фонарика нет (решение владельца: в аудитории вспышкой не
+ * пользуются, блики она только усиливает).
  */
 @Composable
 expect fun QrCameraView(
     modifier: Modifier = Modifier,
     paused: Boolean = false,
-    /** Задняя фонарик: true — включён (кнопка в шапке сканера). */
-    torchEnabled: Boolean = false,
     onCodeScanned: (String) -> Unit
 )
