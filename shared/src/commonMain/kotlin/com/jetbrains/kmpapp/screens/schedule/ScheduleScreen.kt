@@ -129,7 +129,12 @@ private fun ScheduleMainContent(
     val currentMinutesState = viewModel.currentMinutes.collectAsState()
     val isVpnActive by viewModel.isVpnActive.collectAsState()
     val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
+    val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
     var isVpnBannerDismissed by remember(isVpnActive, vpnWarningEnabled) { mutableStateOf(false) }
+
+    // Сканер QR — оверлей поверх расписания (не вкладка): из шапки
+    // попадаем в него в один тап, закрытие возвращает расписание как было.
+    var showQrScanner by remember { mutableStateOf(false) }
 
     var showAddSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -184,7 +189,8 @@ private fun ScheduleMainContent(
                 calendarBadgeDay = if (selectedTarget != null && calendarCollapsed) selectedDate.day else null,
                 onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
                 onCalendarBadgeLongClick = { showMonthPicker = true },
-                onOpenOtherClick = onOpenOther
+                onOpenOtherClick = onOpenOther,
+                onQrScannerClick = if (qrButtonEnabled) { { showQrScanner = true } } else null
             )
         },
         modifier = modifier.fillMaxSize()
@@ -423,6 +429,14 @@ private fun ScheduleMainContent(
                 lessonSummaries = dayLessonSummaries,
                 onDatePicked = { viewModel.selectDate(it) },
                 onDismiss = { showMonthPicker = false }
+            )
+        }
+
+        // Сканер QR — полноэкранный оверлей из шапки: камера и жесты
+        // не должны смешиваться со слоями расписания.
+        if (showQrScanner) {
+            com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
+                onBack = { showQrScanner = false }
             )
         }
         }

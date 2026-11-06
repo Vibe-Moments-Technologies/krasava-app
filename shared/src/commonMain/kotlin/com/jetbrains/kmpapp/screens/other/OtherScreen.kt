@@ -216,6 +216,9 @@ fun OtherScreen(
                     PlatformBackHandler(onBack = back)
                     GamesScreen(viewModel = gamesViewModel)
                 }
+                OtherSubScreen.SERVICE_QR_SCANNER -> {
+                    com.jetbrains.kmpapp.screens.qr.QrScannerScreen(onBack = back)
+                }
             }
         },
         modifier = modifier

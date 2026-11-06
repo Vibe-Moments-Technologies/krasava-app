@@ -51,5 +51,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Красава! использует камеру, чтобы сканировать QR-коды для отметки посещаемости на «Пульсе».</string>
 </dict>
 </plist>

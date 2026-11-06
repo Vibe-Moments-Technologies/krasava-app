@@ -176,6 +176,7 @@ class ScheduleRepository(
     val notifyMinutesBefore: StateFlow<Int> = storage.notifyMinutesBefore
     val notificationsTargetId: StateFlow<Int?> = storage.notificationsTargetId
     val vpnWarningEnabled: StateFlow<Boolean> = storage.vpnWarningEnabled
+    val qrButtonEnabled: StateFlow<Boolean> = storage.qrButtonEnabled
     val askBeforeNoteDelete: StateFlow<Boolean> = storage.askBeforeNoteDelete
 
     init {
@@ -276,6 +277,7 @@ class ScheduleRepository(
     fun setNotifyMinutesBefore(minutes: Int) = storage.setNotifyMinutesBefore(minutes)
     fun setNotificationsTargetId(targetId: Int?) = storage.setNotificationsTargetId(targetId)
     fun setVpnWarningEnabled(enabled: Boolean) = storage.setVpnWarningEnabled(enabled)
+    fun setQrButtonEnabled(enabled: Boolean) = storage.setQrButtonEnabled(enabled)
     fun setAskBeforeNoteDelete(ask: Boolean) = storage.setAskBeforeNoteDelete(ask)
     fun setLessonTypeColor(type: LessonType, color: LessonColor) =
         storage.setLessonTypeColor(type, color)

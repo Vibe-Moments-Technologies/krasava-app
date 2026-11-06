@@ -68,7 +68,8 @@ enum class OtherSubScreen(val depth: Int) {
     SERVICE_MAP(1),
     SERVICE_NOTES(1),
     SERVICE_COMPARE(1),
-    SERVICE_GAMES(1)
+    SERVICE_GAMES(1),
+    SERVICE_QR_SCANNER(1)
 }
 
 /** Родитель подстраницы для послойной навигации (null = корень). */
@@ -98,7 +99,8 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SERVICE_MAP to OtherSubScreen.ROOT,
     OtherSubScreen.SERVICE_NOTES to OtherSubScreen.ROOT,
     OtherSubScreen.SERVICE_COMPARE to OtherSubScreen.ROOT,
-    OtherSubScreen.SERVICE_GAMES to OtherSubScreen.ROOT
+    OtherSubScreen.SERVICE_GAMES to OtherSubScreen.ROOT,
+    OtherSubScreen.SERVICE_QR_SCANNER to OtherSubScreen.ROOT
 )
 
 fun OtherSubScreen.parent(): OtherSubScreen? =
@@ -112,6 +114,7 @@ fun AppTab.toServiceSubScreen(): OtherSubScreen? = when (this) {
     AppTab.NOTES -> OtherSubScreen.SERVICE_NOTES
     AppTab.COMPARE -> OtherSubScreen.SERVICE_COMPARE
     AppTab.GAMES -> OtherSubScreen.SERVICE_GAMES
+    AppTab.QR_SCANNER -> OtherSubScreen.SERVICE_QR_SCANNER
     else -> null
 }
 
@@ -123,7 +126,8 @@ val OtherSubScreen.isServiceScreen: Boolean
         OtherSubScreen.SERVICE_MAP,
         OtherSubScreen.SERVICE_NOTES,
         OtherSubScreen.SERVICE_COMPARE,
-        OtherSubScreen.SERVICE_GAMES
+        OtherSubScreen.SERVICE_GAMES,
+        OtherSubScreen.SERVICE_QR_SCANNER
     )
 
 class OtherViewModel(
@@ -197,6 +201,7 @@ class OtherViewModel(
     val notifyMinutesBefore: StateFlow<Int> = repository.notifyMinutesBefore
     val notificationsTargetId: StateFlow<Int?> = repository.notificationsTargetId
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
+    val qrButtonEnabled: StateFlow<Boolean> = repository.qrButtonEnabled
     val askBeforeNoteDelete: StateFlow<Boolean> = repository.askBeforeNoteDelete
 
     fun setShowLessonProgress(enabled: Boolean) {
@@ -257,6 +262,7 @@ class OtherViewModel(
     fun setNotifyMinutesBefore(minutes: Int) = repository.setNotifyMinutesBefore(minutes)
     fun setNotificationsTargetId(targetId: Int?) = repository.setNotificationsTargetId(targetId)
     fun setVpnWarningEnabled(enabled: Boolean) = repository.setVpnWarningEnabled(enabled)
+    fun setQrButtonEnabled(enabled: Boolean) = repository.setQrButtonEnabled(enabled)
     fun setAskBeforeNoteDelete(ask: Boolean) = repository.setAskBeforeNoteDelete(ask)
 
     fun setDockTabs(tabs: List<AppTab>) {

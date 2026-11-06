@@ -39,6 +39,12 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.sentry.android)
+            // Сканер QR: CameraX (камера) + ML Kit Barcode Scanning bundled
+            // (распознавание; работает без Google Play Services, офлайн).
+            implementation(libs.androidx.camera.camera2)
+            implementation(libs.androidx.camera.lifecycle)
+            implementation(libs.androidx.camera.view)
+            implementation(libs.mlkit.barcode.scanning)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

@@ -81,7 +81,8 @@ private val SERVICE_DESCRIPTIONS = mapOf(
     AppTab.MAP to "Интерактивные схемы этажей корпусов",
     AppTab.NOTES to "Заметки с цветными полями, хранятся на устройстве",
     AppTab.COMPARE to "Сравнение расписаний нескольких групп",
-    AppTab.GAMES to "Раздел игр: сейчас внутри «Сапер», новые игры в будущих обновлениях"
+    AppTab.GAMES to "Раздел игр: сейчас внутри «Сапер», новые игры в будущих обновлениях",
+    AppTab.QR_SCANNER to "Отметка на «Пульсе» и другие коды: распознаём даже сложные"
 )
 
 // Развёрнутые имена только на этой странице; в доке и блоке — краткие.
@@ -172,6 +173,11 @@ fun ServicesScreen(
                 AppTab.GAMES -> {
                     PlatformBackHandler(onBack = back)
                     GamesScreen(viewModel = gamesViewModel)
+                }
+                AppTab.QR_SCANNER -> {
+                    // Сканер без свайпа-назад: жесты не нужны, но
+                    // системная кнопка/стрелка работают.
+                    com.jetbrains.kmpapp.screens.qr.QrScannerScreen(onBack = back)
                 }
                 else -> {}
             }

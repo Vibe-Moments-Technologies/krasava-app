@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.MeetingRoom
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.TaskAlt
@@ -33,6 +34,7 @@ import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.MeetingRoom
+import androidx.compose.material.icons.outlined.QrCodeScanner
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.TaskAlt
@@ -72,6 +74,9 @@ enum class AppTab(
     NOTES("Конспекты", Icons.Filled.EditNote, Icons.Outlined.EditNote, isFixed = false),
     COMPARE("Сравнение", Icons.Filled.CompareArrows, Icons.Outlined.CompareArrows, isFixed = false),
     GAMES("Игры", Icons.Filled.SportsEsports, Icons.Outlined.SportsEsports, isFixed = false),
+    // Сканер QR — сервис с камерой (отметки на «Пульсе» и др.): как
+    // остальные сервисы, добавляется в панель по желанию.
+    QR_SCANNER("Сканер", Icons.Filled.QrCodeScanner, Icons.Outlined.QrCodeScanner, isFixed = false),
     // Раздел-концентратор сервисов: сам не экран приложения, а «папка» —
     // по умолчанию скрыт, добавляется в док как обычная вкладка.
     SERVICES("Сервисы", Icons.Filled.Apps, Icons.Outlined.Apps, isFixed = false),

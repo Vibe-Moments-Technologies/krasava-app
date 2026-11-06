@@ -223,6 +223,13 @@ class ScheduleStorage(
     private val _vpnWarningEnabled = MutableStateFlow(true)
     val vpnWarningEnabled: StateFlow<Boolean> = _vpnWarningEnabled.asStateFlow()
 
+    /**
+     * Кнопка сканера QR в шапке расписания (сервис по умолчанию включён;
+     * прячется настройкой «Дополнительный функционал», запрос владельца).
+     */
+    private val _qrButtonEnabled = MutableStateFlow(true)
+    val qrButtonEnabled: StateFlow<Boolean> = _qrButtonEnabled.asStateFlow()
+
     private val _notifyMinutesBefore = MutableStateFlow(15)
     val notifyMinutesBefore: StateFlow<Int> = _notifyMinutesBefore.asStateFlow()
 
@@ -287,6 +294,7 @@ class ScheduleStorage(
         _notificationsEnabled.value = loadBooleanFlag(KEY_NOTIFICATIONS_ENABLED, false)
         _notificationsTargetId.value = platformStorage.getString(KEY_NOTIFICATIONS_TARGET_ID)?.toIntOrNull()
         _vpnWarningEnabled.value = loadBooleanFlag(KEY_VPN_WARNING_ENABLED, true)
+        _qrButtonEnabled.value = loadBooleanFlag(KEY_QR_BUTTON_ENABLED, true)
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
@@ -844,6 +852,11 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_VPN_WARNING_ENABLED, enabled.toString()) }
     }
 
+    fun setQrButtonEnabled(enabled: Boolean) {
+        _qrButtonEnabled.value = enabled
+        scope.launch { platformStorage.saveString(KEY_QR_BUTTON_ENABLED, enabled.toString()) }
+    }
+
     private fun persistNotificationsTargetId(targetId: Int?) {
         scope.launch {
             if (targetId == null) platformStorage.remove(KEY_NOTIFICATIONS_TARGET_ID)
@@ -1086,6 +1099,7 @@ class ScheduleStorage(
         _notificationsEnabled.value = notificationsEnabledBefore
         _notificationsTargetId.value = null
         _vpnWarningEnabled.value = true
+        _qrButtonEnabled.value = true
         _notifyMinutesBefore.value = notifyMinutesBeforeBefore
         _askBeforeNoteDelete.value = askBeforeNoteDeleteBefore
         _notePages.value = com.jetbrains.kmpapp.data.model.defaultNotePages()
@@ -1208,6 +1222,7 @@ class ScheduleStorage(
         private const val KEY_NOTIFICATIONS_ENABLED = "krasava_notifications_enabled"
         private const val KEY_NOTIFICATIONS_TARGET_ID = "krasava_notifications_target_id"
         private const val KEY_VPN_WARNING_ENABLED = "krasava_vpn_warning_enabled"
+        private const val KEY_QR_BUTTON_ENABLED = "krasava_qr_button_enabled"
         private const val KEY_NOTIFY_MINUTES_BEFORE = "krasava_notify_minutes_before"
         private const val KEY_ASK_BEFORE_NOTE_DELETE = "krasava_ask_before_note_delete"
         private const val KEY_NOTES = "krasava_notes_pages"

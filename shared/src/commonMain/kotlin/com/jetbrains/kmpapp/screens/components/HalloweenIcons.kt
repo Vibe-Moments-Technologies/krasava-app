@@ -14,6 +14,7 @@ val AppTab.halloweenEmoji: String
         AppTab.NOTES -> "\uD83D\uDCD6"      // 📖 гримуар конспектов
         AppTab.COMPARE -> "\uD83D\uDD2E"    // 🔮 хрустальный шар
         AppTab.GAMES -> "\uD83D\uDC7B"      // 👻 призрак
+        AppTab.QR_SCANNER -> "\uD83D\uDC41\uFE0F" // 👁️ око — «смотрит» на код
         AppTab.SERVICES -> "\uD83E\uDDDF"   // 🧟 зомби
         AppTab.OTHER -> "\uD83D\uDC80"      // 💀 череп
     }

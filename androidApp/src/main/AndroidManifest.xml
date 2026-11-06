@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET"/>
     <!-- Сетевой статус для детектора VPN (ConnectivityManager.getActiveNetwork) -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Сканер QR (сервис «Сканер», отметки на «Пульсе»): запрашивается
+         в рантайме при первом открытии экрана сканера. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <!-- Напоминания о занятиях: показ (API 33+) и точные будильники -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission

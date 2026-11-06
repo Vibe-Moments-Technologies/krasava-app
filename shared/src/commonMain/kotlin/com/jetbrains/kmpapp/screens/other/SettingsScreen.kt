@@ -122,6 +122,7 @@ fun SettingsScreen(
     val notifyMinutesBefore by viewModel.notifyMinutesBefore.collectAsState()
     val notificationsTargetId by viewModel.notificationsTargetId.collectAsState()
     val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
+    val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
     val savedTargets by viewModel.savedTargets.collectAsState()
     val askBeforeNoteDelete by viewModel.askBeforeNoteDelete.collectAsState()
     val dockHidden by viewModel.dockHidden.collectAsState()
@@ -667,6 +668,31 @@ fun SettingsScreen(
                     Switch(
                         checked = vpnWarningEnabled,
                         onCheckedChange = { viewModel.setVpnWarningEnabled(it) }
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        GlitchText(
+                            text = "Кнопка сканера QR",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        GlitchText(
+                            text = "Значок сканера в шапке расписания — для отметок на «Пульсе»",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Switch(
+                        checked = qrButtonEnabled,
+                        onCheckedChange = { viewModel.setQrButtonEnabled(it) }
                     )
                 }
             }

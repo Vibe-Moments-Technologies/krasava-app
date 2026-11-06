@@ -425,6 +425,9 @@ fun App() {
                         AppTab.GAMES -> {
                             GamesScreen(viewModel = gamesViewModel)
                         }
+                        AppTab.QR_SCANNER -> {
+                            com.jetbrains.kmpapp.screens.qr.QrScannerScreen(onBack = { currentTab = AppTab.SCHEDULE })
+                        }
                         AppTab.SERVICES -> {
                             ServicesScreen(
                                 viewModel = servicesViewModel,
@@ -491,6 +494,7 @@ fun App() {
                                 AppTab.GAMES -> {
                                     gamesViewModel.closeGame()
                                 }
+                                AppTab.QR_SCANNER -> {}
                                 AppTab.SERVICES -> {
                                     servicesViewModel.closeService()
                                 }
