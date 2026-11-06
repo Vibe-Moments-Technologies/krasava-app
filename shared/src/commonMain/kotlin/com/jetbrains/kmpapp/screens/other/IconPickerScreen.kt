@@ -4,7 +4,6 @@ import com.jetbrains.kmpapp.theme.GlitchText
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -38,9 +36,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
+import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.data.theme.isSystemDarkTheme
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kmp_app_template.shared.generated.resources.Res
+import kmp_app_template.shared.generated.resources.appicon_alt_dark
 import kmp_app_template.shared.generated.resources.appicon_alt_light
+import kmp_app_template.shared.generated.resources.appicon_new_dark
 import kmp_app_template.shared.generated.resources.appicon_new_light
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
@@ -61,19 +63,25 @@ fun IconPickerScreen(
     PlatformBackHandler(onBack = onBack)
 
     val currentIcon by viewModel.appIcon.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val isDarkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemDarkTheme()
+    }
 
     val options = listOf(
         IconOption(
             key = AppIconManager.ICON_DEFAULT,
             title = "Основная",
-            subtitle = "Светлая и тёмная — автоматически под тему системы",
-            preview = Res.drawable.appicon_new_light
+            subtitle = "Светлая и тёмная — под выбранную тему",
+            preview = if (isDarkTheme) Res.drawable.appicon_new_dark else Res.drawable.appicon_new_light
         ),
         IconOption(
             key = AppIconManager.ICON_ALT,
-            title = "Тестовая",
-            subtitle = "Альтернативный вариант (только iOS)",
-            preview = Res.drawable.appicon_alt_light
+            title = "Грифон",
+            subtitle = "Грифон одобряет",
+            preview = if (isDarkTheme) Res.drawable.appicon_alt_dark else Res.drawable.appicon_alt_light
         )
     )
 
@@ -114,8 +122,8 @@ fun IconPickerScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             GlitchText(
-                text = "Выберите, как приложение будет выглядеть на рабочем столе. " +
-                    "Изменение применяется сразу.",
+                text = "Выбери, какая иконка будет выглядеть на рабочем столе. " +
+                    "Изменение применится сразу.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 4.dp)

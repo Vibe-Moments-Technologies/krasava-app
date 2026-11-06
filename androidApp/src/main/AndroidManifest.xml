@@ -22,10 +22,10 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@mipmap/ic_launcher_new"
+        android:icon="@drawable/ic_launcher_new_light"
         android:label="@string/app_name"
         android:name=".ScheduleApp"
-        android:roundIcon="@mipmap/ic_launcher_new_round"
+        android:roundIcon="@drawable/ic_launcher_new_light"
         android:supportsRtl="true"
         android:theme="@style/Theme.Krasava">
 
@@ -40,14 +40,65 @@
              по теме оказался хрупким (краш на старте, пропажа иконки),
              а выгода не стоила риска. -->
         <activity
-            android:exported="true"
+            android:exported="false"
             android:windowSoftInputMode="adjustPan"
-            android:name=".MainActivity">
+            android:name=".MainActivity"/>
+
+        <activity-alias
+            android:name=".DefaultLightAlias"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_new_light"
+            android:roundIcon="@drawable/ic_launcher_new_light"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".DefaultDarkAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_new_dark"
+            android:roundIcon="@drawable/ic_launcher_new_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".GriffonLightAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_griffon_light"
+            android:roundIcon="@drawable/ic_launcher_griffon_light"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".GriffonDarkAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_griffon_dark"
+            android:roundIcon="@drawable/ic_launcher_griffon_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <receiver
             android:name=".notifications.LessonAlarmReceiver"
