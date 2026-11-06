@@ -7,10 +7,11 @@ import com.jetbrains.kmpapp.data.appicon.AppIconManager
 
 class AndroidAppIconEngine(private val context: Context) : AppIconManager.IconEngine {
     private val pm: PackageManager get() = context.packageManager
-    private val packageName: String get() = context.packageName
 
-    private val defaultAlias = ComponentName(packageName, "$packageName.DefaultIconAlias")
-    private val altAlias = ComponentName(packageName, "$packageName.AltIconAlias")
+    // applicationId (ru.vibemoments.krasava) отличается от namespace/классов,
+    // поэтому имя компонента задаём как в манифесте, а не через packageName.
+    private val defaultAlias = ComponentName(context, "com.jetbrains.kmpapp.DefaultIconAlias")
+    private val altAlias = ComponentName(context, "com.jetbrains.kmpapp.AltIconAlias")
 
     override fun applyIcon(name: String) {
         val (enable, disable) = when (name) {
