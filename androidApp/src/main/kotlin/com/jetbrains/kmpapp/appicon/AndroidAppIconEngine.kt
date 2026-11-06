@@ -10,16 +10,24 @@ class AndroidAppIconEngine(private val context: Context) : AppIconManager.IconEn
 
     // applicationId (ru.vibemoments.krasava) отличается от namespace/классов,
     // поэтому имя компонента задаём как в манифесте, а не через packageName.
-    private val defaultAlias = ComponentName(context, "com.jetbrains.kmpapp.DefaultIconAlias")
-    private val altAlias = ComponentName(context, "com.jetbrains.kmpapp.AltIconAlias")
+    private val aliases = listOf(
+        ComponentName(context, "com.jetbrains.kmpapp.DefaultLightAlias"),
+        ComponentName(context, "com.jetbrains.kmpapp.DefaultDarkAlias"),
+        ComponentName(context, "com.jetbrains.kmpapp.GriffonLightAlias"),
+        ComponentName(context, "com.jetbrains.kmpapp.GriffonDarkAlias")
+    )
 
-    override fun applyIcon(name: String) {
-        val (enable, disable) = when (name) {
-            AppIconManager.ICON_ALT -> altAlias to defaultAlias
-            else -> defaultAlias to altAlias
+    override fun applyIcon(name: String, dark: Boolean) {
+        val target = when {
+            name == AppIconManager.ICON_ALT && dark -> "GriffonDarkAlias"
+            name == AppIconManager.ICON_ALT -> "GriffonLightAlias"
+            dark -> "DefaultDarkAlias"
+            else -> "DefaultLightAlias"
         }
-        setEnabled(enable, true)
-        setEnabled(disable, false)
+        aliases.forEach { alias ->
+            val enable = alias.className.endsWith(target)
+            setEnabled(alias, enable)
+        }
     }
 
     private fun setEnabled(component: ComponentName, enabled: Boolean) {

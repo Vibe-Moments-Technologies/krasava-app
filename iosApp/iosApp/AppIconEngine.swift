@@ -7,7 +7,7 @@ import Shared
 // Sources (NotificationsEngine.swift) детерминированно выпадал из плана
 // сборки Xcode при корректном pbxproj — здесь компиляция гарантирована.
 final class AppIconEngine: AppIconManagerIconEngine {
-    func applyIcon(name: String) {
+    func applyIcon(name: String, dark: Bool) {
         // "default" -> nil = вернуть первичную иконку из asset catalog.
         // Литерал, а не AppIconManager.ICON_DEFAULT: const val не экспортируется
         // в Swift (inline на стороне Kotlin), значение зафиксировано в common-коде.

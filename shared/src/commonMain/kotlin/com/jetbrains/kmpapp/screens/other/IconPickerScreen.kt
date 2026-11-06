@@ -3,7 +3,6 @@ import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
+import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.data.theme.isSystemDarkTheme
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kmp_app_template.shared.generated.resources.Res
 import kmp_app_template.shared.generated.resources.appicon_alt_dark
@@ -62,13 +63,18 @@ fun IconPickerScreen(
     PlatformBackHandler(onBack = onBack)
 
     val currentIcon by viewModel.appIcon.collectAsState()
-    val isDarkTheme = isSystemInDarkTheme()
+    val themeMode by viewModel.themeMode.collectAsState()
+    val isDarkTheme = when (themeMode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemDarkTheme()
+    }
 
     val options = listOf(
         IconOption(
             key = AppIconManager.ICON_DEFAULT,
             title = "Основная",
-            subtitle = "Светлая и тёмная — автоматически под тему системы",
+            subtitle = "Светлая и тёмная — под выбранную тему",
             preview = if (isDarkTheme) Res.drawable.appicon_new_dark else Res.drawable.appicon_new_light
         ),
         IconOption(

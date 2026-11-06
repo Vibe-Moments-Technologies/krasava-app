@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.data.storage
 
 import com.jetbrains.kmpapp.data.analytics.AppDiagnostics
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
+import com.jetbrains.kmpapp.data.theme.isSystemDarkTheme
 import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
@@ -421,6 +422,7 @@ class ScheduleStorage(
 
     fun setThemeMode(mode: ThemeMode) {
         _themeMode.value = mode
+        AppIconManager.apply(_appIcon.value, resolveIconDark(mode))
         scope.launch {
             try {
                 platformStorage.saveString(KEY_APP_THEME, mode.name)
@@ -428,6 +430,12 @@ class ScheduleStorage(
                 println("Failed to persist themeMode: ${e.message}")
             }
         }
+    }
+
+    private fun resolveIconDark(mode: ThemeMode): Boolean = when (mode) {
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+        ThemeMode.SYSTEM -> isSystemDarkTheme()
     }
 
     fun setShowEmptyLessons(enabled: Boolean) {
@@ -800,7 +808,7 @@ class ScheduleStorage(
     fun setAppIcon(name: String) {
         val changed = _appIcon.value != name
         _appIcon.value = name
-        AppIconManager.apply(name)
+        AppIconManager.apply(name, resolveIconDark(_themeMode.value))
         scope.launch { platformStorage.saveString(KEY_APP_ICON, name) }
         if (changed) {
         }
