@@ -2,14 +2,12 @@ package com.jetbrains.kmpapp.screens.qr
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Rect
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.OptIn
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ExperimentalGetImage
 import androidx.camera.core.ImageAnalysis
-import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -35,14 +33,11 @@ import java.util.concurrent.Executors
 /**
  * Камера-сканер (Android): CameraX Preview + ML Kit Barcode Scanning.
  *
- * Пауза ([paused]) — внутри analyzer-колбэка через rememberUpdatedState:
- * preview и сессия живут, результаты глушатся; возврат на экран сканера
- * возобновляет дешифровку без пересборки камеры.
- *
- * Автонаведение рамки: ML Kit даёт boundingBox кода в пикселях кадра;
- * переводим в нормализованные координаты вью (FILL_CENTER: кадр
- * масштабируется до покрытия, лишнее кропится по центру) и шлём в
- * [onCodeBounds] через main-поток. Нет кода в кадре — шлём null.
+ * Поиск кода — по ВСЕМУ КАДРУ (баркоды ищутся во всём входном
+ * изображении, не в зоне рамки). Пауза ([paused]) — внутри
+ * analyzer-колбэка через rememberUpdatedState: preview и сессия
+ * живут, результаты глушатся; возврат на экран сканера возобновляет
+ * дешифровку без пересборки камеры.
  */
 @OptIn(ExperimentalGetImage::class)
 @Composable
@@ -50,8 +45,7 @@ actual fun QrCameraView(
     modifier: Modifier,
     paused: Boolean,
     torchEnabled: Boolean,
-    onCodeScanned: (String) -> Unit,
-    onCodeBounds: ((Float, Float, Float, Float) -> Unit)?
+    onCodeScanned: (String) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -71,10 +65,9 @@ actual fun QrCameraView(
     }
 
     val executor = remember { Executors.newSingleThreadExecutor() }
-    // Analyzer живёт в camera-потоке: колбэки обязаны читаться через
-    // rememberUpdatedState, чтобы всегда видеть актуальные значения.
+    // Analyzer живёт в camera-потоке: колбэк обязан читаться через
+    // rememberUpdatedState, чтобы всегда видеть актуальное значение.
     val currentOnScanned by rememberUpdatedState(onCodeScanned)
-    val currentOnBounds by rememberUpdatedState(onCodeBounds)
     val currentPaused by rememberUpdatedState(paused)
 
     DisposableEffect(Unit) {
@@ -82,22 +75,19 @@ actual fun QrCameraView(
     }
 
     if (!hasCameraPermission) {
+        // Пустая подложка: экран сканера поверх рисует своё сообщение
+        // про разрешение камеры.
         androidx.compose.foundation.layout.Box(modifier = modifier)
         return
     }
 
     var cameraRef by remember { mutableStateOf<androidx.camera.core.Camera?>(null) }
-    // Размеры вью для нормализации координат (обновляются в update).
-    var viewSizeRef by remember { mutableStateOf(1 to 1) }
-    // Ссылка на previewView: post() из analyzer-потока в main.
-    val previewViewRef = remember { arrayOf<PreviewView?>(null) }
 
     AndroidView(
         factory = { ctx ->
             val previewView = PreviewView(ctx).apply {
                 scaleType = PreviewView.ScaleType.FILL_CENTER
             }
-            previewViewRef[0] = previewView
             val providerFuture = ProcessCameraProvider.getInstance(ctx)
             providerFuture.addListener({
                 val provider = providerFuture.get()
@@ -109,64 +99,22 @@ actual fun QrCameraView(
                     .build()
                 val scanner = BarcodeScanning.getClient(options)
 
-                // Нормализация бокса кода в координаты вью (FILL_CENTER).
-                // КЛЮЧЕВОЕ: boundingBox ML Kit уже в координатах
-                // ОТОВРАЩЁННОГО кадра (InputImage.fromMediaImage с
-                // rotationDegrees) — то есть в экранной ориентации,
-                // такой же, как у вью. Никакого повторного поворота
-                // бокса делать НЕЛЬЗЯ (первая версия крутила его ещё
-                // раз — рамка уезжала в угол и растягивалась).
-                fun reportBounds(box: Rect?, frameW: Int, frameH: Int, rotation: Int) {
-                    val pv = previewViewRef[0] ?: return
-                    val callback = currentOnBounds ?: return
-                    if (box == null || frameW <= 0 || frameH <= 0) {
-                        pv.post { callback(-1f, -1f, -1f, -1f) }
-                        return
-                    }
-                    // Кадр в экранной ориентации: sensor-кадр повёрнут
-                    // на rotationDegrees.
-                    val rotated = rotation == 90 || rotation == 270
-                    val fw = if (rotated) frameH else frameW
-                    val fh = if (rotated) frameW else frameH
-                    val bx = box.left
-                    val by = box.top
-                    val bw = box.width()
-                    val bh = box.height()
-                    pv.post {
-                        val vw = pv.width.coerceAtLeast(1)
-                        val vh = pv.height.coerceAtLeast(1)
-                        val scale = maxOf(vw.toFloat() / fw, vh.toFloat() / fh)
-                        val dx = (vw - fw * scale) / 2f
-                        val dy = (vh - fh * scale) / 2f
-                        callback(
-                            (bx * scale + dx) / vw,
-                            (by * scale + dy) / vh,
-                            (bw * scale) / vw,
-                            (bh * scale) / vh
-                        )
-                    }
-                }
-
                 val analysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .build()
                 analysis.setAnalyzer(executor) { imageProxy ->
                     val mediaImage = imageProxy.image
-                    val rotation = imageProxy.imageInfo.rotationDegrees
                     if (mediaImage != null) {
-                        val input = InputImage.fromMediaImage(mediaImage, rotation)
+                        val input = InputImage.fromMediaImage(
+                            mediaImage, imageProxy.imageInfo.rotationDegrees
+                        )
                         scanner.process(input)
                             .addOnSuccessListener { barcodes ->
-                                val qr = barcodes.firstOrNull { it.rawValue != null }
-                                if (qr != null) {
-                                    reportBounds(
-                                        qr.boundingBox, imageProxy.width, imageProxy.height, rotation
-                                    )
-                                    if (!currentPaused) {
-                                        qr.rawValue?.let { currentOnScanned(it) }
-                                    }
-                                } else {
-                                    reportBounds(null, imageProxy.width, imageProxy.height, rotation)
+                                if (!currentPaused) {
+                                    // Первый QR с содержимым: весь кадр
+                                    // уже проанализирован декодером.
+                                    barcodes.firstOrNull { it.rawValue != null }?.rawValue
+                                        ?.let { currentOnScanned(it) }
                                 }
                             }
                             .addOnCompleteListener { imageProxy.close() }
@@ -192,10 +140,6 @@ actual fun QrCameraView(
         },
         update = {
             cameraRef?.cameraControl?.enableTorch(torchEnabled)
-            viewSizeRef = it.width to it.height
-        },
-        onRelease = {
-            previewViewRef[0] = null
         },
         modifier = modifier
     )

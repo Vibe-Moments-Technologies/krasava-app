@@ -16,7 +16,6 @@ import kotlinx.cinterop.alloc
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.readValue
-import kotlinx.cinterop.useContents
 import platform.AVFoundation.AVAuthorizationStatusAuthorized
 import platform.AVFoundation.AVAuthorizationStatusDenied
 import platform.AVFoundation.AVAuthorizationStatusNotDetermined
@@ -54,9 +53,10 @@ import platform.darwin.dispatch_queue_create
 /**
  * Камера-сканер (iOS): AVCaptureSession + QR-метаданные.
  *
- * Результаты глушатся при [paused] (как на Android): preview живёт,
- * дешифровка стопорится и мгновенно возобновляется при возврате на
- * экран сканера. Фонарик — через update при смене [torchEnabled].
+ * Поиск кода — по ВСЕМУ КАДРУ (метаданные-вывод не ограничен зоной:
+ * rectOfInterest не задан). Результаты глушатся при [paused]: preview
+ * и сессия живут; возврат на экран сканера возобновляет дешифровку.
+ * Фонарик — через update при смене [torchEnabled].
  *
  * Имена cinterop-символов сверены компиляцией (konanc 2.4.10, ios_arm64)
  * и рабочими KMP-сканерами: animeko QrCodeScanner.ios.kt, KScan,
@@ -69,11 +69,9 @@ actual fun QrCameraView(
     modifier: Modifier,
     paused: Boolean,
     torchEnabled: Boolean,
-    onCodeScanned: (String) -> Unit,
-    onCodeBounds: ((Float, Float, Float, Float) -> Unit)?
+    onCodeScanned: (String) -> Unit
 ) {
     val currentOnScanned = rememberUpdatedState(onCodeScanned)
-    val currentOnBounds = rememberUpdatedState(onCodeBounds)
     val currentPaused = rememberUpdatedState(paused)
 
     // AVAuthorizationStatus в Kotlin/Native — Long, не enum: сравнение
@@ -107,40 +105,12 @@ actual fun QrCameraView(
 
     val session = remember { AVCaptureSession() }
     val holder = remember { ScannerDelegateHolder() }
-    val previewLayerRef = remember { arrayOf<AVCaptureVideoPreviewLayer?>(null) }
     DisposableEffect(Unit) {
         holder.onScanned = { value ->
             if (!currentPaused.value) currentOnScanned.value(value)
         }
-        holder.onBounds = { metadataObject ->
-            // Нормализованные координаты через previewLayer:
-            // transformedMetadataObjectForMetadataObject — метод превью-
-            // слоя, конвертит bounds метаданных в координаты слоя (учитывая
-            // ориентацию и AspectFill); делим на фрэйм слоя.
-            // Существование метода проверено компиляцией (konanc 2.4.10,
-            // ios_arm64).
-            val layer = previewLayerRef[0]
-            val onBoundsCallback = currentOnBounds.value
-            if (layer != null && onBoundsCallback != null) {
-                val transformed = layer.transformedMetadataObjectForMetadataObject(metadataObject)
-                if (transformed != null) {
-                    val size = layer.frame.useContents { this.size }
-                    val vw = size.width.toFloat().coerceAtLeast(1f)
-                    val vh = size.height.toFloat().coerceAtLeast(1f)
-                    transformed.bounds.useContents {
-                        onBoundsCallback(
-                            origin.x.toFloat() / vw,
-                            origin.y.toFloat() / vh,
-                            size.width.toFloat() / vw,
-                            size.height.toFloat() / vh
-                        )
-                    }
-                }
-            }
-        }
         onDispose {
             holder.onScanned = null
-            holder.onBounds = null
             // stopRunning блокирует: с серийной очереди, не с главного потока.
             dispatch_async(sessionQueue) { session.stopRunning() }
         }
@@ -173,7 +143,6 @@ actual fun QrCameraView(
             }
             val layer = AVCaptureVideoPreviewLayer(session = session)
             layer.videoGravity = AVLayerVideoGravityResizeAspectFill
-            previewLayerRef[0] = layer
             PreviewHostView(layer).apply {
                 // startRunning блокирует: не в главный поток.
                 dispatch_async(sessionQueue) { session.startRunning() }
@@ -223,12 +192,11 @@ private class PreviewHostView(
 }
 
 /**
- * Мост колбэка метаданных в Kotlin-лямбды. Держится сильно: output
+ * Мост колбэка метаданных в Kotlin-лямбду. Держится сильно: output
  * удерживает делегата слабо — держатель-remember обязателен.
  */
 private class ScannerDelegateHolder {
     var onScanned: ((String) -> Unit)? = null
-    var onBounds: ((AVMetadataMachineReadableCodeObject) -> Unit)? = null
 
     // Тип — именно ПРОТОКОЛ: NSObject-поле не матчится с параметром
     // setMetadataObjectsDelegate (CI-репорт «argument type mismatch»).
@@ -239,11 +207,10 @@ private class ScannerDelegateHolder {
                 didOutputMetadataObjects: List<*>,
                 fromConnection: AVCaptureConnection
             ) {
-                if (onScanned == null && onBounds == null) return
+                if (onScanned == null) return
                 for (found in didOutputMetadataObjects) {
-                    val code = found as? AVMetadataMachineReadableCodeObject ?: continue
-                    code.stringValue?.let { value -> onScanned?.invoke(value) }
-                    onBounds?.invoke(code)
+                    (found as? AVMetadataMachineReadableCodeObject)?.stringValue
+                        ?.let { value -> onScanned?.invoke(value) }
                 }
             }
         }
