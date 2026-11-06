@@ -190,7 +190,7 @@ private fun ScheduleMainContent(
                 onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
                 onCalendarBadgeLongClick = { showMonthPicker = true },
                 onOpenOtherClick = onOpenOther,
-                onQrScannerClick = if (qrButtonEnabled) { { showQrScanner = true } } else null
+                onQrScannerClick = if (qrButtonEnabled) { { showQrScanner = !showQrScanner } } else null
             )
         },
         modifier = modifier.fillMaxSize()
@@ -203,7 +203,16 @@ private fun ScheduleMainContent(
             Column(
                 modifier = Modifier.fillMaxSize()
             ) {
-            if (selectedTarget == null) {
+            // Встроенный сканер QR (из шапки): живёт ВНУТРИ страницы
+            // расписания под шапкой — шапка, выбор расписания и плюс
+            // остаются доступны; тап по значку QR закрывает (toggle).
+            if (showQrScanner) {
+                com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
+                    onBack = { showQrScanner = false },
+                    embedded = true,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (selectedTarget == null) {
                 // No schedule selected yet
                 Box(
                     modifier = Modifier
@@ -429,14 +438,6 @@ private fun ScheduleMainContent(
                 lessonSummaries = dayLessonSummaries,
                 onDatePicked = { viewModel.selectDate(it) },
                 onDismiss = { showMonthPicker = false }
-            )
-        }
-
-        // Сканер QR — полноэкранный оверлей из шапки: камера и жесты
-        // не должны смешиваться со слоями расписания.
-        if (showQrScanner) {
-            com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
-                onBack = { showQrScanner = false }
             )
         }
         }

@@ -4,18 +4,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 /**
- * Сканер QR-кодов — вид живой камеры с рамкой-прицелом.
+ * Сканер QR-кодов — вид живой камеры.
  *
  * Платформенная реализация:
- *  - Android: CameraX PreviewView + ML Kit Barcode Scanning (GMS-free,
- *    bundled) — выбор сильного распознавания в тяжёлых условиях
- *    (блики, мелкий код, плохой свет; запрос владельца).
+ *  - Android: CameraX PreviewView + ML Kit Barcode Scanning (bundled).
  *  - iOS: AVFoundation AVCaptureSession + метаданные QR.
  *
- * Поведение: одна успешная дешифровка -> [onCodeScanned] и пауза камеры
- * (управляется вызовом [paused]); перезапуск — снятием паузы. Коды
- * меняются на ходу (запрос владельца), поэтому экран сканера НЕ просит
- * подтверждения: распознали -> открыли ссылку.
+ * Поведение: дешифровки шлются в [onCodeScanned]; пауза [paused] глушит
+ * выдачу (камера живёт). Позиция кода в кадре (автонаведение рамки) —
+ * [onCodeBounds]: нормализованные x, y, w, h (0..1) в координатах вью;
+ * null — код не виден. На iOS координаты конвертируются через
+ * previewLayer (учитывает ориентацию), на Android пока не реализовано —
+ * рамка остаётся в центре (заглушка, см. actual).
  */
 @Composable
 expect fun QrCameraView(
@@ -23,5 +23,7 @@ expect fun QrCameraView(
     paused: Boolean = false,
     /** Задняя фонарик: true — включён (кнопка на экране сканера). */
     torchEnabled: Boolean = false,
-    onCodeScanned: (String) -> Unit
+    onCodeScanned: (String) -> Unit,
+    /** Позиция кода в кадре: нормализованные x/y/w/h; null — не виден. */
+    onCodeBounds: ((Float, Float, Float, Float) -> Unit)? = null
 )
