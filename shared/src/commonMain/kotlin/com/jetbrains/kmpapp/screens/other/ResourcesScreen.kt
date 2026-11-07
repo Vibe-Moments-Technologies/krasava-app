@@ -90,6 +90,13 @@ import kmp_app_template.shared.generated.resources.res_logo_pulse
 import kmp_app_template.shared.generated.resources.res_logo_sdo
 import kmp_app_template.shared.generated.resources.res_logo_student
 import kmp_app_template.shared.generated.resources.res_logo_vote
+import kmp_app_template.shared.generated.resources.res_project_bal
+import kmp_app_template.shared.generated.resources.res_project_education
+import kmp_app_template.shared.generated.resources.res_project_miti
+import kmp_app_template.shared.generated.resources.res_project_starteen
+import kmp_app_template.shared.generated.resources.res_project_student_god
+import kmp_app_template.shared.generated.resources.res_project_team
+import kmp_app_template.shared.generated.resources.res_project_vri_les
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
@@ -182,19 +189,47 @@ data class ResourceLink(
     val icon: ImageVector? = null,
     /** Логотип ресурса; показывается вместо [icon]/[symbol]. */
     val logo: DrawableResource? = null,
+    /** Логотип — квадратная аватарка: заполняет круг, а не вписывается в него. */
+    val logoIsAvatar: Boolean = false,
     /** Фон аватара-иконки; null — светлый оттенок [accentColor]. */
     val iconBackground: Color? = null
 ) : ResourceEntry
 
-private fun vkLink(title: String, description: String, symbol: String, url: String, accent: Color) =
-    ResourceLink(
-        title = title,
-        description = description,
-        symbol = symbol,
-        url = url,
-        accentColor = accent,
-        fetchAvatarFrom = url
-    )
+private fun vkLink(
+    title: String,
+    description: String,
+    symbol: String,
+    url: String,
+    accent: Color,
+    logo: DrawableResource? = null
+) = ResourceLink(
+    title = title,
+    description = description,
+    symbol = symbol,
+    url = url,
+    accentColor = accent,
+    fetchAvatarFrom = url,
+    logo = logo,
+    logoIsAvatar = logo != null
+)
+
+private fun tgLink(
+    title: String,
+    description: String,
+    symbol: String,
+    url: String,
+    accent: Color,
+    logo: DrawableResource? = null
+) = ResourceLink(
+    title = title,
+    description = description,
+    symbol = symbol,
+    url = url,
+    accentColor = accent,
+    fetchAvatarFrom = url,
+    logo = logo,
+    logoIsAvatar = logo != null
+)
 
 private fun plannedLink(title: String, description: String, accent: Color) =
     ResourceLink(
@@ -436,7 +471,87 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             title = "Проекты",
                             icon = Icons.Default.RocketLaunch,
                             accentColor = Color(0xFFFF9500),
-                            children = emptyList()
+                            children = listOf(
+                                vkLink(
+                                    title = "Лагерь-семинар «Мы – команда»",
+                                    description = "Выездной лагерь-семинар студенческого актива: командообразование, сцена, мастер-классы и встреча с администрацией университета.",
+                                    symbol = "🏕️",
+                                    url = "https://vk.ru/wearetheteam",
+                                    accent = Color(0xFF34C759),
+                                    logo = Res.drawable.res_project_team
+                                ),
+                                vkLink(
+                                    title = "ВРИ «ЛЕС» — ВКонтакте",
+                                    description = "Новости и сообщество военно-ролевой игры «Лес»: сражения по правилам «Зарницы», магия и квесты.",
+                                    symbol = "🌲",
+                                    url = "https://vk.ru/vri_les",
+                                    accent = Color(0xFF2E8B57),
+                                    logo = Res.drawable.res_project_vri_les
+                                ),
+                                tgLink(
+                                    title = "ВРИ «ЛЕС» — Telegram",
+                                    description = "Telegram-канал проекта: анонсы, новости и организация выездов.",
+                                    symbol = "🌲",
+                                    url = "https://t.me/vri_les",
+                                    accent = Color(0xFF2E8B57),
+                                    logo = Res.drawable.res_project_vri_les
+                                ),
+                                vkLink(
+                                    title = "МИТИ «Наследие Леса» — ВКонтакте",
+                                    description = "Молодёжная историко-туристическая игра по мотивам древнерусских сказаний и славянской мифологии.",
+                                    symbol = "🌳",
+                                    url = "https://vk.ru/miti_nasledielesa",
+                                    accent = Color(0xFFA2845E),
+                                    logo = Res.drawable.res_project_miti
+                                ),
+                                tgLink(
+                                    title = "МИТИ «Наследие Леса» — Telegram",
+                                    description = "Telegram-канал проекта: анонсы, новости и подготовка к выезду.",
+                                    symbol = "🌳",
+                                    url = "https://t.me/miti_nasledielesa",
+                                    accent = Color(0xFFA2845E),
+                                    logo = Res.drawable.res_project_miti
+                                ),
+                                vkLink(
+                                    title = "Традиционный бал РТУ МИРЭА",
+                                    description = "Ежегодный студенческий бал университета: вальс, исторические танцы, этикет и тематическая программа.",
+                                    symbol = "💃",
+                                    url = "https://vk.ru/bal_rtumirea",
+                                    accent = Color(0xFFAF52DE),
+                                    logo = Res.drawable.res_project_bal
+                                ),
+                                vkLink(
+                                    title = "Студент и преподаватель года",
+                                    description = "Конкурс университета, который отмечает лучших студентов, преподавателей и наставников по итогам года.",
+                                    symbol = "🏆",
+                                    url = "https://vk.ru/studentgodartumirea",
+                                    accent = Color(0xFFFF9500),
+                                    logo = Res.drawable.res_project_student_god
+                                ),
+                                vkLink(
+                                    title = "Учебные субботы",
+                                    description = "Проект Студенческого союза: занятия по сложным дисциплинам от старших студентов и материалы для подготовки к сессии.",
+                                    symbol = "📚",
+                                    url = "https://vk.ru/education_sumirea",
+                                    accent = Color(0xFF007AFF),
+                                    logo = Res.drawable.res_project_education
+                                ),
+                                vkLink(
+                                    title = "Стартин",
+                                    description = "Традиционный танцевальный конкурс между институтами и колледжем РТУ МИРЭА.",
+                                    symbol = "🕺",
+                                    url = "https://vk.ru/starteen_sumirea",
+                                    accent = Color(0xFFFF2D55),
+                                    logo = Res.drawable.res_project_starteen
+                                ),
+                                tgLink(
+                                    title = "Что? Где? Когда?",
+                                    description = "Интеллектуальный клуб университета: тренировки, турниры и игры в формате «Что? Где? Когда?».",
+                                    symbol = "🦉",
+                                    url = "https://t.me/chogdekogda_rtumirea",
+                                    accent = Color(0xFF5856D6)
+                                )
+                            )
                         )
                     )
                 ),
@@ -997,18 +1112,22 @@ private fun LinkAvatar(link: ResourceLink, resolvedAvatar: String?) {
             error = { SymbolAvatar(symbol = link.symbol, accentColor = link.accentColor) }
         )
     } else if (link.logo != null) {
+        val avatar = link.logoIsAvatar
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(link.iconBackground ?: link.accentColor.copy(alpha = 0.15f)),
+                .background(
+                    if (avatar) Color.Transparent
+                    else link.iconBackground ?: link.accentColor.copy(alpha = 0.15f)
+                ),
             contentAlignment = Alignment.Center
         ) {
             Image(
                 painter = painterResource(link.logo),
                 contentDescription = link.title,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.size(32.dp)
+                contentScale = if (avatar) ContentScale.Crop else ContentScale.Fit,
+                modifier = if (avatar) Modifier.fillMaxSize() else Modifier.size(32.dp)
             )
         }
     } else if (link.icon != null) {
