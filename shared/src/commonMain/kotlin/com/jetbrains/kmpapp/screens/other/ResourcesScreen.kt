@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Domain
+import androidx.compose.material.icons.filled.Forest
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Groups
@@ -42,10 +43,14 @@ import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MonitorHeart
+import androidx.compose.material.icons.filled.Nature
+import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Park
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -97,6 +102,12 @@ import kmp_app_template.shared.generated.resources.res_project_starteen
 import kmp_app_template.shared.generated.resources.res_project_student_god
 import kmp_app_template.shared.generated.resources.res_project_team
 import kmp_app_template.shared.generated.resources.res_project_vri_les
+import kmp_app_template.shared.generated.resources.res_social_apriori
+import kmp_app_template.shared.generated.resources.res_social_arctic
+import kmp_app_template.shared.generated.resources.res_social_ovk
+import kmp_app_template.shared.generated.resources.res_social_profkom
+import kmp_app_template.shared.generated.resources.res_social_sumirea
+import kmp_app_template.shared.generated.resources.res_social_sumirea_site
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
@@ -201,7 +212,8 @@ private fun vkLink(
     symbol: String,
     url: String,
     accent: Color,
-    logo: DrawableResource? = null
+    logo: DrawableResource? = null,
+    icon: ImageVector? = null
 ) = ResourceLink(
     title = title,
     description = description,
@@ -209,6 +221,7 @@ private fun vkLink(
     url = url,
     accentColor = accent,
     fetchAvatarFrom = url,
+    icon = icon,
     logo = logo,
     logoIsAvatar = logo != null
 )
@@ -219,7 +232,8 @@ private fun tgLink(
     symbol: String,
     url: String,
     accent: Color,
-    logo: DrawableResource? = null
+    logo: DrawableResource? = null,
+    icon: ImageVector? = null
 ) = ResourceLink(
     title = title,
     description = description,
@@ -227,6 +241,7 @@ private fun tgLink(
     url = url,
     accentColor = accent,
     fetchAvatarFrom = url,
+    icon = icon,
     logo = logo,
     logoIsAvatar = logo != null
 )
@@ -334,6 +349,16 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
             accentColor = Color(0xFF5856D6),
             children = listOf(
                 ResourceLink(
+                    title = "Ректорат",
+                    description = "Руководство университета, состав ректората, контакты и приёмные часы.",
+                    symbol = "🏛️",
+                    url = "https://www.mirea.ru/about/administration/rektorat/",
+                    accentColor = Color(0xFF5856D6),
+                    icon = Icons.Default.AccountBalance,
+                    logo = Res.drawable.res_logo_mirea,
+                    iconBackground = Color.White
+                ),
+                ResourceLink(
                     title = "Облако студента",
                     description = "Корпоративное облачное хранилище Nextcloud для учебных файлов и совместной работы.",
                     symbol = "☁️",
@@ -354,16 +379,6 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     iconBackground = Color.White
                 ),
                 ResourceLink(
-                    title = "Фонд целевого капитала",
-                    description = "Поддержка университета, стипендий и образовательных проектов через фонд целевого капитала.",
-                    symbol = "🌳",
-                    url = "https://fund.mirea.ru/",
-                    accentColor = Color(0xFF007AFF),
-                    icon = Icons.Default.Park,
-                    logo = Res.drawable.res_logo_fund,
-                    iconBackground = Color.White
-                ),
-                ResourceLink(
                     title = "Информационный библиотечный центр",
                     description = "Электронные каталоги, учебники, научные базы и сервисы библиотеки РТУ МИРЭА.",
                     symbol = "📚",
@@ -374,13 +389,13 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     iconBackground = Color.White
                 ),
                 ResourceLink(
-                    title = "Ректорат",
-                    description = "Руководство университета, состав ректората, контакты и приёмные часы.",
-                    symbol = "🏛️",
-                    url = "https://www.mirea.ru/about/administration/rektorat/",
-                    accentColor = Color(0xFF5856D6),
-                    icon = Icons.Default.AccountBalance,
-                    logo = Res.drawable.res_logo_mirea,
+                    title = "Фонд целевого капитала",
+                    description = "Поддержка университета, стипендий и образовательных проектов через фонд целевого капитала.",
+                    symbol = "🌳",
+                    url = "https://fund.mirea.ru/",
+                    accentColor = Color(0xFF007AFF),
+                    icon = Icons.Default.Park,
+                    logo = Res.drawable.res_logo_fund,
                     iconBackground = Color.White
                 )
             )
@@ -419,28 +434,33 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             description = "ВК группа, где публикуются новости об организации",
                             symbol = "🤝",
                             url = "https://vk.ru/sumirea",
-                            accent = Color(0xFF007AFF)
+                            accent = Color(0xFF007AFF),
+                            logo = Res.drawable.res_social_sumirea
                         ),
-                        ResourceLink(
+                        tgLink(
                             title = "ТГ сообщество",
                             description = "Официальный ТГ канал организации",
                             symbol = "📢",
                             url = "https://t.me/sumirea",
-                            accentColor = Color(0xFF007AFF)
+                            accent = Color(0xFF007AFF),
+                            logo = Res.drawable.res_social_sumirea
                         ),
                         ResourceLink(
                             title = "Сайт",
                             description = "Официальный сайт Студенческого союза РТУ МИРЭА",
                             symbol = "🌐",
                             url = "https://sumirea.ru/",
-                            accentColor = Color(0xFF007AFF)
+                            accentColor = Color(0xFF007AFF),
+                            logo = Res.drawable.res_social_sumirea_site,
+                            iconBackground = Color.White
                         ),
                         vkLink(
                             title = "ОВК",
                             description = "Отчётно-выборные Конференции Студенческого союза МИРЭА",
                             symbol = "🗳️",
                             url = "https://vk.ru/ovksumirea",
-                            accent = Color(0xFF007AFF)
+                            accent = Color(0xFF007AFF),
+                            logo = Res.drawable.res_social_ovk
                         ),
                         ResourceFolder(
                             title = "Структуры",
@@ -480,37 +500,51 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                                     accent = Color(0xFF34C759),
                                     logo = Res.drawable.res_project_team
                                 ),
-                                vkLink(
-                                    title = "ВРИ «ЛЕС» — ВКонтакте",
-                                    description = "Новости и сообщество военно-ролевой игры «Лес»: сражения по правилам «Зарницы», магия и квесты.",
-                                    symbol = "🌲",
-                                    url = "https://vk.ru/vri_les",
-                                    accent = Color(0xFF2E8B57),
-                                    logo = Res.drawable.res_project_vri_les
+                                ResourceFolder(
+                                    title = "ВРИ «Лес»",
+                                    icon = Icons.Default.Forest,
+                                    accentColor = Color(0xFF2E8B57),
+                                    children = listOf(
+                                        vkLink(
+                                            title = "ВКонтакте",
+                                            description = "Новости и сообщество военно-ролевой игры «Лес»: сражения по правилам «Зарницы», магия и квесты.",
+                                            symbol = "🌲",
+                                            url = "https://vk.ru/vri_les",
+                                            accent = Color(0xFF2E8B57),
+                                            logo = Res.drawable.res_project_vri_les
+                                        ),
+                                        tgLink(
+                                            title = "Telegram",
+                                            description = "Telegram-канал проекта: анонсы, новости и организация выездов.",
+                                            symbol = "🌲",
+                                            url = "https://t.me/vri_les",
+                                            accent = Color(0xFF2E8B57),
+                                            logo = Res.drawable.res_project_vri_les
+                                        )
+                                    )
                                 ),
-                                tgLink(
-                                    title = "ВРИ «ЛЕС» — Telegram",
-                                    description = "Telegram-канал проекта: анонсы, новости и организация выездов.",
-                                    symbol = "🌲",
-                                    url = "https://t.me/vri_les",
-                                    accent = Color(0xFF2E8B57),
-                                    logo = Res.drawable.res_project_vri_les
-                                ),
-                                vkLink(
-                                    title = "МИТИ «Наследие Леса» — ВКонтакте",
-                                    description = "Молодёжная историко-туристическая игра по мотивам древнерусских сказаний и славянской мифологии.",
-                                    symbol = "🌳",
-                                    url = "https://vk.ru/miti_nasledielesa",
-                                    accent = Color(0xFFA2845E),
-                                    logo = Res.drawable.res_project_miti
-                                ),
-                                tgLink(
-                                    title = "МИТИ «Наследие Леса» — Telegram",
-                                    description = "Telegram-канал проекта: анонсы, новости и подготовка к выезду.",
-                                    symbol = "🌳",
-                                    url = "https://t.me/miti_nasledielesa",
-                                    accent = Color(0xFFA2845E),
-                                    logo = Res.drawable.res_project_miti
+                                ResourceFolder(
+                                    title = "МИТИ «Наследие Леса»",
+                                    icon = Icons.Default.Nature,
+                                    accentColor = Color(0xFFA2845E),
+                                    children = listOf(
+                                        vkLink(
+                                            title = "ВКонтакте",
+                                            description = "Молодёжная историко-туристическая игра по мотивам древнерусских сказаний и славянской мифологии.",
+                                            symbol = "🌳",
+                                            url = "https://vk.ru/miti_nasledielesa",
+                                            accent = Color(0xFFA2845E),
+                                            logo = Res.drawable.res_project_miti
+                                        ),
+                                        tgLink(
+                                            title = "Telegram",
+                                            description = "Telegram-канал проекта: анонсы, новости и подготовка к выезду.",
+                                            symbol = "🌳",
+                                            url = "https://t.me/miti_nasledielesa",
+                                            accent = Color(0xFFA2845E),
+                                            logo = Res.drawable.res_project_miti
+                                        )
+                                    )
                                 ),
                                 vkLink(
                                     title = "Традиционный бал РТУ МИРЭА",
@@ -549,7 +583,8 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                                     description = "Интеллектуальный клуб университета: тренировки, турниры и игры в формате «Что? Где? Когда?».",
                                     symbol = "🦉",
                                     url = "https://t.me/chogdekogda_rtumirea",
-                                    accent = Color(0xFF5856D6)
+                                    accent = Color(0xFF5856D6),
+                                    icon = Icons.Default.Quiz
                                 )
                             )
                         )
@@ -565,29 +600,48 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             description = "ВК группа, где публикуются новости об организации",
                             symbol = "🤝",
                             url = "https://vk.ru/rtuprofkom",
-                            accent = Color(0xFF5856D6)
+                            accent = Color(0xFF5856D6),
+                            logo = Res.drawable.res_social_profkom
                         ),
-                        ResourceLink(
+                        tgLink(
                             title = "ТГ сообщество",
                             description = "Официальный ТГ канал организации",
                             symbol = "📢",
                             url = "https://t.me/mireaprofkom",
-                            accentColor = Color(0xFF5856D6)
+                            accent = Color(0xFF5856D6),
+                            logo = Res.drawable.res_social_profkom
                         ),
                         vkLink(
                             title = "Априори",
                             description = "Педагогический отряд",
                             symbol = "🎓",
                             url = "https://vk.ru/apriori.moscow",
-                            accent = Color(0xFF34C759)
+                            accent = Color(0xFF34C759),
+                            logo = Res.drawable.res_social_apriori
                         )
                     )
                 ),
                 ResourceFolder(
-                    title = "Студенческое научное общество",
+                    title = "Студенческое научное общество РТУ МИРЭА",
                     icon = Icons.Default.Science,
                     accentColor = Color(0xFF34C759),
                     children = emptyList()
+                ),
+                ResourceFolder(
+                    title = "Киберзона",
+                    icon = Icons.Default.SportsEsports,
+                    accentColor = Color(0xFF0B0B0F),
+                    children = listOf(
+                        ResourceLink(
+                            title = "Бронирование зон",
+                            description = "Бронирование VR-зон, компьютерных классов и настольных игр в киберпространстве РТУ МИРЭА.",
+                            symbol = "🐉",
+                            url = "https://esports.mirea.app/",
+                            accentColor = Color.White,
+                            icon = CyberzoneDragon,
+                            iconBackground = Color(0xFF0B0B0F)
+                        )
+                    )
                 ),
                 ResourceFolder(
                     title = "Стартап-клуб РТУ МИРЭА",
@@ -599,21 +653,24 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             description = "Информация с официального сайта о Стартап-клубе РТУ МИРЭА",
                             symbol = "🔗",
                             url = "https://www.mirea.ru/news/v-rtu-mirea-sostoyalos-otkrytie-startap-kluba/?ysclid=mucklirr211037720",
-                            accentColor = Color(0xFFFF9500)
+                            accentColor = Color(0xFFFF9500),
+                            icon = Icons.Default.Newspaper
                         ),
-                        ResourceLink(
+                        tgLink(
                             title = "Сообщество",
                             description = "Тг сообщество Стартап-клуба РТУ МИРЭА",
                             symbol = "💬",
                             url = "https://t.me/StartupClubRTUMIREA",
-                            accentColor = Color(0xFFFF9500)
+                            accent = Color(0xFF29A9EB),
+                            icon = TelegramMark
                         ),
-                        ResourceLink(
+                        tgLink(
                             title = "Беседа",
                             description = "Тг беседа Стартап-клуба РТУ МИРЭА",
                             symbol = "🗨️",
                             url = "https://t.me/StartupClub_RTUMIREA",
-                            accentColor = Color(0xFFFF9500)
+                            accent = Color(0xFF29A9EB),
+                            icon = TelegramMark
                         )
                     )
                 ),
@@ -622,18 +679,10 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     description = "Студенческое объединение «Команда Арктики» РТУ МИРЭА",
                     symbol = "🐻‍❄️",
                     url = "https://vk.ru/arcticcenter",
-                    accent = Color(0xFF5AC8FA)
+                    accent = Color(0xFF5AC8FA),
+                    logo = Res.drawable.res_social_arctic
                 )
             )
-        ),
-        ResourceLink(
-            title = "Киберзона",
-            description = "Бронирование VR-зон, компьютерных классов и настольных игр в киберпространстве РТУ МИРЭА.",
-            symbol = "🐉",
-            url = "https://esports.mirea.app/",
-            accentColor = Color.White,
-            icon = CyberzoneDragon,
-            iconBackground = Color(0xFF0B0B0F)
         )
     )
 )
