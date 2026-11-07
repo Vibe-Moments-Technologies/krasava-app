@@ -91,13 +91,23 @@ jobs:
         env:
           ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: "true"
 
+      # Release-вариант, а не debug: debuggable-сборка исполняется
+      # интерпретатором (ART отключает AOT/dex2oat), и замеры на ней
+      # недостоверны. iOS в этом же workflow собирается как Release.
+      # Release не собирается без релизного ключа (signingConfig = null),
+      # поэтому секреты подписи передаются явно — как в preview-main.yml.
       - name: 🔨 Run all tests + Build Android APK
-        run: ./gradlew :shared:allTests assembleDebug --stacktrace
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: ./gradlew :shared:allTests assembleRelease --stacktrace
 
       - name: 🏷️ Prepare APK Artifact
         run: |
           mkdir -p dist
-          cp androidApp/build/outputs/apk/debug/*.apk "dist/Schedule-${{ steps.slug.outputs.artifact_slug }}.apk"
+          cp androidApp/build/outputs/apk/release/*.apk "dist/Schedule-${{ steps.slug.outputs.artifact_slug }}.apk"
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4

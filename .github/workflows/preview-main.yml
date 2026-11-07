@@ -86,18 +86,24 @@ jobs:
         with:
           validate-wrappers: false
 
+      # Release-вариант, а не debug: debuggable-сборка исполняется
+      # интерпретатором (ART отключает AOT/dex2oat), поэтому dev-тесты
+      # производительности на ней недостоверны — напарник мерил тормоза,
+      # которых в магазинной сборке нет. iOS в этом же канале давно
+      # собирается как Release; теперь каналы сопоставимы.
+      # R8/minify по-прежнему выключен — это отдельный эксперимент.
       - name: 🔨 Run all tests + Build Android APK
         env:
           RELEASE_KEYSTORE_B64: ${{ secrets.RELEASE_KEYSTORE_B64 }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        run: ./gradlew :shared:allTests :androidApp:assembleDebug --stacktrace
+        run: ./gradlew :shared:allTests :androidApp:assembleRelease --stacktrace
 
       - name: 🏷️ Prepare preview APK
         run: |
           mkdir -p dist
-          cp androidApp/build/outputs/apk/debug/*.apk dist/Krasava-preview.apk
+          cp androidApp/build/outputs/apk/release/*.apk dist/Krasava-preview.apk
 
       - name: 📤 Upload APK Artifact
         uses: actions/upload-artifact@v4
