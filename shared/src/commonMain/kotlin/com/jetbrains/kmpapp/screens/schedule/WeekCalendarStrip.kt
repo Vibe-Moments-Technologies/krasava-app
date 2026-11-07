@@ -87,9 +87,29 @@ fun WeekCalendarStrip(
     )
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(selectedMonday) {
+    // Автопрокрутка ленты — ТОЛЬКО когда выбранная неделя не видна.
+    //
+    // Баг с устройства владельца: в режиме «две недели» тап по дню во второй
+    // строке (это следующая неделя) перелистывал ленту так, что эта неделя
+    // становилась первой, — хотя она и так была на экране. Причина в прежней
+    // проверке «понедельник текущей страницы != понедельник выбранного дня»:
+    // в двухнедельном режиме выбранная неделя легально может быть второй
+    // строкой. Отсюда и несогласованность: после ручного возврата лента уже
+    // стояла на нужной странице, и повторный тап по той же строке ничего не
+    // перелистывал (ключ эффекта не менялся).
+    //
+    // Теперь окно видимости совпадает с фактической вёрсткой: 1 неделя в WEEK
+    // и 2 в TWO_WEEKS. Прокрутка нужна, только когда выбранная неделя выпала
+    // из окна: дальний переход из пикера месяца, свайп списка пар через две
+    // недели, схлопывание TWO_WEEKS → WEEK, когда выбор был во второй строке.
+    LaunchedEffect(selectedMonday, expandState) {
         val currentMonday = baseMonday.plus(DatePeriod(days = (pagerState.currentPage - BASE_PAGE) * 7))
-        if (currentMonday != selectedMonday && !pagerState.isScrollInProgress) {
+        val weeksAhead = currentMonday.daysUntil(selectedMonday) / 7
+        val needsScroll = calendarStripNeedsScroll(
+            weeksAhead = weeksAhead,
+            twoWeeksMode = expandState == CalendarExpandState.TWO_WEEKS
+        )
+        if (needsScroll && !pagerState.isScrollInProgress) {
             pagerState.animateScrollToPage(
                 targetPage,
                 animationSpec = tween(250, easing = FastOutSlowInEasing)
@@ -97,21 +117,25 @@ fun WeekCalendarStrip(
         }
     }
 
-    // Active displayed week Monday
+    // Active displayed week Monday — первая строка ленты.
     val currentWeekMonday = baseMonday.plus(DatePeriod(days = (pagerState.currentPage - BASE_PAGE) * 7))
-    val currentWeekEnd = currentWeekMonday.plus(DatePeriod(days = 7))
-    val todayInCurrentWeek = today >= currentWeekMonday && today < currentWeekEnd
-    val weekInfo = DateUtils.getWeekInfo(currentWeekMonday)
+    // Видимое окно: вторая строка в TWO_WEEKS тоже на экране, поэтому
+    // заголовок и «Сегодня» считают видимой и её — иначе выделенный день во
+    // второй строке не попадал бы в окно и заголовок показывал чужую неделю.
+    val visibleWeeks = if (expandState == CalendarExpandState.TWO_WEEKS) 2 else 1
+    val visibleEnd = currentWeekMonday.plus(DatePeriod(days = 7 * visibleWeeks))
+    val todayInCurrentWeek = today >= currentWeekMonday && today < visibleEnd
     // Месяц в заголовке — от ВЫБРАННОГО дня, не от понедельника недели
     // (репорт владельца: пограничная неделя 27 окт–1 ноя показывала
     // «Октябрь», хотя пользователь на Вс=1 ноября). Выбран день другой
     // недели (листнули, но не тапнули) — берём середину видимой недели,
     // чтобы заголовок следовал за листанием.
-    val headerDate = if (selectedDate >= currentWeekMonday && selectedDate < currentWeekEnd) {
+    val headerDate = if (selectedDate >= currentWeekMonday && selectedDate < visibleEnd) {
         selectedDate
     } else {
         currentWeekMonday.plus(DatePeriod(days = 3))
     }
+    val weekInfo = DateUtils.getWeekInfo(headerDate)
     val monthTitle = DateUtils.formatMonthTitle(headerDate.month)
     val year = headerDate.year
 
@@ -295,6 +319,20 @@ fun WeekCalendarStrip(
             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f)
         )
     }
+}
+
+/**
+ * Нужна ли автопрокрутка ленты, чтобы выбранная неделя попала в видимое окно.
+ *
+ * [weeksAhead] — на сколько недель выбранная неделя впереди понедельника
+ * текущей страницы (отрицательно, если позади). [twoWeeksMode] — видны две
+ * строки (окно = 2 недели), иначе одна. Чистая функция — покрыта тестами
+ * [com.jetbrains.kmpapp.screens.schedule.CalendarStripScrollTest], чтобы
+ * окно видимости нельзя было рассинхронизировать с вёрсткой незаметно.
+ */
+internal fun calendarStripNeedsScroll(weeksAhead: Int, twoWeeksMode: Boolean): Boolean {
+    val visibleWeeks = if (twoWeeksMode) 2 else 1
+    return weeksAhead !in 0 until visibleWeeks
 }
 
 /** Подпись чётности недели для второй строки двухнедельного режима. */
