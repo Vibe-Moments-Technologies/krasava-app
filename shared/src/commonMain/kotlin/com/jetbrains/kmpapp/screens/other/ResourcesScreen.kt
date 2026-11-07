@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.screens.other
 import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,7 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Domain
 import androidx.compose.material.icons.filled.Forest
@@ -45,12 +47,13 @@ import androidx.compose.material.icons.filled.MilitaryTech
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Nature
 import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Park
-import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -104,8 +107,10 @@ import kmp_app_template.shared.generated.resources.res_project_team
 import kmp_app_template.shared.generated.resources.res_project_vri_les
 import kmp_app_template.shared.generated.resources.res_social_apriori
 import kmp_app_template.shared.generated.resources.res_social_arctic
+import kmp_app_template.shared.generated.resources.res_social_esports
 import kmp_app_template.shared.generated.resources.res_social_ovk
 import kmp_app_template.shared.generated.resources.res_social_profkom
+import kmp_app_template.shared.generated.resources.res_social_startup
 import kmp_app_template.shared.generated.resources.res_social_sumirea
 import kmp_app_template.shared.generated.resources.res_social_sumirea_site
 import org.jetbrains.compose.resources.DrawableResource
@@ -583,8 +588,7 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                                     description = "Интеллектуальный клуб университета: тренировки, турниры и игры в формате «Что? Где? Когда?».",
                                     symbol = "🦉",
                                     url = "https://t.me/chogdekogda_rtumirea",
-                                    accent = Color(0xFF5856D6),
-                                    icon = Icons.Default.Quiz
+                                    accent = Color(0xFF5856D6)
                                 )
                             )
                         )
@@ -640,6 +644,38 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             accentColor = Color.White,
                             icon = CyberzoneDragon,
                             iconBackground = Color(0xFF0B0B0F)
+                        ),
+                        vkLink(
+                            title = "ВКонтакте",
+                            description = "Новости киберспорта, турниры и анонсы мероприятий киберзоны РТУ МИРЭА.",
+                            symbol = "🎮",
+                            url = "https://vk.ru/esports.mirea",
+                            accent = Color(0xFF0077FF),
+                            logo = Res.drawable.res_social_esports
+                        ),
+                        tgLink(
+                            title = "Telegram",
+                            description = "Официальный Telegram-канал киберспорта и киберзоны РТУ МИРЭА.",
+                            symbol = "💬",
+                            url = "https://t.me/mirea_esports",
+                            accent = Color(0xFF29A9EB),
+                            icon = TelegramMark
+                        ),
+                        tgLink(
+                            title = "Настольные игры",
+                            description = "Telegram-канал клуба настольных игр киберзоны РТУ МИРЭА.",
+                            symbol = "🎲",
+                            url = "https://t.me/mirea_tablegames",
+                            accent = Color(0xFFFF9500),
+                            icon = Icons.Default.Casino
+                        ),
+                        ResourceLink(
+                            title = "Вакансии",
+                            description = "Вакансии и работа в киберзоне РТУ МИРЭА.",
+                            symbol = "💼",
+                            url = "https://job.cyberzone.dev",
+                            accentColor = Color(0xFF34C759),
+                            icon = Icons.Default.Work
                         )
                     )
                 ),
@@ -654,7 +690,9 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             symbol = "🔗",
                             url = "https://www.mirea.ru/news/v-rtu-mirea-sostoyalos-otkrytie-startap-kluba/?ysclid=mucklirr211037720",
                             accentColor = Color(0xFFFF9500),
-                            icon = Icons.Default.Newspaper
+                            icon = Icons.Default.Newspaper,
+                            logo = Res.drawable.res_social_startup,
+                            logoIsAvatar = true
                         ),
                         tgLink(
                             title = "Сообщество",
@@ -662,7 +700,7 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             symbol = "💬",
                             url = "https://t.me/StartupClubRTUMIREA",
                             accent = Color(0xFF29A9EB),
-                            icon = TelegramMark
+                            logo = Res.drawable.res_social_startup
                         ),
                         tgLink(
                             title = "Беседа",
@@ -670,9 +708,15 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             symbol = "🗨️",
                             url = "https://t.me/StartupClub_RTUMIREA",
                             accent = Color(0xFF29A9EB),
-                            icon = TelegramMark
+                            logo = Res.drawable.res_social_startup
                         )
                     )
+                ),
+                ResourceFolder(
+                    title = "Центр культуры и творчества",
+                    icon = Icons.Default.Palette,
+                    accentColor = Color(0xFFAF52DE),
+                    children = emptyList()
                 ),
                 vkLink(
                     title = "Команда Арктики",
@@ -708,6 +752,10 @@ fun ResourcesScreen(
     // Скролл корня переживает переходы по папкам: хост перерисовывает корень
     // в другом слое (под дочерней папкой).
     val rootScrollState = rememberScrollState()
+    // У каждой папки — собственный скролл. Слот экрана переиспользуется
+    // между слоями, и общий rememberScrollState переносил прокрутку
+    // предыдущей папки на новую.
+    val folderScrollStates = remember { mutableMapOf<ResourceFolder, ScrollState>() }
 
     // Системный «назад» на корне — выход с экрана. Когда папка открыта,
     // поверх встаёт её собственный PlatformBackHandler (Android: LIFO).
@@ -744,6 +792,7 @@ fun ResourcesScreen(
             PlatformBackHandler(onBack = back)
             FolderContentScreen(
                 folder = folder,
+                scrollState = folderScrollStates.getOrPut(folder) { ScrollState(0) },
                 avatarLoader = avatarLoader,
                 uriHandler = uriHandler,
                 onBack = back,
@@ -820,6 +869,7 @@ private fun ResourcesRootContent(
 @Composable
 private fun FolderContentScreen(
     folder: ResourceFolder,
+    scrollState: ScrollState,
     avatarLoader: VkAvatarLoader,
     uriHandler: UriHandler,
     onBack: () -> Unit,
@@ -855,7 +905,7 @@ private fun FolderContentScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
