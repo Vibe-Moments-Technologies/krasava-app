@@ -30,7 +30,8 @@ enum class LessonColor(
     LIME("Лайм", Color(0xFF65A30D), Color(0xFFA3E635)),
     ROSE("Алый", Color(0xFFE11D48), Color(0xFFFB7185)),
     GOLD("Золотой", Color(0xFFB8860B), Color(0xFFFFD54F)),
-    BROWN("Коричневый", Color(0xFF7C4A1E), Color(0xFFC08457));
+    BROWN("Коричневый", Color(0xFF7C4A1E), Color(0xFFC08457)),
+    DARK_GREEN("Тёмно-зелёный", Color(0xFF14532D), Color(0xFF4ADE80));
 
     fun color(isDark: Boolean): Color = if (isDark) dark else light
 }
@@ -47,7 +48,8 @@ val defaultLessonColor: Map<LessonType, LessonColor> = mapOf(
     LessonType.INDIVIDUAL_WORK to LessonColor.SLATE,
     LessonType.OTHER to LessonColor.PURPLE,
     LessonType.ADDITIONAL to LessonColor.PINK,
-    LessonType.EVENT to LessonColor.CYAN
+    LessonType.EVENT to LessonColor.CYAN,
+    LessonType.USER to LessonColor.DARK_GREEN
 )
 
 /**

@@ -8,7 +8,11 @@ import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.ScheduleSlot
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
+import com.jetbrains.kmpapp.data.model.UserLesson
+import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.data.model.defaultBells
+import com.jetbrains.kmpapp.data.model.newUserLessonId
+import com.jetbrains.kmpapp.data.model.parseUserLessonRef
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -231,6 +235,42 @@ class ScheduleViewModel(
     fun addAndSelectTarget(target: ScheduleTarget) {
         repository.addAndSelectTarget(target)
         resetAutoScroll()
+    }
+
+    /** Создаёт пользовательскую пару в текущем расписании. */
+    fun addUserLesson(
+        subject: String,
+        date: LocalDate,
+        bellNumber: Int,
+        teacher: String,
+        auditorium: String,
+        groups: String,
+        repeatEven: Boolean,
+        repeatOdd: Boolean
+    ) {
+        val target = selectedTarget.value ?: return
+        repository.addUserLesson(
+            target = target,
+            lesson = UserLesson(
+                id = newUserLessonId(),
+                subject = subject.trim(),
+                date = date,
+                bellNumber = bellNumber,
+                teacher = teacher.trim(),
+                auditorium = auditorium.trim(),
+                groups = groups.trim(),
+                repeatEven = repeatEven,
+                repeatOdd = repeatOdd
+            )
+        )
+        // Сразу показываем день, в который добавили пару.
+        selectDate(date)
+    }
+
+    /** Безвозвратное удаление пользовательской пары из «О занятии». */
+    fun deleteUserLesson(lesson: Lesson, scope: UserLessonDeleteScope) {
+        val ref = parseUserLessonRef(lesson.id) ?: return
+        repository.deleteUserLesson(ref.ruleId, ref.date, scope)
     }
 
     fun refresh() {

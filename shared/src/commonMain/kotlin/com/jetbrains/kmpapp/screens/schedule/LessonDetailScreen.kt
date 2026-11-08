@@ -32,10 +32,14 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -70,6 +74,7 @@ import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.Subject
 import com.jetbrains.kmpapp.data.model.SubjectImportance
+import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import org.koin.compose.koinInject
 import kotlin.time.Clock
@@ -79,6 +84,7 @@ fun LessonDetailScreen(
     lesson: Lesson,
     targetId: Int,
     onBack: () -> Unit,
+    onDeleteUserLesson: (Lesson, UserLessonDeleteScope) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -434,6 +440,12 @@ fun LessonDetailScreen(
                 }
             }
 
+            if (lesson.lessonType == LessonType.USER) {
+                UserLessonDeleteButton(
+                    onDelete = { scope -> onDeleteUserLesson(lesson, scope) }
+                )
+            }
+
             // Шит заметок: выбор формата + текст (как AddScheduleBottomSheet).
             if (showNoteSheet) {
                 NoteEditorSheet(
@@ -456,6 +468,83 @@ fun LessonDetailScreen(
             Spacer(modifier = Modifier.height(72.dp))
         }
     }
+}
+
+@Composable
+private fun UserLessonDeleteButton(
+    onDelete: (UserLessonDeleteScope) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .clickable { expanded = true }
+                .background(MaterialTheme.colorScheme.errorContainer)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            GlitchText(
+                text = "Безвозвратно удалить",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            DeleteMenuItem("Удалить эту пару") {
+                expanded = false
+                onDelete(UserLessonDeleteScope.THIS)
+            }
+            DeleteMenuItem("Удалить все эти пары в нечётные недели") {
+                expanded = false
+                onDelete(UserLessonDeleteScope.ODD_WEEKS)
+            }
+            DeleteMenuItem("Удалить все эти пары в чётные недели") {
+                expanded = false
+                onDelete(UserLessonDeleteScope.EVEN_WEEKS)
+            }
+            DeleteMenuItem("Удалить все эти пары") {
+                expanded = false
+                onDelete(UserLessonDeleteScope.ALL)
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { GlitchText("Назад", fontSize = 14.sp) },
+                onClick = { expanded = false }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteMenuItem(
+    text: String,
+    onClick: () -> Unit
+) {
+    DropdownMenuItem(
+        text = {
+            GlitchText(
+                text = text,
+                fontSize = 14.sp,
+                color = MaterialTheme.colorScheme.error
+            )
+        },
+        onClick = onClick
+    )
 }
 
 /**

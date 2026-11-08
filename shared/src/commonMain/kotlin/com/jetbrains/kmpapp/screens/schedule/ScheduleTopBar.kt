@@ -28,12 +28,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -66,6 +68,8 @@ fun ScheduleTopBar(
     onSelectTarget: (ScheduleTarget) -> Unit,
     onDiffClick: () -> Unit,
     onAddClick: () -> Unit,
+    // Не null — рядом с плюсом появляется кнопка «Своя пара».
+    onAddUserLessonClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     // Видна, когда лента календаря свёрнута: число текущего дня расписания.
     // Тап — развернуть ленту, долгое нажатие — месячный календарь.
@@ -251,6 +255,20 @@ fun ScheduleTopBar(
                     contentDescription = "Добавить расписание",
                     modifier = Modifier.size(22.dp)
                 )
+            }
+
+            if (onAddUserLessonClick != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                FilledTonalIconButton(
+                    onClick = onAddUserLessonClick,
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.EditCalendar,
+                        contentDescription = "Своя пара",
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
             }
 
             if (onQrScannerClick != null) {

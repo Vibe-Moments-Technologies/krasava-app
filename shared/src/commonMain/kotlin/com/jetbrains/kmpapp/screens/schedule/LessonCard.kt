@@ -658,6 +658,10 @@ private val TYPE_BADGE_COLORS = mapOf(
     LessonType.ADDITIONAL to listOf(
         Color(0xFF831843) to Color(0xFFFBCFE8),
         Color(0xFFFCE7F3) to Color(0xFFBE185D)
+    ),
+    LessonType.USER to listOf(
+        Color(0xFF14532D) to Color(0xFFBBF7D0),
+        Color(0xFFDCFCE7) to Color(0xFF14532D)
     )
 )
 

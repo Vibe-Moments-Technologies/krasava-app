@@ -11,6 +11,8 @@ import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.data.model.UserLesson
+import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -49,6 +51,14 @@ class ScheduleStorage(
 
     private val _cachedLessons = MutableStateFlow<Map<Int, List<Lesson>>>(emptyMap())
     val cachedLessons: StateFlow<Map<Int, List<Lesson>>> = _cachedLessons.asStateFlow()
+
+    /**
+     * Пользовательские пары, отдельно от кэша фида. Ключ — тип и id
+     * расписания ("1:123"), чтобы пара была привязана к конкретной группе,
+     * преподавателю или аудитории и не пропадала при обновлении.
+     */
+    private val _userLessons = MutableStateFlow<Map<String, List<UserLesson>>>(emptyMap())
+    val userLessons: StateFlow<Map<String, List<UserLesson>>> = _userLessons.asStateFlow()
 
     private val _showEmptyLessons = MutableStateFlow<Boolean>(true)
     val showEmptyLessons: StateFlow<Boolean> = _showEmptyLessons.asStateFlow()
@@ -348,6 +358,8 @@ class ScheduleStorage(
 
     /** Цели, кэш уроков и выбранная цель. Порядок важен: кэш ДО выбранной цели. */
     private fun restoreScheduleData() {
+        _userLessons.value = loadUserLessons()
+
         // Restore saved targets
         val targets: List<ScheduleTarget> = try {
             val targetsJson = platformStorage.getString(KEY_SAVED_TARGETS)
@@ -957,6 +969,12 @@ class ScheduleStorage(
 
     fun removeTarget(targetId: Int) {
         val removed = _savedTargets.value.firstOrNull { it.id == targetId }
+        // Пользовательские пары принадлежат конкретному расписанию: удаление
+        // расписания удаляет и их (id может совпадать у разных типов целей,
+        // поэтому чистим все совпавшие ключи).
+        val removedUserLessonKeys = _savedTargets.value
+            .filter { it.id == targetId }
+            .map { userLessonsKey(it) }
         _savedTargets.update { list -> list.filter { it.id != targetId } }
         if (_selectedTarget.value?.id == targetId) {
             _selectedTarget.value = _savedTargets.value.firstOrNull()
@@ -972,6 +990,10 @@ class ScheduleStorage(
         platformStorage.remove(KEY_LESSONS_PREFIX + targetId)
         platformStorage.remove(KEY_LAST_SYNC_PREFIX + targetId)
         platformStorage.remove(KEY_WEEK_MARKERS_PREFIX + targetId)
+        if (removedUserLessonKeys.isNotEmpty()) {
+            _userLessons.update { map -> map - removedUserLessonKeys.toSet() }
+            persistUserLessons()
+        }
         _selectedTarget.value?.let {
             com.jetbrains.kmpapp.data.model.SemesterWeeks.set(loadWeekMarkers(it.id))
         }
@@ -1004,6 +1026,72 @@ class ScheduleStorage(
                 platformStorage.saveString(KEY_LESSONS_PREFIX + targetId, json.encodeToString(lessons))
             } catch (e: Exception) {
                 println("Failed to persist lessons for $targetId: ${e.message}")
+            }
+        }
+    }
+
+    /** Пользовательские пары конкретного сохранённого расписания. */
+    fun userLessonsFor(
+        target: ScheduleTarget,
+        map: Map<String, List<UserLesson>> = _userLessons.value
+    ): List<UserLesson> = map[userLessonsKey(target)].orEmpty()
+
+    fun addUserLesson(target: ScheduleTarget, lesson: UserLesson) {
+        val key = userLessonsKey(target)
+        _userLessons.update { map -> map + (key to (map[key].orEmpty() + lesson)) }
+        persistUserLessons()
+    }
+
+    /**
+     * Безвозвратное удаление из меню «О занятии». Возвращает true, если
+     * правило исчезло целиком (последнее появление удалено).
+     */
+    fun deleteUserLesson(
+        target: ScheduleTarget,
+        ruleId: String,
+        date: kotlinx.datetime.LocalDate,
+        scope: UserLessonDeleteScope
+    ) {
+        val key = userLessonsKey(target)
+        val rules = _userLessons.value[key].orEmpty()
+        val rule = rules.firstOrNull { it.id == ruleId } ?: return
+        val updated = when (scope) {
+            UserLessonDeleteScope.THIS -> rule.withoutOccurrence(date)
+            UserLessonDeleteScope.ODD_WEEKS -> rule.withoutWeekParity(isEven = false)
+            UserLessonDeleteScope.EVEN_WEEKS -> rule.withoutWeekParity(isEven = true)
+            UserLessonDeleteScope.ALL -> null
+        }
+        val next = when {
+            updated == null || !updated.hasOccurrences() ->
+                rules.filterNot { it.id == ruleId }
+            else -> rules.map { if (it.id == ruleId) updated else it }
+        }
+        _userLessons.update { map ->
+            if (next.isEmpty()) map - key else map + (key to next)
+        }
+        persistUserLessons()
+    }
+
+    private fun loadUserLessons(): Map<String, List<UserLesson>> = try {
+        val raw = platformStorage.getString(KEY_USER_LESSONS)
+        if (raw.isNullOrBlank()) emptyMap()
+        else try {
+            json.decodeFromString<Map<String, List<UserLesson>>>(raw)
+        } catch (_: Throwable) {
+            emptyMap()
+        }
+    } catch (_: Throwable) {
+        emptyMap()
+    }
+
+    private fun persistUserLessons() {
+        val snapshot = _userLessons.value.filterValues { it.isNotEmpty() }
+        scope.launch {
+            try {
+                if (snapshot.isEmpty()) platformStorage.remove(KEY_USER_LESSONS)
+                else platformStorage.saveString(KEY_USER_LESSONS, json.encodeToString(snapshot))
+            } catch (e: Exception) {
+                println("Failed to persist user lessons: ${e.message}")
             }
         }
     }
@@ -1077,6 +1165,7 @@ class ScheduleStorage(
         _savedTargets.value = emptyList()
         _selectedTarget.value = null
         _cachedLessons.value = emptyMap()
+        _userLessons.value = emptyMap()
         _showEmptyLessons.value = true
         _showLessonProgress.value = true
         _showEmptyLessonProgress.value = true
@@ -1192,6 +1281,7 @@ class ScheduleStorage(
         private const val KEY_SAVED_TARGETS = "krasava_saved_targets"
         private const val KEY_SELECTED_TARGET_ID = "krasava_selected_target_id"
         private const val KEY_LESSONS_PREFIX = "krasava_lessons_"
+        private const val KEY_USER_LESSONS = "krasava_user_lessons"
         private const val KEY_WEEK_MARKERS_PREFIX = "krasava_week_markers_"
         private const val KEY_LAST_SYNC_PREFIX = "krasava_last_sync_"
         private const val KEY_SHOW_EMPTY_LESSONS = "krasava_show_empty_lessons"
@@ -1242,6 +1332,10 @@ class ScheduleStorage(
             AppTab.SERVICES,
             AppTab.OTHER
         )
+
+        /** Ключ пользовательских пар: тип цели + её id ("1:123"). */
+        fun userLessonsKey(target: ScheduleTarget): String =
+            "${target.scheduleTarget}:${target.id}"
     }
 }
 
