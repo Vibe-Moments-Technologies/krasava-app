@@ -49,7 +49,7 @@ val defaultLessonColor: Map<LessonType, LessonColor> = mapOf(
     LessonType.OTHER to LessonColor.PURPLE,
     LessonType.ADDITIONAL to LessonColor.PINK,
     LessonType.EVENT to LessonColor.CYAN,
-    LessonType.USER to LessonColor.DARK_GREEN
+    LessonType.USER to LessonColor.BROWN
 )
 
 /**
