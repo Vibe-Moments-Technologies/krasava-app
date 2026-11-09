@@ -68,6 +68,9 @@ internal fun DaySchedulePage(
     markAutoScrolled: (LocalDate) -> Unit,
     onRetry: () -> Unit,
     onLessonClick: (Lesson) -> Unit,
+    hiddenLessonIds: Set<String>,
+    onHideLesson: (Lesson) -> Unit,
+    onShowLesson: (Lesson) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Ключи — только дата и настройка: список slots пересоздаётся при каждой
@@ -213,6 +216,9 @@ internal fun DaySchedulePage(
                 ScheduleSlotCard(
                     slot = slot,
                     onLessonClick = onLessonClick,
+                    hiddenLessonIds = hiddenLessonIds,
+                    onHideLesson = onHideLesson,
+                    onShowLesson = onShowLesson,
                     isToday = date == com.jetbrains.kmpapp.data.model.DateUtils.today(),
                     currentMinutesState = currentMinutesState,
                     showLessonProgress = showLessonProgress,

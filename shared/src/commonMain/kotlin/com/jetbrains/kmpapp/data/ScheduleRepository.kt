@@ -2,6 +2,7 @@ package com.jetbrains.kmpapp.data
 
 import com.jetbrains.kmpapp.data.api.MireaScheduleApi
 import com.jetbrains.kmpapp.data.model.CalendarExpandState
+import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
@@ -10,6 +11,9 @@ import com.jetbrains.kmpapp.data.model.LessonDiffType
 import com.jetbrains.kmpapp.data.model.ScheduleDiff
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.data.model.UserLesson
+import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
+import com.jetbrains.kmpapp.data.model.orderedForDisplay
 import com.jetbrains.kmpapp.data.network.detectVpnActive
 import com.jetbrains.kmpapp.data.parser.MireaICalParser
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
@@ -29,6 +33,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import io.ktor.utils.io.errors.IOException
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlin.time.Clock
 
 class ScheduleRepository(
@@ -179,6 +187,56 @@ class ScheduleRepository(
     val qrButtonEnabled: StateFlow<Boolean> = storage.qrButtonEnabled
     val askBeforeNoteDelete: StateFlow<Boolean> = storage.askBeforeNoteDelete
 
+    val hiddenLessonIds: StateFlow<Set<String>> = combine(
+        storage.selectedTarget,
+        storage.hiddenLessons
+    ) { selected, hidden ->
+        selected?.let { storage.hiddenLessonIdsFor(it, hidden) }.orEmpty()
+    }.stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    val hiddenLessonsByTarget: StateFlow<Map<Int, Set<String>>> = combine(
+        storage.savedTargets,
+        storage.hiddenLessons
+    ) { targets, hidden ->
+        targets.associate { target -> target.id to storage.hiddenLessonIdsFor(target, hidden) }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    val currentLessons: StateFlow<List<Lesson>> = combine(
+        storage.selectedTarget,
+        storage.cachedLessons,
+        storage.hideAdditionalLessons,
+        storage.userLessons
+    ) { selected, cache, hideAdditional, userLessons ->
+        val remote = if (selected == null) emptyList() else cache[selected.id] ?: emptyList()
+        // Пользовательские пары идут ПЕРВЫМИ: при совпадении звонка карточка
+        // «Своя пара» должна открываться раньше пары из фида.
+        val userOccurrences = selected
+            ?.let { storage.userLessonsFor(it, userLessons) }
+            ?.let { expandUserLessons(it) }
+            .orEmpty()
+        val merged = userOccurrences + remote
+        if (hideAdditional) merged.filter { it.lessonType != LessonType.ADDITIONAL }
+        else merged
+    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val displayLessonsByTarget: StateFlow<Map<Int, List<Lesson>>> = combine(
+        storage.savedTargets,
+        storage.cachedLessons,
+        storage.hideAdditionalLessons,
+        storage.userLessons
+    ) { targets, cache, hideAdditional, userLessons ->
+        targets.associate { target ->
+            val remote = cache[target.id].orEmpty()
+            val userOccurrences = expandUserLessons(storage.userLessonsFor(target, userLessons))
+            val merged = userOccurrences + remote
+            target.id to if (hideAdditional) {
+                merged.filter { it.lessonType != LessonType.ADDITIONAL }
+            } else {
+                merged
+            }
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
     init {
         // Единая точка перепланирования напоминаний: кэш расписания, выбранная
         // цель, тумблер или минуты — любое изменение (и старт приложения)
@@ -194,12 +252,21 @@ class ScheduleRepository(
                 storage.hideAdditionalLessons
             ) { enabled, minutes, hideAdditional -> Triple(enabled, minutes, hideAdditional) }
             combine(
-                storage.cachedLessons,
+                displayLessonsByTarget,
                 storage.selectedTarget,
                 storage.notificationsTargetId,
-                notifSettings
-            ) { lessons, activeTarget, notificationTargetId, (enabled, minutes, hideAdditional) ->
-                NotificationsPayload(lessons, activeTarget, enabled, minutes, notificationTargetId, hideAdditional)
+                notifSettings,
+                storage.hiddenLessons
+            ) { lessons, activeTarget, notificationTargetId, (enabled, minutes, hideAdditional), hidden ->
+                NotificationsPayload(
+                    lessons,
+                    activeTarget,
+                    enabled,
+                    minutes,
+                    notificationTargetId,
+                    hideAdditional,
+                    hidden
+                )
             }.collect { p ->
                 notificationRescheduleMutex.withLock {
                     val target = p.notificationTargetId?.let { id ->
@@ -210,11 +277,16 @@ class ScheduleRepository(
                         // берём активное расписание и фиксируем его явно.
                         storage.setNotificationsTargetId(it.id)
                     }
+                    val hiddenIds = target?.let { storage.hiddenLessonIdsFor(it, p.hiddenLessons) }.orEmpty()
                     val targetLessons = target?.let { p.lessons[it.id] }
                         ?.let { list ->
-                            if (p.hideAdditionalLessons) {
-                                list.filter { it.lessonType != LessonType.ADDITIONAL }
-                            } else list
+                            val filtered = if (p.hideAdditionalLessons) {
+                                list.filter { lesson -> lesson.lessonType != LessonType.ADDITIONAL }
+                            } else {
+                                list
+                            }
+                            filtered.orderedForDisplay(hiddenIds)
+                                .distinctBy { lesson -> lesson.date to lesson.bellNumber }
                         }
                     when {
                         !p.enabled || target == null -> {
@@ -261,7 +333,8 @@ class ScheduleRepository(
         val enabled: Boolean,
         val minutes: Int,
         val notificationTargetId: Int?,
-        val hideAdditionalLessons: Boolean
+        val hideAdditionalLessons: Boolean,
+        val hiddenLessons: Map<String, Set<String>>
     )
 
     fun setThemeOverlay(overlay: ThemeOverlay) = storage.setThemeOverlay(overlay)
@@ -301,14 +374,15 @@ class ScheduleRepository(
         storage.revokeMatrixUnlock()
     }
 
-    val currentLessons: StateFlow<List<Lesson>> = combine(
-        storage.selectedTarget,
-        storage.cachedLessons,
-        storage.hideAdditionalLessons
-    ) { selected, cache, hideAdditional ->
-        val lessons = if (selected == null) emptyList() else cache[selected.id] ?: emptyList()
-        if (hideAdditional) lessons.filter { it.lessonType != LessonType.ADDITIONAL } else lessons
-    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
+    fun hideLesson(lesson: Lesson) {
+        val target = storage.selectedTarget.value ?: return
+        storage.hideLesson(target, lesson.id)
+    }
+
+    fun showLesson(lesson: Lesson) {
+        val target = storage.selectedTarget.value ?: return
+        storage.showLesson(target, lesson.id)
+    }
 
     init {
         scope.launch {
@@ -363,6 +437,15 @@ class ScheduleRepository(
         // Каскадное удаление заметок (R2): заметки к парам и предметам
         // этого расписания удаляются вместе с ним.
         lessonNotesStorage.removeNotesForTarget(targetId)
+    }
+
+    fun addUserLesson(target: ScheduleTarget, lesson: UserLesson) {
+        storage.addUserLesson(target, lesson)
+    }
+
+    fun deleteUserLesson(ruleId: String, date: LocalDate, scope: UserLessonDeleteScope) {
+        val target = selectedTarget.value ?: return
+        storage.deleteUserLesson(target, ruleId, date, scope)
     }
 
     fun refreshCurrentSchedule() {
@@ -429,6 +512,33 @@ class ScheduleRepository(
                 _isLoading.value = false
             }
         }
+    }
+
+    /**
+     * Разворачивает правила повторяющихся пар в карточки на диапазон,
+     * покрывающий пейджер дней (±1000 дней от сегодня). Базовая дата
+     * добавляется всегда, даже если оказалась за пределами окна.
+     */
+    private fun expandUserLessons(rules: List<UserLesson>): List<Lesson> {
+        if (rules.isEmpty()) return emptyList()
+        val today = DateUtils.today()
+        val start = today.minus(DatePeriod(days = 1000))
+        val end = today.plus(DatePeriod(days = 1000))
+        val result = mutableListOf<Lesson>()
+        rules.forEach { rule ->
+            var day = start
+            while (day.dayOfWeek != rule.date.dayOfWeek) {
+                day = day.plus(DatePeriod(days = 1))
+            }
+            while (day <= end) {
+                if (rule.occursOn(day)) result += rule.toLesson(day)
+                day = day.plus(DatePeriod(days = 7))
+            }
+            if (rule.date < start || rule.date > end) {
+                if (rule.occursOn(rule.date)) result += rule.toLesson(rule.date)
+            }
+        }
+        return result.sortedWith(compareBy({ it.date }, { it.bellNumber }))
     }
 
     private fun computeDiff(

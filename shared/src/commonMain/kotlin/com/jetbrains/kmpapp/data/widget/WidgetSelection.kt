@@ -336,8 +336,7 @@ class WidgetSelectionEngine(
     private val lessonOrder = compareBy<WidgetLesson>(
         { parseDate(it.date) ?: LocalDate(1970, 1, 1) },
         { parseTime(it.start) ?: LocalTime(0, 0) },
-        { it.bell },
-        { it.id }
+        { it.bell }
     )
 }
 

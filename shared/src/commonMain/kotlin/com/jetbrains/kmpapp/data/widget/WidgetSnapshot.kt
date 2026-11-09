@@ -5,6 +5,7 @@ import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
+import com.jetbrains.kmpapp.data.model.orderedForDisplay
 import androidx.compose.ui.graphics.toArgb
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.TimeZone
@@ -104,7 +105,8 @@ object WidgetSnapshotBuilder {
         targets: List<ScheduleTarget>,
         lessonsByTarget: Map<Int, List<Lesson>>,
         notificationsTargetId: Int?,
-        typeColorOverrides: Map<LessonType, LessonColor> = emptyMap()
+        typeColorOverrides: Map<LessonType, LessonColor> = emptyMap(),
+        hiddenLessonIdsByTarget: Map<Int, Set<String>> = emptyMap()
     ): String? {
         if (targets.isEmpty()) return null
         val today = kotlin.time.Clock.System.now()
@@ -117,13 +119,14 @@ object WidgetSnapshotBuilder {
                 ?.takeIf { id -> targets.any { it.id == id } }
                 ?: targets.first().id,
             targets = targets.map { target ->
+                val hiddenIds = hiddenLessonIdsByTarget[target.id].orEmpty()
                 WidgetTarget(
                     id = target.id,
                     title = target.targetTitle,
                     typeName = target.type.displayName,
                     lessons = lessonsByTarget[target.id]
                         ?.filter { it.date >= today && it.date <= lastDay }
-                        ?.sortedWith(compareBy({ it.date }, { it.bellNumber }, { it.startTime }))
+                        ?.orderedForDisplay(hiddenIds)
                         .orEmpty()
                         .map { it.toWidgetLesson() }
                 )
@@ -173,9 +176,10 @@ object WidgetBridge {
         return try {
             WidgetSnapshotBuilder.build(
                 targets = repo.savedTargets.value,
-                lessonsByTarget = repo.cachedLessons.value,
+                lessonsByTarget = repo.displayLessonsByTarget.value,
                 notificationsTargetId = repo.notificationsTargetId.value,
-                typeColorOverrides = repo.lessonTypeColors.value
+                typeColorOverrides = repo.lessonTypeColors.value,
+                hiddenLessonIdsByTarget = repo.hiddenLessonsByTarget.value
             )
         } catch (_: Throwable) {
             null

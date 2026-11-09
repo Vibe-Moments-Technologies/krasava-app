@@ -54,6 +54,11 @@ class LessonColorTest {
     }
 
     @Test
+    fun userLessonDefaultsToBrown() {
+        assertEquals(LessonColor.BROWN, defaultLessonColor[LessonType.USER])
+    }
+
+    @Test
     fun identicalColorsForDifferentTypesAreAllowed() {
         // Осознанный выбор пользователя, а не ошибка: два типа одного цвета.
         val overrides = mapOf(

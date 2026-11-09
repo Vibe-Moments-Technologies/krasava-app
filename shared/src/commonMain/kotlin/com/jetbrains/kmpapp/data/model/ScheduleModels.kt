@@ -42,7 +42,14 @@ enum class LessonType(val displayName: String, val shortName: String) {
      * «Мероприятие» (код МР в фиде, FULL_LESSON_TYPE: «Мероприятие»):
      * внеучебные события в расписании. Найден в живом фиде (ауд. 249, С-20).
      */
-    EVENT("Мероприятие", "МР")
+    EVENT("Мероприятие", "МР"),
+
+    /**
+     * Пара, добавленная самим пользователем («Своя пара»). В фиде МИРЭА
+     * таких нет: они живут только в хранилище приложения, привязаны к
+     * конкретному сохранённому расписанию и переживают обновления.
+     */
+    USER("Пользовательский", "СВ")
 }
 
 @Serializable
@@ -89,6 +96,25 @@ data class Lesson(
     val physicalClassrooms: List<String>
         get() = classrooms.filterNot { it.trim().equals("СДО", ignoreCase = true) }
 }
+
+fun List<Lesson>.withoutHiddenLessons(hiddenLessonIds: Set<String>): List<Lesson> =
+    if (hiddenLessonIds.isEmpty()) this else filterNot { it.id in hiddenLessonIds }
+
+private fun Lesson.displayPriority(hiddenLessonIds: Set<String>): Int = when {
+    id in hiddenLessonIds -> 2
+    lessonType == LessonType.USER -> 0
+    else -> 1
+}
+
+fun List<Lesson>.orderedForDisplay(hiddenLessonIds: Set<String>): List<Lesson> =
+    sortedWith(
+        compareBy<Lesson>(
+            { it.date },
+            { it.bellNumber },
+            { it.startTime },
+            { it.displayPriority(hiddenLessonIds) }
+        )
+    )
 
 data class DaySchedule(
     val date: LocalDate,

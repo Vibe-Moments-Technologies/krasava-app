@@ -26,9 +26,12 @@ import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -59,6 +62,9 @@ import org.koin.compose.koinInject
 fun ScheduleSlotCard(
     slot: ScheduleSlot,
     onLessonClick: (Lesson) -> Unit,
+    hiddenLessonIds: Set<String> = emptySet(),
+    onHideLesson: (Lesson) -> Unit = {},
+    onShowLesson: (Lesson) -> Unit = {},
     isToday: Boolean = false,
     currentMinutesState: State<Int>? = null,
     showLessonProgress: Boolean = true,
@@ -72,17 +78,30 @@ fun ScheduleSlotCard(
     when (slot) {
         is ScheduleSlot.Active -> {
             if (slot.lessons.size == 1) {
-                LessonCard(
-                    lesson = slot.lessons.first(),
-                    onClick = { onLessonClick(slot.lessons.first()) },
-                    isToday = isToday,
-                    currentMinutesState = currentMinutesState,
-                    showLessonProgress = showLessonProgress,
-                    showAbbreviatedNames = showAbbreviatedNames,
-                    scheduleTargetType = scheduleTargetType,
-                    noteTargetId = noteTargetId,
-                    modifier = modifier
-                )
+                val lesson = slot.lessons.first()
+                if (lesson.id in hiddenLessonIds) {
+                    HiddenLessonCard(
+                        lesson = lesson,
+                        onShow = { onShowLesson(lesson) },
+                        isToday = isToday,
+                        currentMinutesState = currentMinutesState,
+                        showEmptyLessonProgress = showEmptyLessonProgress,
+                        modifier = modifier
+                    )
+                } else {
+                    LessonCard(
+                        lesson = lesson,
+                        onClick = { onLessonClick(lesson) },
+                        onHide = { onHideLesson(lesson) },
+                        isToday = isToday,
+                        currentMinutesState = currentMinutesState,
+                        showLessonProgress = showLessonProgress,
+                        showAbbreviatedNames = showAbbreviatedNames,
+                        scheduleTargetType = scheduleTargetType,
+                        noteTargetId = noteTargetId,
+                        modifier = modifier
+                    )
+                }
             } else {
                 MultiLessonCard(
                     bellNumber = slot.bellNumber,
@@ -90,9 +109,13 @@ fun ScheduleSlotCard(
                     endTime = slot.endTime,
                     lessons = slot.lessons,
                     onLessonClick = onLessonClick,
+                    hiddenLessonIds = hiddenLessonIds,
+                    onHideLesson = onHideLesson,
+                    onShowLesson = onShowLesson,
                     isToday = isToday,
                     currentMinutesState = currentMinutesState,
                     showLessonProgress = showLessonProgress,
+                    showEmptyLessonProgress = showEmptyLessonProgress,
                     showAbbreviatedNames = showAbbreviatedNames,
                     scheduleTargetType = scheduleTargetType,
                     noteTargetId = noteTargetId,
@@ -118,6 +141,7 @@ fun ScheduleSlotCard(
 fun LessonCard(
     lesson: Lesson,
     onClick: () -> Unit,
+    onHide: (() -> Unit)? = null,
     isToday: Boolean = false,
     currentMinutesState: State<Int>? = null,
     showLessonProgress: Boolean = true,
@@ -390,28 +414,54 @@ fun LessonCard(
                     }
                 }
 
-                pageIndicator?.let { (total, current) ->
+                if (pageIndicator != null || onHide != null) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        modifier = Modifier.padding(top = 10.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp)
                     ) {
-                        GlitchText(
-                            text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        repeat(total) { index ->
-                            Box(
-                                modifier = Modifier
-                                    .size(if (index == current) 6.dp else 4.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (index == current) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outlineVariant
+                        if (pageIndicator != null) {
+                            val (total, current) = pageIndicator
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                GlitchText(
+                                    text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                repeat(total) { index ->
+                                    Box(
+                                        modifier = Modifier
+                                            .size(if (index == current) 6.dp else 4.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (index == current) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.outlineVariant
+                                            )
                                     )
-                            )
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+
+                        if (onHide != null) {
+                            IconButton(
+                                onClick = onHide,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VisibilityOff,
+                                    contentDescription = "Скрыть пару",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -448,9 +498,13 @@ fun MultiLessonCard(
     endTime: String,
     lessons: List<Lesson>,
     onLessonClick: (Lesson) -> Unit,
+    hiddenLessonIds: Set<String> = emptySet(),
+    onHideLesson: (Lesson) -> Unit = {},
+    onShowLesson: (Lesson) -> Unit = {},
     isToday: Boolean = false,
     currentMinutesState: State<Int>? = null,
     showLessonProgress: Boolean = true,
+    showEmptyLessonProgress: Boolean = true,
     showAbbreviatedNames: Boolean = false,
     scheduleTargetType: ScheduleTargetType = ScheduleTargetType.GROUP,
     noteTargetId: Int = -1,
@@ -464,20 +518,151 @@ fun MultiLessonCard(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         pageSpacing = 4.dp,
-        beyondViewportPageCount = 1
+        beyondViewportPageCount = 1,
+        key = { page -> lessons[page].id }
     ) { page ->
-        LessonCard(
-            lesson = lessons[page],
-            onClick = { onLessonClick(lessons[page]) },
-            isToday = isToday,
-            currentMinutesState = currentMinutesState,
-            showLessonProgress = showLessonProgress,
-            showAbbreviatedNames = showAbbreviatedNames,
-            scheduleTargetType = scheduleTargetType,
-            noteTargetId = noteTargetId,
-            pageIndicator = lessons.size to pagerState.currentPage,
-            horizontalMargin = 0.dp
-        )
+        val lesson = lessons[page]
+        if (lesson.id in hiddenLessonIds) {
+            HiddenLessonCard(
+                lesson = lesson,
+                onShow = { onShowLesson(lesson) },
+                isToday = isToday,
+                currentMinutesState = currentMinutesState,
+                showEmptyLessonProgress = showEmptyLessonProgress,
+                pageIndicator = lessons.size to pagerState.currentPage,
+                horizontalMargin = 0.dp
+            )
+        } else {
+            LessonCard(
+                lesson = lesson,
+                onClick = { onLessonClick(lesson) },
+                onHide = { onHideLesson(lesson) },
+                isToday = isToday,
+                currentMinutesState = currentMinutesState,
+                showLessonProgress = showLessonProgress,
+                showAbbreviatedNames = showAbbreviatedNames,
+                scheduleTargetType = scheduleTargetType,
+                noteTargetId = noteTargetId,
+                pageIndicator = lessons.size to pagerState.currentPage,
+                horizontalMargin = 0.dp
+            )
+        }
+    }
+}
+
+@Composable
+fun HiddenLessonCard(
+    lesson: Lesson,
+    onShow: () -> Unit,
+    isToday: Boolean = false,
+    currentMinutesState: State<Int>? = null,
+    showEmptyLessonProgress: Boolean = true,
+    pageIndicator: Pair<Int, Int>? = null,
+    horizontalMargin: androidx.compose.ui.unit.Dp = 16.dp,
+    modifier: Modifier = Modifier
+) {
+    val progress = if (isToday && showEmptyLessonProgress) {
+        val currentMinutes = currentMinutesState?.value
+            ?: com.jetbrains.kmpapp.data.model.DateUtils.currentTimeMinutes()
+        com.jetbrains.kmpapp.data.model.DateUtils.getLessonProgress(lesson.startTime, lesson.endTime, currentMinutes)
+    } else null
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = horizontalMargin, vertical = 2.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.5f))
+            .border(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                shape = RoundedCornerShape(12.dp)
+            )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 14.dp, end = 6.dp, top = 4.dp, bottom = 4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GlitchText(
+                    text = "${lesson.bellNumber} пара · ${lesson.startTime} - ${lesson.endTime}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f)
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    GlitchText(
+                        text = "скрыто",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
+                    )
+                    IconButton(
+                        onClick = onShow,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Visibility,
+                            contentDescription = "Показать пару",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            if (pageIndicator != null) {
+                val (total, current) = pageIndicator
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    GlitchText(
+                        text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    repeat(total) { index ->
+                        Box(
+                            modifier = Modifier
+                                .size(if (index == current) 6.dp else 4.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (index == current) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.outlineVariant
+                                )
+                        )
+                    }
+                }
+            }
+        }
+
+        if (progress != null) {
+            val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+                targetValue = progress,
+                animationSpec = androidx.compose.animation.core.tween(500)
+            )
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(2.5.dp)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(animatedProgress)
+                        .height(2.5.dp)
+                        .background(MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
     }
 }
 
@@ -658,6 +843,10 @@ private val TYPE_BADGE_COLORS = mapOf(
     LessonType.ADDITIONAL to listOf(
         Color(0xFF831843) to Color(0xFFFBCFE8),
         Color(0xFFFCE7F3) to Color(0xFFBE185D)
+    ),
+    LessonType.USER to listOf(
+        Color(0xFF4A2F1B) to Color(0xFFE7C9A9),
+        Color(0xFFF5E6D8) to Color(0xFF7C4A1E)
     )
 )
 

@@ -100,7 +100,11 @@ fun ScheduleScreen(
             LessonDetailScreen(
                 lesson = detailLesson as Lesson,
                 targetId = viewModel.selectedTargetId,
-                onBack = back
+                onBack = back,
+                onDeleteUserLesson = { lessonToDelete, scope ->
+                    viewModel.deleteUserLesson(lessonToDelete, scope)
+                    back()
+                }
             )
         },
         modifier = modifier
@@ -119,6 +123,7 @@ private fun ScheduleMainContent(
     val selectedTarget by viewModel.selectedTarget.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
     val currentLessons by viewModel.currentLessons.collectAsState()
+    val hiddenLessonIds by viewModel.hiddenLessonIds.collectAsState()
     val showEmptyLessons by viewModel.showEmptyLessons.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -151,6 +156,11 @@ private fun ScheduleMainContent(
 
     var showDiffSheet by remember { mutableStateOf(false) }
     val diffSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    var showUserLessonSheet by remember { mutableStateOf(false) }
+    var showUserLessonDatePicker by remember { mutableStateOf(false) }
+    var userLessonForm by remember { mutableStateOf(UserLessonForm(date = selectedDate)) }
+    val userLessonSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val scope = rememberCoroutineScope()
     val isToday = selectedDate == com.jetbrains.kmpapp.data.model.DateUtils.today()
@@ -192,6 +202,12 @@ private fun ScheduleMainContent(
                 onSelectTarget = { viewModel.selectTarget(it) },
                 onDiffClick = { showDiffSheet = true },
                 onAddClick = { showAddSheet = true },
+                onAddUserLessonClick = if (selectedTarget != null) {
+                    {
+                        userLessonForm = UserLessonForm(date = selectedDate)
+                        showUserLessonSheet = true
+                    }
+                } else null,
                 calendarBadgeDay = if (selectedTarget != null && calendarCollapsed) selectedDate.day else null,
                 onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
                 onCalendarBadgeLongClick = { showMonthPicker = true },
@@ -341,7 +357,7 @@ private fun ScheduleMainContent(
                         modifier = Modifier.fillMaxSize()
                     ) { page ->
                         val pageDate = today.plus(DatePeriod(days = page - basePage))
-                        val pageSlots = viewModel.slotsForDate(pageDate, currentLessons, showEmptyLessons)
+                        val pageSlots = viewModel.slotsForDate(pageDate, currentLessons, showEmptyLessons, hiddenLessonIds)
                         key(pageDate) {
                             // Стартуем с сохранённой позиции дня и пишем её
                             // обратно: открытие подстраницы больше не сбрасывает
@@ -372,6 +388,9 @@ private fun ScheduleMainContent(
                                 markAutoScrolled = { viewModel.markAutoScrolled(it, selectedTarget?.id) },
                                 onRetry = { viewModel.refresh() },
                                 onLessonClick = { viewModel.selectLessonForDetail(it) },
+                                hiddenLessonIds = hiddenLessonIds,
+                                onHideLesson = { viewModel.hideLesson(it) },
+                                onShowLesson = { viewModel.showLesson(it) },
                                 modifier = Modifier.fillMaxSize()
                             )
                         }
@@ -441,6 +460,20 @@ private fun ScheduleMainContent(
                 onDismiss = { showMonthPicker = false }
             )
         }
+
+        // Выбор даты для «Своей пары»: шторка на время прячется, чтобы
+        // полноэкранный календарь не оказался под ней.
+        if (showUserLessonDatePicker) {
+            com.jetbrains.kmpapp.screens.components.MonthPickerOverlay(
+                initialDate = userLessonForm.date,
+                lessonSummaries = dayLessonSummaries,
+                onDatePicked = {
+                    userLessonForm = userLessonForm.copy(date = it)
+                    showUserLessonDatePicker = false
+                },
+                onDismiss = { showUserLessonDatePicker = false }
+            )
+        }
         }
     }
 
@@ -472,6 +505,40 @@ private fun ScheduleMainContent(
                 viewModel.dismissDiff()
                 scope.launch { diffSheetState.hide() }.invokeOnCompletion {
                     showDiffSheet = false
+                }
+            }
+        )
+    }
+
+    if (showUserLessonSheet && !showUserLessonDatePicker) {
+        UserLessonBottomSheet(
+            sheetState = userLessonSheetState,
+            form = userLessonForm,
+            onFormChange = { userLessonForm = it },
+            onPickDate = { showUserLessonDatePicker = true },
+            onDismiss = {
+                scope.launch { userLessonSheetState.hide() }.invokeOnCompletion {
+                    showUserLessonSheet = false
+                }
+            },
+            onSubmit = {
+                val form = userLessonForm
+                val bell = form.bellNumber
+                if (bell != null) {
+                    viewModel.addUserLesson(
+                        subject = form.subject,
+                        date = form.date,
+                        bellNumber = bell,
+                        teacher = form.teacher,
+                        auditorium = form.auditorium,
+                        groups = form.groups,
+                        repeatEven = form.repeatEven,
+                        repeatOdd = form.repeatOdd
+                    )
+                    scope.launch { userLessonSheetState.hide() }.invokeOnCompletion {
+                        showUserLessonSheet = false
+                        userLessonForm = UserLessonForm(date = form.date)
+                    }
                 }
             }
         )

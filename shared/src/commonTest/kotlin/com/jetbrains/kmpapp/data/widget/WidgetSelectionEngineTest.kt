@@ -141,6 +141,19 @@ class WidgetSelectionEngineTest {
     }
 
     @Test
+    fun sameTimePrimaryFollowsPayloadDisplayOrder() {
+        val state = engine.makeState(
+            payload(
+                lesson("z-user", start = "12:40", end = "14:10", bell = 3),
+                lesson("a-original", start = "12:40", end = "14:10", bell = 3),
+                lesson("m-hidden", start = "12:40", end = "14:10", bell = 3)
+            ),
+            now = now
+        )
+        assertEquals("z-user", state.primary?.id)
+    }
+
+    @Test
     fun codecRoundTrip() {
         val original = payload(lesson("a"), lesson("b", date = "2026-10-24"))
         val restored = WidgetPayloadCodec.decode(WidgetPayloadCodec.encode(original))

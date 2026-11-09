@@ -8,7 +8,13 @@ import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.ScheduleSlot
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
+import com.jetbrains.kmpapp.data.model.UserLesson
+import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.data.model.defaultBells
+import com.jetbrains.kmpapp.data.model.newUserLessonId
+import com.jetbrains.kmpapp.data.model.orderedForDisplay
+import com.jetbrains.kmpapp.data.model.parseUserLessonRef
+import com.jetbrains.kmpapp.data.model.withoutHiddenLessons
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -125,53 +131,72 @@ class ScheduleViewModel(
     private val _selectedLessonForDetail = MutableStateFlow<Lesson?>(null)
     val selectedLessonForDetail: StateFlow<Lesson?> = _selectedLessonForDetail.asStateFlow()
 
-    val datesWithLessons: StateFlow<Set<LocalDate>> = repository.currentLessons
-        .combine(MutableStateFlow(Unit)) { lessons, _ ->
-            lessons.map { it.date }.toSet()
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    val datesWithLessons: StateFlow<Set<LocalDate>> = combine(
+        repository.currentLessons,
+        repository.hiddenLessonIds
+    ) { lessons, hiddenIds ->
+        lessons.withoutHiddenLessons(hiddenIds).map { it.date }.toSet()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val dayLessonSummaries: StateFlow<Map<LocalDate, DayLessonSummary>> = repository.currentLessons
-        .combine(MutableStateFlow(Unit)) { lessons, _ ->
-            lessons.groupBy { it.date }.mapValues { (_, dayLessons) ->
-                val orderedTypes = dayLessons.groupBy { it.bellNumber }
-                    .entries.sortedBy { it.key }
-                    .map { (_, slotLessons) -> slotLessons.first().lessonType }
-                DayLessonSummary(lessonTypes = orderedTypes)
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+    val dayLessonSummaries: StateFlow<Map<LocalDate, DayLessonSummary>> = combine(
+        repository.currentLessons,
+        repository.hiddenLessonIds
+    ) { lessons, hiddenIds ->
+        lessons.withoutHiddenLessons(hiddenIds).groupBy { it.date }.mapValues { (_, dayLessons) ->
+            val orderedTypes = dayLessons.groupBy { it.bellNumber }
+                .entries.sortedBy { it.key }
+                .map { (_, slotLessons) -> slotLessons.first().lessonType }
+            DayLessonSummary(lessonTypes = orderedTypes)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val daySlots: StateFlow<List<ScheduleSlot>> = combine(
         repository.currentLessons,
         _selectedDate,
-        repository.showEmptyLessons
-    ) { lessons, date, showEmpty -> slotsForDate(lessons, date, showEmpty) }
+        repository.showEmptyLessons,
+        repository.hiddenLessonIds
+    ) { lessons, date, showEmpty, hiddenIds ->
+        slotsForDate(lessons, date, showEmpty, hiddenIds)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val currentLessons: StateFlow<List<Lesson>> = repository.currentLessons
+    val hiddenLessonIds: StateFlow<Set<String>> = repository.hiddenLessonIds
     val showEmptyLessons: StateFlow<Boolean> = repository.showEmptyLessons
+
+    fun hideLesson(lesson: Lesson) {
+        repository.hideLesson(lesson)
+    }
+
+    fun showLesson(lesson: Lesson) {
+        repository.showLesson(lesson)
+    }
 
     fun slotsForDate(
         date: LocalDate,
         lessons: List<Lesson> = currentLessons.value,
-        showEmpty: Boolean = showEmptyLessons.value
-    ): List<ScheduleSlot> = slotsForDate(lessons, date, showEmpty)
+        showEmpty: Boolean = showEmptyLessons.value,
+        hiddenIds: Set<String> = hiddenLessonIds.value
+    ): List<ScheduleSlot> = slotsForDate(lessons, date, showEmpty, hiddenIds)
 
     private fun slotsForDate(
         lessons: List<Lesson>,
         date: LocalDate,
-        showEmpty: Boolean
+        showEmpty: Boolean,
+        hiddenIds: Set<String>
     ): List<ScheduleSlot> {
         val forDay = lessons.filter { it.date == date }
         if (forDay.isEmpty()) {
             return if (showEmpty && date.dayOfWeek != DayOfWeek.SUNDAY) {
                 (1..7).map { bell ->
                     val bellInfo = defaultBells.firstOrNull { it.number == bell }
-                    ScheduleSlot.Empty(bell, bellInfo?.startTime ?: "—", bellInfo?.endTime ?: "—")
+                    ScheduleSlot.Empty(bell, bellInfo?.startTime ?: "-", bellInfo?.endTime ?: "-")
                 }
             } else emptyList()
         }
 
         val bellMap = forDay.groupBy { it.bellNumber }
+            .mapValues { (_, items) -> items.orderedForDisplay(hiddenIds) }
         if (!showEmpty) {
             return bellMap.entries.sortedBy { it.key }.map { (bell, items) ->
                 val first = items.first()
@@ -231,6 +256,42 @@ class ScheduleViewModel(
     fun addAndSelectTarget(target: ScheduleTarget) {
         repository.addAndSelectTarget(target)
         resetAutoScroll()
+    }
+
+    /** Создаёт пользовательскую пару в текущем расписании. */
+    fun addUserLesson(
+        subject: String,
+        date: LocalDate,
+        bellNumber: Int,
+        teacher: String,
+        auditorium: String,
+        groups: String,
+        repeatEven: Boolean,
+        repeatOdd: Boolean
+    ) {
+        val target = selectedTarget.value ?: return
+        repository.addUserLesson(
+            target = target,
+            lesson = UserLesson(
+                id = newUserLessonId(),
+                subject = subject.trim(),
+                date = date,
+                bellNumber = bellNumber,
+                teacher = teacher.trim(),
+                auditorium = auditorium.trim(),
+                groups = groups.trim(),
+                repeatEven = repeatEven,
+                repeatOdd = repeatOdd
+            )
+        )
+        // Сразу показываем день, в который добавили пару.
+        selectDate(date)
+    }
+
+    /** Безвозвратное удаление пользовательской пары из «О занятии». */
+    fun deleteUserLesson(lesson: Lesson, scope: UserLessonDeleteScope) {
+        val ref = parseUserLessonRef(lesson.id) ?: return
+        repository.deleteUserLesson(ref.ruleId, ref.date, scope)
     }
 
     fun refresh() {
