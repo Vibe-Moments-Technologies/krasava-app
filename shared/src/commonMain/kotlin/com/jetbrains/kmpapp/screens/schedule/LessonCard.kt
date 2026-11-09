@@ -518,7 +518,8 @@ fun MultiLessonCard(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         pageSpacing = 4.dp,
-        beyondViewportPageCount = 1
+        beyondViewportPageCount = 1,
+        key = { page -> lessons[page].id }
     ) { page ->
         val lesson = lessons[page]
         if (lesson.id in hiddenLessonIds) {
