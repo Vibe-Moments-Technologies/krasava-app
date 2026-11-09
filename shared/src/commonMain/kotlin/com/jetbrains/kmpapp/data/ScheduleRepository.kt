@@ -308,6 +308,23 @@ class ScheduleRepository(
         storage.revokeMatrixUnlock()
     }
 
+    val hiddenLessonIds: StateFlow<Set<String>> = combine(
+        storage.selectedTarget,
+        storage.hiddenLessons
+    ) { selected, hidden ->
+        selected?.let { storage.hiddenLessonIdsFor(it, hidden) }.orEmpty()
+    }.stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    fun hideLesson(lesson: Lesson) {
+        val target = storage.selectedTarget.value ?: return
+        storage.hideLesson(target, lesson.id)
+    }
+
+    fun showLesson(lesson: Lesson) {
+        val target = storage.selectedTarget.value ?: return
+        storage.showLesson(target, lesson.id)
+    }
+
     val currentLessons: StateFlow<List<Lesson>> = combine(
         storage.selectedTarget,
         storage.cachedLessons,

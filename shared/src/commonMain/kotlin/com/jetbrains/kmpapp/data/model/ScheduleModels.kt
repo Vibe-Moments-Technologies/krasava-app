@@ -97,6 +97,9 @@ data class Lesson(
         get() = classrooms.filterNot { it.trim().equals("СДО", ignoreCase = true) }
 }
 
+fun List<Lesson>.withoutHiddenLessons(hiddenLessonIds: Set<String>): List<Lesson> =
+    if (hiddenLessonIds.isEmpty()) this else filterNot { it.id in hiddenLessonIds }
+
 data class DaySchedule(
     val date: LocalDate,
     val lessons: List<Lesson>

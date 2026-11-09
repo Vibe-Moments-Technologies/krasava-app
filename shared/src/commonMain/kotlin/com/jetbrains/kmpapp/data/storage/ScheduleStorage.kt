@@ -60,6 +60,13 @@ class ScheduleStorage(
     private val _userLessons = MutableStateFlow<Map<String, List<UserLesson>>>(emptyMap())
     val userLessons: StateFlow<Map<String, List<UserLesson>>> = _userLessons.asStateFlow()
 
+    /**
+     * Hidden lesson occurrences per schedule target. Key is target type + id
+     * ("1:123"); values are Lesson.id strings.
+     */
+    private val _hiddenLessons = MutableStateFlow<Map<String, Set<String>>>(emptyMap())
+    val hiddenLessons: StateFlow<Map<String, Set<String>>> = _hiddenLessons.asStateFlow()
+
     private val _showEmptyLessons = MutableStateFlow<Boolean>(true)
     val showEmptyLessons: StateFlow<Boolean> = _showEmptyLessons.asStateFlow()
 
@@ -359,6 +366,7 @@ class ScheduleStorage(
     /** Цели, кэш уроков и выбранная цель. Порядок важен: кэш ДО выбранной цели. */
     private fun restoreScheduleData() {
         _userLessons.value = loadUserLessons()
+        _hiddenLessons.value = loadHiddenLessons()
 
         // Restore saved targets
         val targets: List<ScheduleTarget> = try {
@@ -994,6 +1002,10 @@ class ScheduleStorage(
             _userLessons.update { map -> map - removedUserLessonKeys.toSet() }
             persistUserLessons()
         }
+        if (removedUserLessonKeys.isNotEmpty()) {
+            _hiddenLessons.update { map -> map - removedUserLessonKeys.toSet() }
+            persistHiddenLessons()
+        }
         _selectedTarget.value?.let {
             com.jetbrains.kmpapp.data.model.SemesterWeeks.set(loadWeekMarkers(it.id))
         }
@@ -1072,6 +1084,28 @@ class ScheduleStorage(
         persistUserLessons()
     }
 
+    fun hiddenLessonIdsFor(
+        target: ScheduleTarget,
+        map: Map<String, Set<String>> = _hiddenLessons.value
+    ): Set<String> = map[userLessonsKey(target)].orEmpty()
+
+    fun hideLesson(target: ScheduleTarget, lessonId: String) {
+        val key = userLessonsKey(target)
+        _hiddenLessons.update { map ->
+            map + (key to (map[key].orEmpty() + lessonId))
+        }
+        persistHiddenLessons()
+    }
+
+    fun showLesson(target: ScheduleTarget, lessonId: String) {
+        val key = userLessonsKey(target)
+        _hiddenLessons.update { map ->
+            val next = map[key].orEmpty() - lessonId
+            if (next.isEmpty()) map - key else map + (key to next)
+        }
+        persistHiddenLessons()
+    }
+
     private fun loadUserLessons(): Map<String, List<UserLesson>> = try {
         val raw = platformStorage.getString(KEY_USER_LESSONS)
         if (raw.isNullOrBlank()) emptyMap()
@@ -1092,6 +1126,30 @@ class ScheduleStorage(
                 else platformStorage.saveString(KEY_USER_LESSONS, json.encodeToString(snapshot))
             } catch (e: Exception) {
                 println("Failed to persist user lessons: ${e.message}")
+            }
+        }
+    }
+
+    private fun loadHiddenLessons(): Map<String, Set<String>> = try {
+        val raw = platformStorage.getString(KEY_HIDDEN_LESSONS)
+        if (raw.isNullOrBlank()) emptyMap()
+        else try {
+            json.decodeFromString<Map<String, Set<String>>>(raw)
+        } catch (_: Throwable) {
+            emptyMap()
+        }
+    } catch (_: Throwable) {
+        emptyMap()
+    }
+
+    private fun persistHiddenLessons() {
+        val snapshot = _hiddenLessons.value.filterValues { it.isNotEmpty() }
+        scope.launch {
+            try {
+                if (snapshot.isEmpty()) platformStorage.remove(KEY_HIDDEN_LESSONS)
+                else platformStorage.saveString(KEY_HIDDEN_LESSONS, json.encodeToString(snapshot))
+            } catch (e: Exception) {
+                println("Failed to persist hidden lessons: ${e.message}")
             }
         }
     }
@@ -1166,6 +1224,7 @@ class ScheduleStorage(
         _selectedTarget.value = null
         _cachedLessons.value = emptyMap()
         _userLessons.value = emptyMap()
+        _hiddenLessons.value = emptyMap()
         _showEmptyLessons.value = true
         _showLessonProgress.value = true
         _showEmptyLessonProgress.value = true
@@ -1282,6 +1341,7 @@ class ScheduleStorage(
         private const val KEY_SELECTED_TARGET_ID = "krasava_selected_target_id"
         private const val KEY_LESSONS_PREFIX = "krasava_lessons_"
         private const val KEY_USER_LESSONS = "krasava_user_lessons"
+        private const val KEY_HIDDEN_LESSONS = "krasava_hidden_lessons"
         private const val KEY_WEEK_MARKERS_PREFIX = "krasava_week_markers_"
         private const val KEY_LAST_SYNC_PREFIX = "krasava_last_sync_"
         private const val KEY_SHOW_EMPTY_LESSONS = "krasava_show_empty_lessons"

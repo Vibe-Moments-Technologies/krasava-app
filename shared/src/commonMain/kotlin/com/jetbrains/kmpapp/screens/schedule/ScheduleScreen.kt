@@ -123,6 +123,7 @@ private fun ScheduleMainContent(
     val selectedTarget by viewModel.selectedTarget.collectAsState()
     val selectedDate by viewModel.selectedDate.collectAsState()
     val currentLessons by viewModel.currentLessons.collectAsState()
+    val hiddenLessonIds by viewModel.hiddenLessonIds.collectAsState()
     val showEmptyLessons by viewModel.showEmptyLessons.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -387,6 +388,9 @@ private fun ScheduleMainContent(
                                 markAutoScrolled = { viewModel.markAutoScrolled(it, selectedTarget?.id) },
                                 onRetry = { viewModel.refresh() },
                                 onLessonClick = { viewModel.selectLessonForDetail(it) },
+                                hiddenLessonIds = hiddenLessonIds,
+                                onHideLesson = { viewModel.hideLesson(it) },
+                                onShowLesson = { viewModel.showLesson(it) },
                                 modifier = Modifier.fillMaxSize()
                             )
                         }

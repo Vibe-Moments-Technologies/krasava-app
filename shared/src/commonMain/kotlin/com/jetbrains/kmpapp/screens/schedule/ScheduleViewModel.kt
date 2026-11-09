@@ -13,6 +13,7 @@ import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.data.model.defaultBells
 import com.jetbrains.kmpapp.data.model.newUserLessonId
 import com.jetbrains.kmpapp.data.model.parseUserLessonRef
+import com.jetbrains.kmpapp.data.model.withoutHiddenLessons
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -129,20 +130,24 @@ class ScheduleViewModel(
     private val _selectedLessonForDetail = MutableStateFlow<Lesson?>(null)
     val selectedLessonForDetail: StateFlow<Lesson?> = _selectedLessonForDetail.asStateFlow()
 
-    val datesWithLessons: StateFlow<Set<LocalDate>> = repository.currentLessons
-        .combine(MutableStateFlow(Unit)) { lessons, _ ->
-            lessons.map { it.date }.toSet()
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+    val datesWithLessons: StateFlow<Set<LocalDate>> = combine(
+        repository.currentLessons,
+        repository.hiddenLessonIds
+    ) { lessons, hiddenIds ->
+        lessons.withoutHiddenLessons(hiddenIds).map { it.date }.toSet()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
-    val dayLessonSummaries: StateFlow<Map<LocalDate, DayLessonSummary>> = repository.currentLessons
-        .combine(MutableStateFlow(Unit)) { lessons, _ ->
-            lessons.groupBy { it.date }.mapValues { (_, dayLessons) ->
-                val orderedTypes = dayLessons.groupBy { it.bellNumber }
-                    .entries.sortedBy { it.key }
-                    .map { (_, slotLessons) -> slotLessons.first().lessonType }
-                DayLessonSummary(lessonTypes = orderedTypes)
-            }
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+    val dayLessonSummaries: StateFlow<Map<LocalDate, DayLessonSummary>> = combine(
+        repository.currentLessons,
+        repository.hiddenLessonIds
+    ) { lessons, hiddenIds ->
+        lessons.withoutHiddenLessons(hiddenIds).groupBy { it.date }.mapValues { (_, dayLessons) ->
+            val orderedTypes = dayLessons.groupBy { it.bellNumber }
+                .entries.sortedBy { it.key }
+                .map { (_, slotLessons) -> slotLessons.first().lessonType }
+            DayLessonSummary(lessonTypes = orderedTypes)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
 
     val daySlots: StateFlow<List<ScheduleSlot>> = combine(
         repository.currentLessons,
@@ -152,7 +157,16 @@ class ScheduleViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val currentLessons: StateFlow<List<Lesson>> = repository.currentLessons
+    val hiddenLessonIds: StateFlow<Set<String>> = repository.hiddenLessonIds
     val showEmptyLessons: StateFlow<Boolean> = repository.showEmptyLessons
+
+    fun hideLesson(lesson: Lesson) {
+        repository.hideLesson(lesson)
+    }
+
+    fun showLesson(lesson: Lesson) {
+        repository.showLesson(lesson)
+    }
 
     fun slotsForDate(
         date: LocalDate,
