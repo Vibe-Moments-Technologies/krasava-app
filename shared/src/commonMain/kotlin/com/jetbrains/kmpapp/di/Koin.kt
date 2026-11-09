@@ -70,7 +70,10 @@ val dataModule = module {
     singleOf(::LessonNotesStorage)
     singleOf(::UnifiedSyncManager)
     singleOf(::MireaScheduleApi)
-    singleOf(::VkAvatarLoader)
+    // Аватарки сообществ: URL, найденный на странице ВК, кешируется на
+    // диске (KeyValueStore) с TTL — иначе при каждом запуске заново
+    // скрапились все страницы.
+    single { VkAvatarLoader(client = get(), store = get()) }
     singleOf(::ScheduleStorage)
     singleOf(::GamesStorage)
     singleOf(::ScheduleRepository)
