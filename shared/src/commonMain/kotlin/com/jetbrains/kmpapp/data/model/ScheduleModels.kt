@@ -100,6 +100,22 @@ data class Lesson(
 fun List<Lesson>.withoutHiddenLessons(hiddenLessonIds: Set<String>): List<Lesson> =
     if (hiddenLessonIds.isEmpty()) this else filterNot { it.id in hiddenLessonIds }
 
+private fun Lesson.displayPriority(hiddenLessonIds: Set<String>): Int = when {
+    id in hiddenLessonIds -> 2
+    lessonType == LessonType.USER -> 0
+    else -> 1
+}
+
+fun List<Lesson>.orderedForDisplay(hiddenLessonIds: Set<String>): List<Lesson> =
+    sortedWith(
+        compareBy<Lesson>(
+            { it.date },
+            { it.bellNumber },
+            { it.startTime },
+            { it.displayPriority(hiddenLessonIds) }
+        )
+    )
+
 data class DaySchedule(
     val date: LocalDate,
     val lessons: List<Lesson>

@@ -12,6 +12,7 @@ import com.jetbrains.kmpapp.data.model.UserLesson
 import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.data.model.defaultBells
 import com.jetbrains.kmpapp.data.model.newUserLessonId
+import com.jetbrains.kmpapp.data.model.orderedForDisplay
 import com.jetbrains.kmpapp.data.model.parseUserLessonRef
 import com.jetbrains.kmpapp.data.model.withoutHiddenLessons
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -152,8 +153,11 @@ class ScheduleViewModel(
     val daySlots: StateFlow<List<ScheduleSlot>> = combine(
         repository.currentLessons,
         _selectedDate,
-        repository.showEmptyLessons
-    ) { lessons, date, showEmpty -> slotsForDate(lessons, date, showEmpty) }
+        repository.showEmptyLessons,
+        repository.hiddenLessonIds
+    ) { lessons, date, showEmpty, hiddenIds ->
+        slotsForDate(lessons, date, showEmpty, hiddenIds)
+    }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val currentLessons: StateFlow<List<Lesson>> = repository.currentLessons
@@ -171,25 +175,28 @@ class ScheduleViewModel(
     fun slotsForDate(
         date: LocalDate,
         lessons: List<Lesson> = currentLessons.value,
-        showEmpty: Boolean = showEmptyLessons.value
-    ): List<ScheduleSlot> = slotsForDate(lessons, date, showEmpty)
+        showEmpty: Boolean = showEmptyLessons.value,
+        hiddenIds: Set<String> = hiddenLessonIds.value
+    ): List<ScheduleSlot> = slotsForDate(lessons, date, showEmpty, hiddenIds)
 
     private fun slotsForDate(
         lessons: List<Lesson>,
         date: LocalDate,
-        showEmpty: Boolean
+        showEmpty: Boolean,
+        hiddenIds: Set<String>
     ): List<ScheduleSlot> {
         val forDay = lessons.filter { it.date == date }
         if (forDay.isEmpty()) {
             return if (showEmpty && date.dayOfWeek != DayOfWeek.SUNDAY) {
                 (1..7).map { bell ->
                     val bellInfo = defaultBells.firstOrNull { it.number == bell }
-                    ScheduleSlot.Empty(bell, bellInfo?.startTime ?: "—", bellInfo?.endTime ?: "—")
+                    ScheduleSlot.Empty(bell, bellInfo?.startTime ?: "-", bellInfo?.endTime ?: "-")
                 }
             } else emptyList()
         }
 
         val bellMap = forDay.groupBy { it.bellNumber }
+            .mapValues { (_, items) -> items.orderedForDisplay(hiddenIds) }
         if (!showEmpty) {
             return bellMap.entries.sortedBy { it.key }.map { (bell, items) ->
                 val first = items.first()

@@ -357,7 +357,7 @@ private fun ScheduleMainContent(
                         modifier = Modifier.fillMaxSize()
                     ) { page ->
                         val pageDate = today.plus(DatePeriod(days = page - basePage))
-                        val pageSlots = viewModel.slotsForDate(pageDate, currentLessons, showEmptyLessons)
+                        val pageSlots = viewModel.slotsForDate(pageDate, currentLessons, showEmptyLessons, hiddenLessonIds)
                         key(pageDate) {
                             // Стартуем с сохранённой позиции дня и пишем её
                             // обратно: открытие подстраницы больше не сбрасывает

@@ -13,6 +13,7 @@ import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.model.UserLesson
 import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
+import com.jetbrains.kmpapp.data.model.orderedForDisplay
 import com.jetbrains.kmpapp.data.network.detectVpnActive
 import com.jetbrains.kmpapp.data.parser.MireaICalParser
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
@@ -186,6 +187,56 @@ class ScheduleRepository(
     val qrButtonEnabled: StateFlow<Boolean> = storage.qrButtonEnabled
     val askBeforeNoteDelete: StateFlow<Boolean> = storage.askBeforeNoteDelete
 
+    val hiddenLessonIds: StateFlow<Set<String>> = combine(
+        storage.selectedTarget,
+        storage.hiddenLessons
+    ) { selected, hidden ->
+        selected?.let { storage.hiddenLessonIdsFor(it, hidden) }.orEmpty()
+    }.stateIn(scope, SharingStarted.Eagerly, emptySet())
+
+    val hiddenLessonsByTarget: StateFlow<Map<Int, Set<String>>> = combine(
+        storage.savedTargets,
+        storage.hiddenLessons
+    ) { targets, hidden ->
+        targets.associate { target -> target.id to storage.hiddenLessonIdsFor(target, hidden) }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
+    val currentLessons: StateFlow<List<Lesson>> = combine(
+        storage.selectedTarget,
+        storage.cachedLessons,
+        storage.hideAdditionalLessons,
+        storage.userLessons
+    ) { selected, cache, hideAdditional, userLessons ->
+        val remote = if (selected == null) emptyList() else cache[selected.id] ?: emptyList()
+        // Пользовательские пары идут ПЕРВЫМИ: при совпадении звонка карточка
+        // «Своя пара» должна открываться раньше пары из фида.
+        val userOccurrences = selected
+            ?.let { storage.userLessonsFor(it, userLessons) }
+            ?.let { expandUserLessons(it) }
+            .orEmpty()
+        val merged = userOccurrences + remote
+        if (hideAdditional) merged.filter { it.lessonType != LessonType.ADDITIONAL }
+        else merged
+    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    val displayLessonsByTarget: StateFlow<Map<Int, List<Lesson>>> = combine(
+        storage.savedTargets,
+        storage.cachedLessons,
+        storage.hideAdditionalLessons,
+        storage.userLessons
+    ) { targets, cache, hideAdditional, userLessons ->
+        targets.associate { target ->
+            val remote = cache[target.id].orEmpty()
+            val userOccurrences = expandUserLessons(storage.userLessonsFor(target, userLessons))
+            val merged = userOccurrences + remote
+            target.id to if (hideAdditional) {
+                merged.filter { it.lessonType != LessonType.ADDITIONAL }
+            } else {
+                merged
+            }
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
+
     init {
         // Единая точка перепланирования напоминаний: кэш расписания, выбранная
         // цель, тумблер или минуты — любое изменение (и старт приложения)
@@ -201,12 +252,21 @@ class ScheduleRepository(
                 storage.hideAdditionalLessons
             ) { enabled, minutes, hideAdditional -> Triple(enabled, minutes, hideAdditional) }
             combine(
-                storage.cachedLessons,
+                displayLessonsByTarget,
                 storage.selectedTarget,
                 storage.notificationsTargetId,
-                notifSettings
-            ) { lessons, activeTarget, notificationTargetId, (enabled, minutes, hideAdditional) ->
-                NotificationsPayload(lessons, activeTarget, enabled, minutes, notificationTargetId, hideAdditional)
+                notifSettings,
+                storage.hiddenLessons
+            ) { lessons, activeTarget, notificationTargetId, (enabled, minutes, hideAdditional), hidden ->
+                NotificationsPayload(
+                    lessons,
+                    activeTarget,
+                    enabled,
+                    minutes,
+                    notificationTargetId,
+                    hideAdditional,
+                    hidden
+                )
             }.collect { p ->
                 notificationRescheduleMutex.withLock {
                     val target = p.notificationTargetId?.let { id ->
@@ -217,11 +277,16 @@ class ScheduleRepository(
                         // берём активное расписание и фиксируем его явно.
                         storage.setNotificationsTargetId(it.id)
                     }
+                    val hiddenIds = target?.let { storage.hiddenLessonIdsFor(it, p.hiddenLessons) }.orEmpty()
                     val targetLessons = target?.let { p.lessons[it.id] }
                         ?.let { list ->
-                            if (p.hideAdditionalLessons) {
-                                list.filter { it.lessonType != LessonType.ADDITIONAL }
-                            } else list
+                            val filtered = if (p.hideAdditionalLessons) {
+                                list.filter { lesson -> lesson.lessonType != LessonType.ADDITIONAL }
+                            } else {
+                                list
+                            }
+                            filtered.orderedForDisplay(hiddenIds)
+                                .distinctBy { lesson -> lesson.date to lesson.bellNumber }
                         }
                     when {
                         !p.enabled || target == null -> {
@@ -268,7 +333,8 @@ class ScheduleRepository(
         val enabled: Boolean,
         val minutes: Int,
         val notificationTargetId: Int?,
-        val hideAdditionalLessons: Boolean
+        val hideAdditionalLessons: Boolean,
+        val hiddenLessons: Map<String, Set<String>>
     )
 
     fun setThemeOverlay(overlay: ThemeOverlay) = storage.setThemeOverlay(overlay)
@@ -308,13 +374,6 @@ class ScheduleRepository(
         storage.revokeMatrixUnlock()
     }
 
-    val hiddenLessonIds: StateFlow<Set<String>> = combine(
-        storage.selectedTarget,
-        storage.hiddenLessons
-    ) { selected, hidden ->
-        selected?.let { storage.hiddenLessonIdsFor(it, hidden) }.orEmpty()
-    }.stateIn(scope, SharingStarted.Eagerly, emptySet())
-
     fun hideLesson(lesson: Lesson) {
         val target = storage.selectedTarget.value ?: return
         storage.hideLesson(target, lesson.id)
@@ -324,24 +383,6 @@ class ScheduleRepository(
         val target = storage.selectedTarget.value ?: return
         storage.showLesson(target, lesson.id)
     }
-
-    val currentLessons: StateFlow<List<Lesson>> = combine(
-        storage.selectedTarget,
-        storage.cachedLessons,
-        storage.hideAdditionalLessons,
-        storage.userLessons
-    ) { selected, cache, hideAdditional, userLessons ->
-        val remote = if (selected == null) emptyList() else cache[selected.id] ?: emptyList()
-        // Пользовательские пары идут ПЕРВЫМИ: при совпадении звонка карточка
-        // «Своя пара» должна открываться раньше пары из фида.
-        val userOccurrences = selected
-            ?.let { storage.userLessonsFor(it, userLessons) }
-            ?.let { expandUserLessons(it) }
-            .orEmpty()
-        val merged = userOccurrences + remote
-        if (hideAdditional) merged.filter { it.lessonType != LessonType.ADDITIONAL }
-        else merged
-    }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     init {
         scope.launch {
