@@ -2,7 +2,11 @@ package com.jetbrains.kmpapp.theme
 
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+
+/** Активна ли новогодняя тема: сезонная или выбранная вручную. */
+val LocalNewYearEnabled = compositionLocalOf { false }
 
 // Новогодняя тема: морозное небо, лёд и тёплое золото праздничных огней.
 // Светлая палитра — воздушная и снежная, тёмная — глубокая ночная, но обе

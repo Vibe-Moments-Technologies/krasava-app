@@ -201,6 +201,7 @@ fun App() {
                 ((errorActive || halloweenActive) && !newYearActive),
             com.jetbrains.kmpapp.theme.LocalHalloweenEnabled provides
                 (halloweenActive && !newYearActive),
+            com.jetbrains.kmpapp.theme.LocalNewYearEnabled provides newYearActive,
             LocalLessonTypeOverrides provides lessonTypeColors
         ) {
         Surface(
