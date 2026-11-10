@@ -141,11 +141,19 @@ class ScheduleStorage(
      * живут только квестовые: Кавай, Киберпанк, Матрица.
      *
      * Разблокировка сохраняется навсегда: повторно проходить квест не нужно.
-     * Исключение — Матрица: при её потере (нарушение договора о читах)
-     * тема исчезает и из списка.
+     * Исключение — Матрица: при потере (нарушение договора о читах) тема
+     * остаётся в списке, но блокируется и больше не активируется.
      */
     private val _unlockedThemes = MutableStateFlow(setOf<ThemeOverlay>())
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = _unlockedThemes.asStateFlow()
+
+    /**
+     * Темы, отозванные у пользователя за нарушение правил. В отличие от
+     * ненайденных тем, они показываются в списке с отдельным сообщением и
+     * не могут быть разблокированы повторно.
+     */
+    private val _revokedThemes = MutableStateFlow(setOf<ThemeOverlay>())
+    val revokedThemes: StateFlow<Set<ThemeOverlay>> = _revokedThemes.asStateFlow()
 
     /**
      * Пользовательские цвета типов занятий: только переопределённые типы.
@@ -297,6 +305,7 @@ class ScheduleStorage(
         _userLessonsEnabled.value = loadBooleanFlag(KEY_USER_LESSONS_ENABLED, true)
         _themeOverlay.value = loadThemeOverlay()
         _unlockedThemes.value = loadUnlockedThemes()
+        _revokedThemes.value = loadRevokedThemes()
         _lessonTypeColors.value = loadLessonTypeColors()
         _cyberpunkVariant.value =
             CyberpunkVariant.fromName(platformStorage.getString(KEY_CYBERPUNK_VARIANT))
@@ -763,8 +772,8 @@ class ScheduleStorage(
     }
 
     /**
-     * Разблокировка квестовой темы: добавляет или убирает её из списка
-     * «Тематические темы». Сакура и Хэллоуин в списке не живут (первая
+     * Разблокировка квестовой темы: открывает или снова закрывает её в
+     * «Тематических темах». Сакура и Хэллоуин сюда не входят (первая
      * доступна всегда, второй — сезонный), поэтому их ключей нет.
      */
     fun setThemeUnlocked(overlay: ThemeOverlay, unlocked: Boolean) {
@@ -781,18 +790,40 @@ class ScheduleStorage(
     }
 
     /**
-     * Потеря Матрицы: тема выключается и исчезает из списка найденных.
-     * Вызывается при нарушении договора о читах — второго шанса нет,
-     * поэтому разблокировка снимается навсегда.
+     * Потеря Матрицы: тема выключается и блокируется навсегда.
+     * Вызывается при нарушении договора о читах — второго шанса нет.
      */
     fun revokeMatrixUnlock() {
         setMatrixThemeOff()
-        setThemeUnlocked(ThemeOverlay.MATRIX, false)
+        revokeTheme(ThemeOverlay.MATRIX)
     }
 
     /** Выключить Матрицу, не трогая разблокировку (для обычных тумблеров). */
     private fun setMatrixThemeOff() {
         setThemeOverlay(ThemeOverlay.NONE)
+    }
+
+    /**
+     * Отзыв темы: снимает разблокировку и запоминает причину блокировки.
+     * Отозванная тема остаётся видимой в списке, но не активируется.
+     */
+    private fun revokeTheme(overlay: ThemeOverlay) {
+        if (unlockKey(overlay) == null) return
+        _revokedThemes.value = _revokedThemes.value + overlay
+        setThemeUnlocked(overlay, false)
+        persistRevokedThemes()
+    }
+
+    private fun persistRevokedThemes() {
+        val encoded = _revokedThemes.value.joinToString(",") { it.name }
+        scope.launch {
+            try {
+                if (encoded.isEmpty()) platformStorage.remove(KEY_REVOKED_THEMES)
+                else platformStorage.saveString(KEY_REVOKED_THEMES, encoded)
+            } catch (e: Exception) {
+                println("Failed to persist revoked themes: ${e.message}")
+            }
+        }
     }
 
     private fun unlockKey(overlay: ThemeOverlay): String? = when (overlay) {
@@ -826,6 +857,15 @@ class ScheduleStorage(
             set += ThemeOverlay.MATRIX
         }
         return set
+    }
+
+    /** Отозванные темы: "MATRIX" или "KAWAII,CYBERPUNK,MATRIX". */
+    private fun loadRevokedThemes(): Set<ThemeOverlay> {
+        val raw = platformStorage.getString(KEY_REVOKED_THEMES) ?: return emptySet()
+        return raw.split(',')
+            .mapNotNull { runCatching { ThemeOverlay.valueOf(it) }.getOrNull() }
+            .filter { unlockKey(it) != null }
+            .toSet()
     }
 
     fun setCheatsAgreed(agreed: Boolean?) {
@@ -1228,6 +1268,7 @@ class ScheduleStorage(
     fun resetAllData() {
         val cheatsAgreedBefore = _cheatsAgreed.value
         val cheatsBlockedBefore = _cheatsBlocked.value
+        val revokedThemesBefore = _revokedThemes.value
         val diagnosticsEnabledBefore = _diagnosticsEnabled.value
         val notificationsEnabledBefore = _notificationsEnabled.value
         val notifyMinutesBeforeBefore = _notifyMinutesBefore.value
@@ -1256,6 +1297,11 @@ class ScheduleStorage(
         // Вариант палитры Киберпанка — тоже настройка: сброс возвращает новую
         // палитру, которая стоит по умолчанию.
         _cyberpunkVariant.value = CyberpunkVariant.DEFAULT
+        // Найденные темы — часть прогресса: сброс данных возвращает их в
+        // «ещё не найдены». Отзыв за нарушение правил — наказание, а не
+        // прогресс, поэтому его сохраняем, как и cheats-флаги ниже.
+        _unlockedThemes.value = emptySet()
+        _revokedThemes.value = revokedThemesBefore
         _themeMode.value = ThemeMode.SYSTEM
         _dockTabs.value = DEFAULT_DOCK_TABS
         // Дефолт после сброса — розовая тема включена (решение владельца).
@@ -1290,6 +1336,12 @@ class ScheduleStorage(
             platformStorage.remove(KEY_DOCK_HIDDEN)
             platformStorage.saveString(KEY_USER_LESSONS_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTES, json.encodeToString(_notePages.value))
+            if (revokedThemesBefore.isNotEmpty()) {
+                platformStorage.saveString(
+                    KEY_REVOKED_THEMES,
+                    revokedThemesBefore.joinToString(",") { it.name }
+                )
+            }
         }
     }
 
@@ -1385,6 +1437,7 @@ class ScheduleStorage(
         private const val KEY_UNLOCKED_KAWAII = "krasava_unlocked_kawaii"
         private const val KEY_UNLOCKED_CYBERPUNK = "krasava_unlocked_cyberpunk"
         private const val KEY_UNLOCKED_MATRIX = "krasava_unlocked_matrix"
+        private const val KEY_REVOKED_THEMES = "krasava_revoked_themes"
         // Пользовательские цвета типов занятий: "LECTURE=BLUE;LAB=ROSE".
         private const val KEY_LESSON_TYPE_COLORS = "krasava_lesson_type_colors"
         // Вариант палитры Киберпанка: NEON (новая) | CLASSIC (старая).

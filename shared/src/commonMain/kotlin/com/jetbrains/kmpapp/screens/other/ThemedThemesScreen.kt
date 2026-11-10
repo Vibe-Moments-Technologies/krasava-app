@@ -1,5 +1,6 @@
 package com.jetbrains.kmpapp.screens.other
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilterChip
@@ -26,9 +29,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -39,24 +46,22 @@ import com.jetbrains.kmpapp.theme.GlitchText
 import com.jetbrains.kmpapp.theme.ThemeOverlay
 
 /**
- * Подстраница «Тематические темы»: тумблеры найденных тем-надстроек.
+ * Подстраница «Тематические темы»: тумблеры всех тем-надстроек.
  *
- * Состав списка честный и простой:
+ * Состав списка:
  * - Сакура — всегда: розовая тема доступна по умолчанию и включена сразу;
- * - Кавай, Киберпанк, Матрица — только после того, как пользователь нашёл
- *   их квестами. Разблокировка сохраняется, повторно проходить квест не
- *   нужно; потерянная Матрица исчезает из списка навсегда;
+ * - Кавай, Киберпанк, Матрица — видны всегда. Пока тема не найдена, строка
+ *   заблокирована: нажатие показывает подсказку, но не включает её;
  * - Хэллоуин — сезонная строка: появляется, пока действует её правило
  *   (сезон 28 октября — 3 ноября или включение вручную), чтобы её можно было
  *   выключить из обычного меню. Когда сезон кончается, строка исчезает сама.
  *
- * У «Киберпанка» под строкой появляется выборщик палитры (новая/старая) — но
- * только пока тема включена. Выбор хранится отдельно от оверлея, поэтому
- * переключение на другую тему его не сбрасывает.
+ * Отозванная тема (например, Матрица за нарушение правил) остаётся в списке,
+ * но показывает отдельное сообщение и не может быть включена.
  *
- * Строка — только название и тумблер: подписи расписывали то, что и так
- * понятно из названия темы, а вместе с иконками выдавливали тумблер за
- * границу экрана на узких устройствах.
+ * У «Киберпанка» под строкой появляется выборщик палитры (новая/старая) — но
+ * только пока тема найдена и включена. Выбор хранится отдельно от оверлея,
+ * поэтому переключение на другую тему его не сбрасывает.
  *
  * Темы взаимно исключают друг друга: включение одной выключает остальные —
  * это свойство оверлея, а не списка.
@@ -77,6 +82,8 @@ fun ThemedThemesScreen(
     val halloweenVisible by viewModel.isHalloweenRowVisible.collectAsState()
     val cyberpunkVariant by viewModel.cyberpunkVariant.collectAsState()
     val unlocked by viewModel.unlockedThemes.collectAsState()
+    val revoked by viewModel.revokedThemes.collectAsState()
+    var lockDialog by remember { mutableStateOf<ThemeLockDialog?>(null) }
 
     // Сезонная тема перекрывает оформление, но не стирает выбранную базу:
     // после 3 ноября Сакура вернётся сама. Поэтому в списке «включённой»
@@ -131,40 +138,53 @@ fun ThemedThemesScreen(
                         onCheckedChange = viewModel::setSakuraTheme
                     )
 
-                    // Квестовые темы: строка появляется только после того,
-                    // как тема найдена. Порядок фиксированный, чтобы список
-                    // не прыгал при разблокировках.
-                    val questRows = listOfNotNull(
-                        if (ThemeOverlay.KAWAII in unlocked) ThemeRowData(
+                    // Квестовые темы видны всегда: ненайденная строка не
+                    // активируется, а показывает подсказку. Порядок
+                    // фиксированный, чтобы список не прыгал при разблокировках.
+                    val questRows = listOf(
+                        ThemeRowData(
                             title = "Кавай",
+                            overlay = ThemeOverlay.KAWAII,
                             checked = acting(isKawaii),
                             onCheckedChange = viewModel::setKawaiiTheme
-                        ) else null,
-                        if (ThemeOverlay.CYBERPUNK in unlocked) ThemeRowData(
+                        ),
+                        ThemeRowData(
                             title = "Киберпанк",
+                            overlay = ThemeOverlay.CYBERPUNK,
                             checked = acting(isCyberpunk),
                             onCheckedChange = viewModel::setCyberpunkTheme,
                             hasVariantPicker = true
-                        ) else null,
-                        if (ThemeOverlay.MATRIX in unlocked) ThemeRowData(
+                        ),
+                        ThemeRowData(
                             title = "Матрица",
+                            overlay = ThemeOverlay.MATRIX,
                             checked = acting(isMatrix),
                             onCheckedChange = viewModel::setMatrixTheme
-                        ) else null
+                        )
                     )
 
                     for (row in questRows) {
+                        val locked = row.overlay !in unlocked || row.overlay in revoked
                         ThemeRowDivider()
                         ThemeRow(
                             title = row.title,
-                            checked = row.checked,
-                            onCheckedChange = row.onCheckedChange
+                            checked = !locked && row.checked,
+                            onCheckedChange = row.onCheckedChange,
+                            locked = locked,
+                            onLockedClick = {
+                                val isRevoked = row.overlay in revoked
+                                lockDialog = ThemeLockDialog(
+                                    title = if (isRevoked) "Тема недоступна" else "Тема не найдена",
+                                    message = if (isRevoked) THEME_REVOKED_MESSAGE
+                                    else THEME_NOT_FOUND_MESSAGE
+                                )
+                            }
                         )
                         // Вариант палитры Киберпанка виден, только пока тема
-                        // действительно включена: настраивать то, что не
-                        // рисуется, незачем. Выбор хранится отдельно от
-                        // оверлея, поэтому выключение темы его не теряет.
-                        if (row.hasVariantPicker && row.checked) {
+                        // найдена и действительно включена: настраивать то,
+                        // что не рисуется, незачем. Выбор хранится отдельно
+                        // от оверлея, поэтому выключение темы его не теряет.
+                        if (!locked && row.hasVariantPicker && row.checked) {
                             CyberpunkVariantPicker(
                                 selected = cyberpunkVariant,
                                 onSelect = viewModel::setCyberpunkVariant
@@ -186,20 +206,43 @@ fun ThemedThemesScreen(
                 }
             }
 
-            // Подсказка о квестах: список не выглядит сломанным, когда в нём
-            // одна строка, и мотивирует искать остальные.
+            // Подсказка о квестах: заблокированные строки видны заранее
+            // и мотивируют искать остальные темы.
             Text(
-                text = "Остальные темы появятся здесь, когда вы их найдёте. " +
-                    "Потерянная тема исчезает из списка.",
+                text = "Недоступные темы видны заранее, но включатся только " +
+                    "после того, как вы их найдёте.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
+
+    lockDialog?.let { dialog ->
+        AlertDialog(
+            onDismissRequest = { lockDialog = null },
+            title = { GlitchText(dialog.title) },
+            text = { GlitchText(dialog.message) },
+            confirmButton = {
+                TextButton(onClick = { lockDialog = null }) {
+                    GlitchText("Понятно")
+                }
+            }
+        )
+    }
 }
+
+private const val THEME_NOT_FOUND_MESSAGE = "Вы еще не нашли тему"
+private const val THEME_REVOKED_MESSAGE =
+    "Вам нельзя активировать эту тему за нарушение правил"
+
+private data class ThemeLockDialog(
+    val title: String,
+    val message: String
+)
 
 private class ThemeRowData(
     val title: String,
+    val overlay: ThemeOverlay,
     val checked: Boolean,
     val onCheckedChange: (Boolean) -> Unit,
     /** Есть ли у темы выборщик варианта палитры (пока — только Киберпанк). */
@@ -215,32 +258,50 @@ private fun ThemeRowDivider() {
 }
 
 /**
- * Строка темы: название слева, тумблер справа.
+ * Строка темы: название слева, тумблер или замок справа.
  *
- * Название занимает `weight(1f)` в том же Row, что и тумблер, — раньше оно
- * лежало во вложенном Row и получало неограниченную ширину, из-за чего
- * длинные подписи выталкивали тумблер за экран.
+ * Заблокированная строка остаётся кликабельной, чтобы показать подсказку,
+ * но не переключает тему. Название занимает `weight(1f)` в том же Row, что
+ * и элемент справа, — иначе длинные подписи выталкивали тумблер за экран.
  */
 @Composable
 private fun ThemeRow(
     title: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    locked: Boolean = false,
+    onLockedClick: (() -> Unit)? = null
 ) {
+    val clickModifier = if (locked && onLockedClick != null) {
+        Modifier.clickable(onClick = onLockedClick)
+    } else {
+        Modifier
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 56.dp),
+            .heightIn(min = 56.dp)
+            .then(clickModifier),
         verticalAlignment = Alignment.CenterVertically
     ) {
         GlitchText(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
+            color = if (locked) MaterialTheme.colorScheme.onSurfaceVariant
+            else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(12.dp))
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        if (locked) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = "Тема недоступна",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else {
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
     }
 }
 

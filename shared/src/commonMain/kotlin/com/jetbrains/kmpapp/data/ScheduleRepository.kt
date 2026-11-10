@@ -174,6 +174,7 @@ class ScheduleRepository(
     /** Строка Хэллоуина видна в списке тем: сезон идёт или тема включена. */
     val isHalloweenRowVisible: StateFlow<Boolean> = storage.isHalloweenRowVisible
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
+    val revokedThemes: StateFlow<Set<ThemeOverlay>> = storage.revokedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
     val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = storage.lessonTypeColors
     /** Вариант палитры «Киберпанка»: новая (жёлтый/циан) или старая (маджента). */
@@ -383,7 +384,7 @@ class ScheduleRepository(
         storage.setCyberpunkTheme(enabled)
     }
 
-    /** Матрица потеряна: выключить и убрать из списка найденных тем. */
+    /** Матрица потеряна: выключить и заблокировать в списке тем. */
     fun revokeMatrixUnlock() {
         storage.revokeMatrixUnlock()
     }

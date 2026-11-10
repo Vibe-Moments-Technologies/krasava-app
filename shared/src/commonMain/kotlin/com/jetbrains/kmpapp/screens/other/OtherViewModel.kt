@@ -163,8 +163,10 @@ class OtherViewModel(
     val isHalloweenActive: StateFlow<Boolean> = repository.isHalloweenActive
     /** Строка Хэллоуина в списке тем: сезон идёт или тема включена вручную. */
     val isHalloweenRowVisible: StateFlow<Boolean> = repository.isHalloweenRowVisible
-    /** Темы, найденные квестами: только они плюс Сакура видны в списке. */
+    /** Темы, найденные квестами: они доступны в списке тем. */
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
+    /** Темы, отозванные за нарушение правил: видны, но не активируются. */
+    val revokedThemes: StateFlow<Set<ThemeOverlay>> = repository.revokedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
     val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = repository.lessonTypeColors
 
@@ -252,7 +254,7 @@ class OtherViewModel(
     fun resetLessonTypeColors() = repository.resetLessonTypeColors()
     fun setCyberpunkVariant(variant: CyberpunkVariant) = repository.setCyberpunkVariant(variant)
 
-    /** Матрица потеряна: выключается и исчезает из списка найденных тем. */
+    /** Матрица потеряна: выключается и блокируется в списке тем. */
     fun revokeMatrixUnlock() = repository.revokeMatrixUnlock()
     fun setCheatsAgreed(agreed: Boolean?) = repository.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = repository.setCheatsBlocked(blocked)
