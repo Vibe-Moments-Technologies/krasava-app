@@ -64,6 +64,9 @@ import com.jetbrains.kmpapp.theme.LocalGlitchTextEnabled
 import com.jetbrains.kmpapp.theme.LocalLessonTypeOverrides
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
+import com.jetbrains.kmpapp.theme.NewYearDarkColors
+import com.jetbrains.kmpapp.theme.NewYearLightColors
+import com.jetbrains.kmpapp.theme.NewYearSnowfall
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
 import com.jetbrains.kmpapp.theme.SakuraLightColors
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -158,7 +161,14 @@ fun App() {
     // считались одинаково: сезон + отсутствие отказа либо ручное включение.
     val halloweenActive by repository.isHalloweenActive.collectAsState()
 
-    val colors = if (halloweenActive) {
+    // Новый год: автоматическая тема с 30 декабря по 11 января, перекрывает
+    // остальные оверлеи и Error (как Хэллоуин). Светлая и тёмная палитры
+    // следуют выбранному режиму темы.
+    val newYearActive by repository.isNewYearActive.collectAsState()
+
+    val colors = if (newYearActive) {
+        if (isDark) NewYearDarkColors else NewYearLightColors
+    } else if (halloweenActive) {
         HalloweenDarkColors
     } else if (errorActive) {
         ErrorColors
@@ -171,16 +181,17 @@ fun App() {
             ThemeOverlay.KAWAII -> if (isDark) KawaiiDarkColors else KawaiiLightColors
             ThemeOverlay.CYBERPUNK -> cyberpunkColors(cyberpunkVariant, isDark)
             ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
-            // Перекрыт проверкой halloweenActive выше; ветка нужна для
-            // исчерпывающего when.
+            // Перекрыты проверками newYearActive/halloweenActive выше; ветки
+            // нужны для исчерпывающего when.
             ThemeOverlay.HALLOWEEN -> HalloweenDarkColors
+            ThemeOverlay.NEW_YEAR -> if (isDark) NewYearDarkColors else NewYearLightColors
             ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
         }
     }
 
     MaterialTheme(
         colorScheme = colors,
-        typography = if (errorActive) ErrorTypography else MaterialTheme.typography
+        typography = if (errorActive && !newYearActive) ErrorTypography else MaterialTheme.typography
     ) {
         // Пока активна тема Error, все светлые (белые) надписи приложения —
         // расписание, сервисы, настройки — рисуются через GlitchText: те
@@ -188,8 +199,10 @@ fun App() {
         // подписи остаются обычными. На Хэллоуин глитч включается тоже —
         // как «страшный» эффект надписей.
         CompositionLocalProvider(
-            LocalGlitchTextEnabled provides (errorActive || halloweenActive),
-            com.jetbrains.kmpapp.theme.LocalHalloweenEnabled provides halloweenActive,
+            LocalGlitchTextEnabled provides
+                ((errorActive || halloweenActive) && !newYearActive),
+            com.jetbrains.kmpapp.theme.LocalHalloweenEnabled provides
+                (halloweenActive && !newYearActive),
             LocalLessonTypeOverrides provides lessonTypeColors
         ) {
         Surface(
@@ -536,7 +549,11 @@ fun App() {
                 // Однотонные поверхности приложения во время темы Error дают
                 // те же «глюковатые полосы», что и поле «Сапёра»: скан-строка
                 // и полосы порчи проезжают по всему экрану поверх контента.
-                ErrorScanlines(enabled = errorActive)
+                ErrorScanlines(enabled = errorActive && !newYearActive)
+
+                // Снегопад — самый верхний слой: он не ловит жесты и не
+                // мешает управлению, но заметен на любой поверхности темы.
+                NewYearSnowfall(enabled = newYearActive)
             }
         }
         }

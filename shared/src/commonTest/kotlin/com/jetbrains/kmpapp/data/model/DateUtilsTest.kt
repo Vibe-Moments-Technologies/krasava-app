@@ -88,4 +88,26 @@ class DateUtilsTest {
         // Летом тема выключена.
         assertFalse(DateUtils.isHalloweenSeason(LocalDate(2026, 7, 31)))
     }
+
+    // Новогодний сезон: 30 декабря — 11 января включительно. Окно переходит
+    // через границу года, поэтому проверяем обе половины и дни вокруг.
+    @Test
+    fun newYearSeasonBoundaries() {
+        assertFalse(DateUtils.isNewYearSeason(LocalDate(2026, 12, 29)))
+        assertTrue(DateUtils.isNewYearSeason(LocalDate(2026, 12, 30)))
+        assertTrue(DateUtils.isNewYearSeason(LocalDate(2026, 12, 31)))
+        assertTrue(DateUtils.isNewYearSeason(LocalDate(2027, 1, 1)))
+        assertTrue(DateUtils.isNewYearSeason(LocalDate(2027, 1, 11)))
+        assertFalse(DateUtils.isNewYearSeason(LocalDate(2027, 1, 12)))
+        assertFalse(DateUtils.isNewYearSeason(LocalDate(2027, 6, 1)))
+    }
+
+    @Test
+    fun newYearSeasonYearKeepsDecemberAndJanuaryTogether() {
+        // Отказ 30 декабря должен действовать и в январе следующего года.
+        assertEquals(2027, DateUtils.newYearSeasonYear(LocalDate(2026, 12, 30)))
+        assertEquals(2027, DateUtils.newYearSeasonYear(LocalDate(2027, 1, 11)))
+        // Следующий декабрь — уже новый сезон.
+        assertEquals(2028, DateUtils.newYearSeasonYear(LocalDate(2027, 12, 30)))
+    }
 }

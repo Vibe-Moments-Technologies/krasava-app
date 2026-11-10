@@ -163,6 +163,9 @@ class ScheduleRepository(
     val isHalloweenActive: StateFlow<Boolean> = storage.isHalloweenActive
     /** Строка Хэллоуина видна в списке тем: сезон идёт или тема включена. */
     val isHalloweenRowVisible: StateFlow<Boolean> = storage.isHalloweenRowVisible
+    val isNewYearTheme: StateFlow<Boolean> = storage.isNewYearTheme
+    /** Новый год сейчас активен: сезон без отказа или ручное включение. */
+    val isNewYearActive: StateFlow<Boolean> = storage.isNewYearActive
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
     val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = storage.lessonTypeColors
@@ -269,6 +272,9 @@ class ScheduleRepository(
     fun setHalloweenTheme(enabled: Boolean) = storage.setHalloweenTheme(enabled)
     fun dismissHalloweenSeason() = storage.dismissHalloweenSeason()
     fun clearHalloweenSeasonDismissal() = storage.clearHalloweenSeasonDismissal()
+    fun setNewYearTheme(enabled: Boolean) = storage.setNewYearTheme(enabled)
+    fun dismissNewYearSeason() = storage.dismissNewYearSeason()
+    fun clearNewYearSeasonDismissal() = storage.clearNewYearSeasonDismissal()
     fun setCheatsAgreed(agreed: Boolean?) = storage.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = storage.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = storage.setDiagnosticsEnabled(enabled)

@@ -7,6 +7,8 @@ import com.jetbrains.kmpapp.theme.CyberpunkLightColors
 import com.jetbrains.kmpapp.theme.CyberpunkClassicLightColors
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.HalloweenDarkColors
+import com.jetbrains.kmpapp.theme.NewYearDarkColors
+import com.jetbrains.kmpapp.theme.NewYearLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
 import com.jetbrains.kmpapp.theme.SakuraLightColors
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -82,6 +84,32 @@ class WidgetThemeTest {
         )
         assertEquals(HalloweenDarkColors.background.toArgb(), colors.background)
         assertEquals(HalloweenDarkColors.onSurface.toArgb(), colors.subjectText)
+    }
+
+    @Test
+    fun newYearOverridesOverlayWithLightPalette() {
+        val colors = WidgetThemeResolver.resolve(
+            themeMode = ThemeMode.LIGHT,
+            overlay = ThemeOverlay.SAKURA,
+            systemDark = true,
+            halloweenActive = true,
+            newYearActive = true
+        )
+        assertEquals(NewYearLightColors.background.toArgb(), colors.background)
+        assertEquals(NewYearLightColors.primary.toArgb(), colors.accent)
+    }
+
+    @Test
+    fun newYearUsesDarkPaletteInDarkMode() {
+        val colors = WidgetThemeResolver.resolve(
+            themeMode = ThemeMode.DARK,
+            overlay = ThemeOverlay.NONE,
+            systemDark = false,
+            halloweenActive = false,
+            newYearActive = true
+        )
+        assertEquals(NewYearDarkColors.background.toArgb(), colors.background)
+        assertEquals(NewYearDarkColors.onSurface.toArgb(), colors.subjectText)
     }
 
     @Test

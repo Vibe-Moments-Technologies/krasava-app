@@ -162,6 +162,8 @@ class OtherViewModel(
     val isHalloweenActive: StateFlow<Boolean> = repository.isHalloweenActive
     /** Строка Хэллоуина в списке тем: сезон идёт или тема включена вручную. */
     val isHalloweenRowVisible: StateFlow<Boolean> = repository.isHalloweenRowVisible
+    /** Новый год действует прямо сейчас: сезон без отказа или включён вручную. */
+    val isNewYearActive: StateFlow<Boolean> = repository.isNewYearActive
     /** Темы, найденные квестами: только они плюс Сакура видны в списке. */
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
@@ -246,6 +248,7 @@ class OtherViewModel(
 
     fun setMatrixTheme(enabled: Boolean) = repository.setMatrixTheme(enabled)
     fun setHalloweenTheme(enabled: Boolean) = repository.setHalloweenTheme(enabled)
+    fun setNewYearTheme(enabled: Boolean) = repository.setNewYearTheme(enabled)
 
     fun setLessonTypeColor(type: LessonType, color: LessonColor) =
         repository.setLessonTypeColor(type, color)

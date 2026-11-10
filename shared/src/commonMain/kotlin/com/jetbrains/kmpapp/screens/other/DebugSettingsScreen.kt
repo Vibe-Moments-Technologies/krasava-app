@@ -72,6 +72,9 @@ fun DebugSettingsScreen(
     // сохранённого оверлея HALLOWEEN может и не быть. Тумблер должен
     // показывать факт, иначе он выглядит выключенным при включённой теме.
     val isHalloweenTheme by viewModel.isHalloweenActive.collectAsState()
+    // Аналогично Хэллоуину: показываем факт активности, а не сырой оверлей,
+    // иначе в сезон тумблер выглядел бы выключенным при включённой теме.
+    val isNewYearTheme by viewModel.isNewYearActive.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.refreshStorageStats()
@@ -297,10 +300,10 @@ fun DebugSettingsScreen(
 
                 Spacer(Modifier.height(4.dp))
 
-                // Раскрываемый раздел «Темы»: пока одна тема — хэллоуинская.
-                // Тумблер нужен, чтобы проверить праздничное оформление вне
-                // сезона (сама тема включается по дате автоматически:
-                // 28 октября — 3 ноября).
+                // Раскрываемый раздел «Темы»: сезонные темы — Хэллоуин и
+                // Новый год. Тумблеры нужны, чтобы проверить оформление вне
+                // сезона (сами темы включаются по дате автоматически:
+                // 28 октября — 3 ноября и 30 декабря — 11 января).
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -344,6 +347,32 @@ fun DebugSettingsScreen(
                         Switch(
                             checked = isHalloweenTheme,
                             onCheckedChange = viewModel::setHalloweenTheme
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            GlitchText(
+                                text = "Новогодняя тема",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            GlitchText(
+                                text = "Снегопад, морозные оттенки и тёплое золото. " +
+                                    "С 30 декабря по 11 января включается сама. " +
+                                    "Выключение в сезон запоминается до его конца.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Switch(
+                            checked = isNewYearTheme,
+                            onCheckedChange = viewModel::setNewYearTheme
                         )
                     }
                 }

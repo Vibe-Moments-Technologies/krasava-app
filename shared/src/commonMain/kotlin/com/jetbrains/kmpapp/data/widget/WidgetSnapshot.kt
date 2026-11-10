@@ -191,6 +191,7 @@ object WidgetBridge {
                     overlay = repo.themeOverlay.value,
                     systemDark = systemDark,
                     halloweenActive = repo.isHalloweenActive.value,
+                    newYearActive = repo.isNewYearActive.value,
                     // Вариант палитры Киберпанка пробрасывается в виджет:
                     // «Старая» маджента должна жить и вне приложения.
                     cyberpunkVariant = repo.cyberpunkVariant.value
