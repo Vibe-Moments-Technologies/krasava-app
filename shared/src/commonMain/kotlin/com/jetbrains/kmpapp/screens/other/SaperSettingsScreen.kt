@@ -36,7 +36,8 @@ import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import com.jetbrains.kmpapp.screens.games.GamesViewModel
 
 /**
- * Настройки «Сапера»: ориентация доски и подсказка о мелких клетках.
+ * Настройки «Сапера»: ориентация доски, подсказка о мелких клетках и
+ * режим «Бой с тенью».
  * Открывается из раздела «Игры» на странице настроек.
  */
 @Composable
@@ -48,6 +49,7 @@ fun SaperSettingsScreen(
     PlatformBackHandler(onBack = onBack)
     val boardVertical by viewModel.boardVertical.collectAsState()
     val smallCellHintEnabled by viewModel.smallCellHintEnabled.collectAsState()
+    val shadowBattle by viewModel.shadowBattle.collectAsState()
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -108,6 +110,13 @@ fun SaperSettingsScreen(
                         subtitle = "Показывать подсказку «Клетки слишком мелкие — приблизите поле»",
                         checked = smallCellHintEnabled,
                         onCheckedChange = { viewModel.setSmallCellHintEnabled(it) }
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SaperToggleRow(
+                        title = "Бой с тенью",
+                        subtitle = "Показывать открытые клетки только секунду после хода",
+                        checked = shadowBattle,
+                        onCheckedChange = { viewModel.setShadowBattle(it) }
                     )
                 }
             }

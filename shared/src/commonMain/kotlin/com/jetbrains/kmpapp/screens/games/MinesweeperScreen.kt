@@ -3,7 +3,6 @@ import com.jetbrains.kmpapp.theme.GlitchText
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -79,15 +78,14 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.floor
 
 /**
  * Игра «Сапер». Поле рисуется одним Canvas: тап открывает клетку (а по
  * раскрытой цифре, вокруг которой собраны все флаги, — открывает остаток
- * области), долгое нажатие ставит флаг сразу при удержании. Щипок
- * масштабирует поле, перетаскивание двигает его по экрану; кнопка в шапке
- * возвращает исходный размер.
+ * области), долгое нажатие ставит флаг сразу при удержании, а в режиме
+ * флага — открывает клетку. Щипок масштабирует поле, перетаскивание двигает
+ * его по экрану; кнопка в шапке возвращает исходный размер.
  */
 @Composable
 fun MinesweeperScreen(
@@ -100,10 +98,10 @@ fun MinesweeperScreen(
     val elapsed by viewModel.elapsedSeconds.collectAsState()
     val flagMode by viewModel.flagMode.collectAsState()
     val difficulty by viewModel.difficulty.collectAsState()
-    val boomIndex by viewModel.boomIndex.collectAsState()
     val errorTheme by viewModel.errorActive.collectAsState()
     val verticalBoard by viewModel.boardVertical.collectAsState()
     val smallCellHintEnabled by viewModel.smallCellHintEnabled.collectAsState()
+    val shadowBattle by viewModel.shadowBattle.collectAsState()
 
     // Эффективные размеры поля с учётом настройки «вертикальная доска».
     // До первого хода доски нет — берём размеры варианта; после — фактические
@@ -200,11 +198,11 @@ fun MinesweeperScreen(
                 height = fieldHeight,
                 board = board,
                 status = status,
-                boomIndex = boomIndex,
                 scheme = scheme,
                 errorTheme = errorTheme,
                 zoomResetRequest = zoomResetTick,
                 smallCellHintEnabled = smallCellHintEnabled,
+                shadowBattle = shadowBattle,
                 onCellClick = { viewModel.onCellClick(it) },
                 onCellLongClick = { viewModel.onCellLongClick(it) },
                 onCellDoubleClick = { viewModel.onCellDoubleClick(it) }
@@ -243,7 +241,7 @@ fun MinesweeperScreen(
                     label = { GlitchText(if (flagMode) "Режим флага" else "Обычный режим") }
                 )
                 GlitchText(
-                    text = "Долгое нажатие — флаг",
+                    text = if (flagMode) "Тап — флаг, долгое — открыть" else "Долгое нажатие — флаг",
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant
                 )
@@ -332,9 +330,11 @@ private val MaxCellSize = 72.dp
 /** Клетки мельче этого размера — повод показать подсказку «приблизьте поле». */
 private val MinTapCellSize = 14.dp
 
-private const val RevealAnimMillis = 180f
 private const val FlagAnimMillis = 260f
 private const val DoubleTapMillis = 320L
+
+/** «Бой с тенью»: сколько открытые клетки остаются видимыми после касания. */
+private const val ShadowRevealMillis = 1_000L
 
 /** Зона у левого края, где живёт свайп «назад»: там поле не перетаскиваем. */
 private val EdgeSwipeZonePx = 200f
@@ -355,11 +355,11 @@ private fun MinesweeperField(
     height: Int,
     board: MinesweeperBoard?,
     status: MinesweeperStatus,
-    boomIndex: Int?,
     scheme: ColorScheme,
     errorTheme: Boolean,
     zoomResetRequest: Long = 0,
     smallCellHintEnabled: Boolean = false,
+    shadowBattle: Boolean = false,
     onCellClick: (Int) -> Unit,
     onCellLongClick: (Int) -> Unit,
     onCellDoubleClick: (Int) -> Unit
@@ -379,12 +379,16 @@ private fun MinesweeperField(
     var framesNeeded by remember { mutableStateOf(false) }
     val animClock = remember { mutableLongStateOf(0L) }
 
-    // Метки времени раскрытия и установки флага: по ним рисуются анимации.
-    var revealAt by remember { mutableStateOf(LongArray(0)) }
+    // «Бой с тенью»: открытые клетки видны секунду после любого касания поля.
+    // Счётчик касаний нужен, чтобы поле снова показывалось и тогда, когда
+    // игрок тапает по уже открытой (скрытой тенью) клетке.
+    var shadowVisible by remember { mutableStateOf(true) }
+    var interactionTick by remember { mutableStateOf(0) }
+    val shadowActive = shadowBattle && status == MinesweeperStatus.PLAYING
+
+    // Метки времени установки флага: по ним рисуется анимация.
     var flagAt by remember { mutableStateOf(LongArray(0)) }
-    var prevRevealed = remember { BooleanArray(0) }
     var prevFlagged = remember { BooleanArray(0) }
-    var lastActionIndex by remember { mutableStateOf(-1) }
 
     var pressedCell by remember { mutableStateOf(-1) }
     var pressedSince by remember { mutableStateOf<TimeMark?>(null) }
@@ -470,40 +474,34 @@ private fun MinesweeperField(
             )
         }
 
-        LaunchedEffect(board, status) {
+        LaunchedEffect(board) {
             val b = board ?: return@LaunchedEffect
             val total = b.width * b.height
-            if (prevRevealed.size != total) {
-                prevRevealed = BooleanArray(total)
+            if (prevFlagged.size != total) {
                 prevFlagged = BooleanArray(total)
-                revealAt = LongArray(total) { Long.MIN_VALUE }
                 flagAt = LongArray(total) { Long.MIN_VALUE }
             }
             val now = withFrameNanos { it }
-            val loss = status == MinesweeperStatus.LOST
-            val win = status == MinesweeperStatus.WON
+            animClock.longValue = now
             for (i in 0 until total) {
                 val cell = b.cells[i]
-                if (cell.isRevealed && !prevRevealed[i]) {
-                    // Каскад раскрытия идёт от клетки хода; при проигрыше —
-                    // от подорванной мины, при победе флаги встают волной.
-                    val delay = when {
-                        loss && cell.isMine && boomIndex != null ->
-                            minOf(chebyshev(boomIndex, i, b.width) * 25L, 500L)
-                        win -> minOf((cell.x + cell.y) * 6L, 400L)
-                        else -> if (lastActionIndex in 0 until total) {
-                            minOf(chebyshev(lastActionIndex, i, b.width) * 12L, 300L)
-                        } else {
-                            0L
-                        }
-                    }
-                    revealAt[i] = now + delay
-                }
                 if (cell.isFlagged && !prevFlagged[i]) flagAt[i] = now
-                prevRevealed[i] = cell.isRevealed
                 prevFlagged[i] = cell.isFlagged
             }
             framesNeeded = true
+        }
+
+        // Таймер тени живёт отдельно от кадров Canvas: даже если анимация
+        // флагов уже остановилась, открытые клетки гарантированно скроются
+        // через секунду после последнего касания.
+        LaunchedEffect(board, status, shadowBattle, interactionTick) {
+            if (!shadowActive) {
+                shadowVisible = true
+                return@LaunchedEffect
+            }
+            shadowVisible = true
+            delay(ShadowRevealMillis)
+            shadowVisible = false
         }
 
         LaunchedEffect(framesNeeded) {
@@ -518,10 +516,14 @@ private fun MinesweeperField(
                     since.elapsedNow().inWholeMilliseconds >= longPressMs
                 ) {
                     longFiredCell = pressed
-                    lastActionIndex = pressed
+                    interactionTick++
                     onCellLongClick(pressed)
                 }
-                framesNeeded = hasActiveAnimations(animClock.longValue, revealAt, flagAt, pressedCell)
+                framesNeeded = hasActiveAnimations(
+                    now = animClock.longValue,
+                    flagAt = flagAt,
+                    pressedCell = pressedCell
+                )
             }
         }
 
@@ -577,6 +579,7 @@ private fun MinesweeperField(
                             pressedCell = downCell
                             pressedSince = TimeSource.Monotonic.markNow()
                             longFiredCell = -1
+                            interactionTick++
                             framesNeeded = true
                         }
                         var upPos = down.position
@@ -673,12 +676,12 @@ private fun MinesweeperField(
                             if (downCell != null && upCell == downCell && longFiredCell != downCell) {
                                 if (lastTapCell == downCell && upTime - lastTapTime < DoubleTapMillis) {
                                     lastTapCell = -1
-                                    lastActionIndex = downCell
+                                    interactionTick++
                                     onCellDoubleClick(downCell)
                                 } else {
                                     lastTapCell = downCell
                                     lastTapTime = upTime
-                                    lastActionIndex = downCell
+                                    interactionTick++
                                     onCellClick(downCell)
                                 }
                             }
@@ -688,6 +691,7 @@ private fun MinesweeperField(
                 }
         ) {
             val now = animClock.longValue
+            val shadowHidden = shadowActive && !shadowVisible
             val basePx = baseCell.toPx()
             val cellPx = basePx * zoom
             val boardW = cellPx * width
@@ -724,9 +728,9 @@ private fun MinesweeperField(
                             x = x * basePx,
                             y = y * basePx,
                             size = basePx,
-                            revealStart = revealAt.getOrElse(index) { Long.MIN_VALUE },
                             flagStart = flagAt.getOrElse(index) { Long.MIN_VALUE },
                             now = now,
+                            revealVisible = !shadowHidden,
                             scheme = scheme,
                             errorTheme = errorTheme,
                             glyphs = glyphLayouts
@@ -862,29 +866,15 @@ internal fun clampOffset(
 
 private fun hasActiveAnimations(
     now: Long,
-    revealAt: LongArray,
     flagAt: LongArray,
     pressedCell: Int
 ): Boolean {
     if (pressedCell >= 0) return true
-    for (i in revealAt.indices) {
-        val s = revealAt[i]
-        if (s != Long.MIN_VALUE && now - s < RevealAnimMillis) return true
-    }
     for (i in flagAt.indices) {
         val s = flagAt[i]
         if (s != Long.MIN_VALUE && now - s < FlagAnimMillis) return true
     }
     return false
-}
-
-/** Расстояние Чебышёва между клетками — как распространяется волна раскрытия. */
-private fun chebyshev(a: Int, b: Int, width: Int): Int {
-    val ax = a % width
-    val ay = a / width
-    val bx = b % width
-    val by = b / width
-    return maxOf(abs(ax - bx), abs(ay - by))
 }
 
 private fun centroid(changes: List<PointerInputChange>): Offset {
@@ -901,10 +891,6 @@ private fun distance(changes: List<PointerInputChange>): Float {
     return (a - b).getDistance()
 }
 
-private fun revealProgress(start: Long, now: Long): Float =
-    if (start == Long.MIN_VALUE) 1f
-    else ((now - start).coerceAtLeast(0L) / RevealAnimMillis).coerceIn(0f, 1f)
-
 private fun flagProgress(start: Long, now: Long): Float =
     if (start == Long.MIN_VALUE) 1f
     else ((now - start).coerceAtLeast(0L) / FlagAnimMillis).coerceIn(0f, 1f)
@@ -914,15 +900,14 @@ private fun DrawScope.drawCell(
     x: Float,
     y: Float,
     size: Float,
-    revealStart: Long,
     flagStart: Long,
     now: Long,
+    revealVisible: Boolean,
     scheme: ColorScheme,
     errorTheme: Boolean,
     glyphs: Map<String, TextLayoutResult>
 ) {
-    val revealed = cell?.isRevealed == true
-    val isMine = cell?.isMine == true
+    val revealed = cell?.isRevealed == true && revealVisible
     val flagged = cell?.isFlagged == true
 
     // Полупиксель с каждой стороны: соседние клетки не оставляют швов.
@@ -941,55 +926,47 @@ private fun DrawScope.drawCell(
     )
 
     if (revealed) {
-        val p = revealProgress(revealStart, now)
-        val ease = FastOutSlowInEasing.transform(p)
-        val bg = if (isMine) scheme.errorContainer else scheme.surface
-        val revealScale = 0.6f + 0.4f * ease
-        withTransform({
-            translate(x + size / 2f, y + size / 2f)
-            scale(revealScale, revealScale)
-            translate(-x - size / 2f, -y - size / 2f)
-        }) {
-            drawRect(
-                color = bg.copy(alpha = ease),
-                topLeft = Offset(x - 0.25f, y - 0.25f),
-                size = Size(size + 0.5f, size + 0.5f)
-            )
-            when {
-                isMine -> glyphs["✖"]?.let { g ->
-                    val top = textTopLeft(g, x, y, size)
-                    if (errorTheme) drawGhostLayer(g, top, ease)
-                    drawText(
-                        g,
-                        topLeft = top,
-                        color = if (errorTheme) Color(0xFFFF8A80) else scheme.onErrorContainer,
-                        alpha = ease
-                    )
+        // Открытые клетки рисуем сразу полностью: если привязать их видимость
+        // к кадрам анимации, при большом каскаде поле может «пропасть» до
+        // следующего касания.
+        val current = cell
+        val bg = if (current.isMine) scheme.errorContainer else scheme.surface
+        drawRect(
+            color = bg,
+            topLeft = Offset(x - 0.25f, y - 0.25f),
+            size = Size(size + 0.5f, size + 0.5f)
+        )
+        when {
+            current.isMine -> glyphs["✖"]?.let { g ->
+                val top = textTopLeft(g, x, y, size)
+                if (errorTheme) drawGhostLayer(g, top)
+                drawText(
+                    g,
+                    topLeft = top,
+                    color = if (errorTheme) Color(0xFFFF8A80) else scheme.onErrorContainer
+                )
+            }
+            current.isFlagged -> glyphs["⚑"]?.let { g ->
+                val top = textTopLeft(g, x, y, size)
+                if (errorTheme) drawGhostLayer(g, top)
+                drawText(
+                    g,
+                    topLeft = top,
+                    color = if (errorTheme) Color(0xFFFF3B30) else scheme.error
+                )
+            }
+            current.adjacentMines > 0 -> glyphs[current.adjacentMines.toString()]?.let { g ->
+                val top = textTopLeft(g, x, y, size)
+                if (errorTheme) {
+                    val jitter = if ((cellX * 7 + cellY * 13) % 5 == 0) 2.4f else 1.5f
+                    drawText(g, topLeft = top + Offset(-jitter, 0f), color = Color(0x6600E5FF))
+                    drawText(g, topLeft = top + Offset(jitter, 0f), color = Color(0x66FF0033))
                 }
-                flagged -> glyphs["⚑"]?.let { g ->
-                    val top = textTopLeft(g, x, y, size)
-                    if (errorTheme) drawGhostLayer(g, top, ease)
-                    drawText(
-                        g,
-                        topLeft = top,
-                        color = if (errorTheme) Color(0xFFFF3B30) else scheme.error,
-                        alpha = ease
-                    )
-                }
-                (cell?.adjacentMines ?: 0) > 0 -> glyphs[cell!!.adjacentMines.toString()]?.let { g ->
-                    val top = textTopLeft(g, x, y, size)
-                    if (errorTheme) {
-                        val jitter = if ((cellX * 7 + cellY * 13) % 5 == 0) 2.4f else 1.5f
-                        drawText(g, topLeft = top + Offset(-jitter, 0f), color = Color(0x6600E5FF), alpha = ease)
-                        drawText(g, topLeft = top + Offset(jitter, 0f), color = Color(0x66FF0033), alpha = ease)
-                    }
-                    drawText(
-                        g,
-                        topLeft = top,
-                        color = if (errorTheme) Color(0xFFFFE8E6) else Color.Unspecified,
-                        alpha = ease
-                    )
-                }
+                drawText(
+                    g,
+                    topLeft = top,
+                    color = if (errorTheme) Color(0xFFFFE8E6) else Color.Unspecified
+                )
             }
         }
     } else if (flagged) {
@@ -1003,9 +980,9 @@ private fun DrawScope.drawCell(
 }
 
 /** Хроматические «двойники» глифа: циан слева, красный справа. Только Error. */
-private fun DrawScope.drawGhostLayer(glyph: TextLayoutResult, top: Offset, ease: Float) {
-    drawText(glyph, topLeft = top + Offset(-1.8f, 0f), color = Color(0x5500E5FF), alpha = ease)
-    drawText(glyph, topLeft = top + Offset(1.8f, 0f), color = Color(0x55FF002E), alpha = ease)
+private fun DrawScope.drawGhostLayer(glyph: TextLayoutResult, top: Offset) {
+    drawText(glyph, topLeft = top + Offset(-1.8f, 0f), color = Color(0x5500E5FF))
+    drawText(glyph, topLeft = top + Offset(1.8f, 0f), color = Color(0x55FF002E))
 }
 
 private fun textTopLeft(layout: TextLayoutResult, x: Float, y: Float, size: Float): Offset =
