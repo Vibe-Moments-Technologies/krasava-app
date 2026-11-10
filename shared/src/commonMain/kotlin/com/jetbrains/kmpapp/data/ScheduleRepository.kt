@@ -110,6 +110,13 @@ class ScheduleRepository(
         storage.setShowAbbreviatedNames(enabled)
     }
 
+    /** Редактирование расписания (свои пары): по умолчанию включено. */
+    val userLessonsEnabled: StateFlow<Boolean> = storage.userLessonsEnabled
+
+    fun setUserLessonsEnabled(enabled: Boolean) {
+        storage.setUserLessonsEnabled(enabled)
+    }
+
     val showLessonProgress: StateFlow<Boolean> = storage.showLessonProgress
 
     fun setShowLessonProgress(enabled: Boolean) {
@@ -205,15 +212,22 @@ class ScheduleRepository(
         storage.selectedTarget,
         storage.cachedLessons,
         storage.hideAdditionalLessons,
-        storage.userLessons
-    ) { selected, cache, hideAdditional, userLessons ->
+        storage.userLessons,
+        storage.userLessonsEnabled
+    ) { selected, cache, hideAdditional, userLessons, userLessonsOn ->
         val remote = if (selected == null) emptyList() else cache[selected.id] ?: emptyList()
         // Пользовательские пары идут ПЕРВЫМИ: при совпадении звонка карточка
-        // «Своя пара» должна открываться раньше пары из фида.
-        val userOccurrences = selected
-            ?.let { storage.userLessonsFor(it, userLessons) }
-            ?.let { expandUserLessons(it) }
-            .orEmpty()
+        // «Своя пара» должна открываться раньше пары из фида. Если свои пары
+        // выключены настройкой, они не подмешиваются вовсе (правила при этом
+        // остаются в хранилище — вернул тумблер, они вернулись).
+        val userOccurrences = if (userLessonsOn) {
+            selected
+                ?.let { storage.userLessonsFor(it, userLessons) }
+                ?.let { expandUserLessons(it) }
+                .orEmpty()
+        } else {
+            emptyList()
+        }
         val merged = userOccurrences + remote
         if (hideAdditional) merged.filter { it.lessonType != LessonType.ADDITIONAL }
         else merged
@@ -223,11 +237,16 @@ class ScheduleRepository(
         storage.savedTargets,
         storage.cachedLessons,
         storage.hideAdditionalLessons,
-        storage.userLessons
-    ) { targets, cache, hideAdditional, userLessons ->
+        storage.userLessons,
+        storage.userLessonsEnabled
+    ) { targets, cache, hideAdditional, userLessons, userLessonsOn ->
         targets.associate { target ->
             val remote = cache[target.id].orEmpty()
-            val userOccurrences = expandUserLessons(storage.userLessonsFor(target, userLessons))
+            val userOccurrences = if (userLessonsOn) {
+                expandUserLessons(storage.userLessonsFor(target, userLessons))
+            } else {
+                emptyList()
+            }
             val merged = userOccurrences + remote
             target.id to if (hideAdditional) {
                 merged.filter { it.lessonType != LessonType.ADDITIONAL }

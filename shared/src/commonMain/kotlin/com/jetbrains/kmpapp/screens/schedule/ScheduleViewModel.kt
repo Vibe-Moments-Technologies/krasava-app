@@ -50,6 +50,8 @@ class ScheduleViewModel(
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
     val qrButtonEnabled: StateFlow<Boolean> = repository.qrButtonEnabled
+    /** Редактирование расписания (свои пары): кнопка в шапке и сами пары. */
+    val userLessonsEnabled: StateFlow<Boolean> = repository.userLessonsEnabled
 
     private var lastAutoScrolledDate: LocalDate? = null
     private var lastAutoScrolledTargetId: Int? = null

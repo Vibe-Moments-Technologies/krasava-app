@@ -145,6 +145,9 @@ private fun ScheduleMainContent(
     val isVpnActive by viewModel.isVpnActive.collectAsState()
     val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
     val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
+    // Редактирование расписания (свои пары): настройка выключает и кнопку
+    // в шапке, и подмешивание правил в список (см. currentLessons).
+    val userLessonsEnabled by viewModel.userLessonsEnabled.collectAsState()
     var isVpnBannerDismissed by remember(isVpnActive, vpnWarningEnabled) { mutableStateOf(false) }
 
     var showAddSheet by remember { mutableStateOf(false) }
@@ -202,7 +205,7 @@ private fun ScheduleMainContent(
                 onSelectTarget = { viewModel.selectTarget(it) },
                 onDiffClick = { showDiffSheet = true },
                 onAddClick = { showAddSheet = true },
-                onAddUserLessonClick = if (selectedTarget != null) {
+                onAddUserLessonClick = if (selectedTarget != null && userLessonsEnabled) {
                     {
                         userLessonForm = UserLessonForm(date = selectedDate)
                         showUserLessonSheet = true

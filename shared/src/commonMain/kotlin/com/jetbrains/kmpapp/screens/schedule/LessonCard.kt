@@ -295,14 +295,18 @@ fun LessonCard(
                     }
                 }
 
+                // Если есть строка «N пар в это время», кнопка «скрыть»
+                // уезжает туда (владелец: «чтобы по красоте было») — иначе
+                // она остаётся на строке деталей. В обоих случаях отдельного
+                // пустого Row не появляется.
+                val detailsHideAction = if (pageIndicator == null) onHide else null
+
                 // Строка деталей: формат пары / аудитория / счётчик групп,
-                // а справа — кнопка «скрыть». Раньше кнопка стояла отдельной
-                // строкой под деталями и добавляла карточке пустую полосу
-                // снизу (баг с устройства владельца).
+                // а справа — кнопка «скрыть», если пагинатора нет.
                 val hasDetailsRow = lesson.isRemote ||
                     lesson.physicalClassrooms.isNotEmpty() ||
                     showGroupsCount ||
-                    onHide != null
+                    detailsHideAction != null
 
                 if (hasDetailsRow) {
                     Row(
@@ -367,9 +371,9 @@ fun LessonCard(
 
                         Spacer(modifier = Modifier.weight(1f))
 
-                        if (onHide != null) {
+                        if (detailsHideAction != null) {
                             IconButton(
-                                onClick = onHide,
+                                onClick = detailsHideAction,
                                 modifier = Modifier.size(28.dp)
                             ) {
                                 Icon(
@@ -412,35 +416,54 @@ fun LessonCard(
                     }
                 }
 
-                // Строка пагинатора — только для нескольких пар в одно время.
-                // Кнопка «скрыть» переехала на строку деталей выше: раньше
-                // она жила здесь и, когда пагинатора не было, оставляла
-                // под собой пустую полосу (баг с устройства владельца).
+                // Строка пагинатора «N пар в это время». Кнопка «скрыть» живёт здесь,
+                // когда строка есть: она прижата вправо, текст с точками —
+                // слева (владелец: «чтобы по красоте было»). Без пагинатора
+                // кнопка остаётся на строке деталей выше.
                 if (pageIndicator != null) {
                     val (total, current) = pageIndicator
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 10.dp)
                     ) {
-                        GlitchText(
-                            text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        repeat(total) { index ->
-                            Box(
-                                modifier = Modifier
-                                    .size(if (index == current) 6.dp else 4.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (index == current) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outlineVariant
-                                    )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            GlitchText(
+                                text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            repeat(total) { index ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(if (index == current) 6.dp else 4.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (index == current) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                )
+                            }
+                        }
+
+                        if (onHide != null) {
+                            IconButton(
+                                onClick = onHide,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VisibilityOff,
+                                    contentDescription = "Скрыть пару",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
                         }
                     }
                 }

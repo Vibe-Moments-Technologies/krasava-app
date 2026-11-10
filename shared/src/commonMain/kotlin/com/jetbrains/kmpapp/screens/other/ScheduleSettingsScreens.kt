@@ -55,12 +55,19 @@ fun ScheduleDisplaySettingsScreen(
     val hideAdditionalLessons by viewModel.hideAdditionalLessons.collectAsState()
     val showAbbreviatedNames by viewModel.showAbbreviatedNames.collectAsState()
     val autoScrollToCurrentLesson by viewModel.autoScrollToCurrentLesson.collectAsState()
+    val userLessonsEnabled by viewModel.userLessonsEnabled.collectAsState()
 
     SettingsSubScreen(
         title = "Отображение расписания",
         onBack = onBack,
         modifier = modifier
     ) {
+        SettingsToggleRow(
+            title = "Редактирование расписания",
+            subtitle = "Свои пары: кнопка в шапке и добавленные пары в списке",
+            checked = userLessonsEnabled,
+            onCheckedChange = { viewModel.setUserLessonsEnabled(it) }
+        )
         SettingsToggleRow(
             title = "Показывать пустые пары",
             subtitle = "Отображать окна между занятиями в списке пар",

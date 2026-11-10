@@ -220,9 +220,24 @@ fun ScheduleTopBar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Правая группа: кружок текущего дня (когда календарь свёрнут) + Add (+)
+        // Правая группа кнопок. Плюс «Добавить расписание» зафиксирован
+        // ПЕРВЫМ слева (требование владельца): он — главное действие шапки,
+        // а всё остальное (бейдж дня, своя пара, QR, «Другое») встаёт
+        // справа от него в порядке добавления.
         Row(verticalAlignment = Alignment.CenterVertically) {
+            FilledIconButton(
+                onClick = onAddClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Добавить расписание",
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
             if (calendarBadgeDay != null) {
+                Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -243,18 +258,6 @@ fun ScheduleTopBar(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-
-            FilledIconButton(
-                onClick = onAddClick,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Добавить расписание",
-                    modifier = Modifier.size(22.dp)
-                )
             }
 
             if (onAddUserLessonClick != null) {

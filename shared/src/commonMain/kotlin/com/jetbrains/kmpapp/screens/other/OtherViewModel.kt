@@ -147,6 +147,7 @@ class OtherViewModel(
     val hideAdditionalLessons: StateFlow<Boolean> = repository.hideAdditionalLessons
     val autoScrollToCurrentLesson: StateFlow<Boolean> = repository.autoScrollToCurrentLesson
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
+    val userLessonsEnabled: StateFlow<Boolean> = repository.userLessonsEnabled
     val themeMode: StateFlow<ThemeMode> = repository.themeMode
     val themeOverlay: StateFlow<ThemeOverlay> = repository.themeOverlay
     val isSakuraTheme: StateFlow<Boolean> = repository.isSakuraTheme
@@ -400,6 +401,10 @@ class OtherViewModel(
 
     fun setShowAbbreviatedNames(enabled: Boolean) {
         repository.setShowAbbreviatedNames(enabled)
+    }
+
+    fun setUserLessonsEnabled(enabled: Boolean) {
+        repository.setUserLessonsEnabled(enabled)
     }
 
     fun selectTarget(target: ScheduleTarget) {

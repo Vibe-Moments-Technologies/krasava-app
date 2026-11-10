@@ -106,6 +106,14 @@ class ScheduleStorage(
     private val _showAbbreviatedNames = MutableStateFlow<Boolean>(false)
     val showAbbreviatedNames: StateFlow<Boolean> = _showAbbreviatedNames.asStateFlow()
 
+    /**
+     * Разрешено ли редактирование расписания — свои пары (кнопка «Своя пара»
+     * в шапке и сами пары в списке). По умолчанию ВКЛЮЧЕНО (решение
+     * владельца); выключается в настройках для тех, кому нужен только фид.
+     */
+    private val _userLessonsEnabled = MutableStateFlow<Boolean>(true)
+    val userLessonsEnabled: StateFlow<Boolean> = _userLessonsEnabled.asStateFlow()
+
     private val _themeMode = MutableStateFlow<ThemeMode>(ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
 
@@ -290,6 +298,7 @@ class ScheduleStorage(
         _hideAdditionalLessons.value = loadBooleanFlag(KEY_HIDE_ADDITIONAL_LESSONS, false)
         _autoScrollToCurrentLesson.value = loadBooleanFlag(KEY_AUTO_SCROLL_CURRENT_LESSON, true)
         _showAbbreviatedNames.value = loadBooleanFlag(KEY_SHOW_ABBREVIATED_NAMES, false)
+        _userLessonsEnabled.value = loadBooleanFlag(KEY_USER_LESSONS_ENABLED, true)
         _themeOverlay.value = loadThemeOverlay()
         _unlockedThemes.value = loadUnlockedThemes()
         _lessonTypeColors.value = loadLessonTypeColors()
@@ -550,6 +559,22 @@ class ScheduleStorage(
                 platformStorage.saveString(KEY_HIDE_ADDITIONAL_LESSONS, enabled.toString())
             } catch (e: Exception) {
                 println("Failed to persist hideAdditionalLessons: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Разрешить/запретить свои пары. Выключение только прячет возможность
+     * (кнопку и сами пары), сохранённые правила НЕ удаляются: вернул
+     * тумблер — всё вернулось.
+     */
+    fun setUserLessonsEnabled(enabled: Boolean) {
+        _userLessonsEnabled.value = enabled
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_USER_LESSONS_ENABLED, enabled.toString())
+            } catch (e: Exception) {
+                println("Failed to persist userLessonsEnabled: ${e.message}")
             }
         }
     }
@@ -1235,6 +1260,8 @@ class ScheduleStorage(
         _hideAdditionalLessons.value = false
         _autoScrollToCurrentLesson.value = true
         _showAbbreviatedNames.value = false
+        // Свои пары: дефолт — включено (решение владельца).
+        _userLessonsEnabled.value = true
         // Пользовательские цвета занятий — тоже настройка, сбрасывается
         // вместе с остальными (в исходной ветке этот ключ забывали).
         _lessonTypeColors.value = emptyMap()
@@ -1274,6 +1301,7 @@ class ScheduleStorage(
             platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, notifyMinutesBeforeBefore.toString())
             platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, askBeforeNoteDeleteBefore.toString())
             platformStorage.saveString(KEY_DOCK_HIDDEN, false.toString())
+            platformStorage.saveString(KEY_USER_LESSONS_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTES, json.encodeToString(_notePages.value))
         }
     }
@@ -1355,6 +1383,7 @@ class ScheduleStorage(
         private const val KEY_HIDE_ADDITIONAL_LESSONS = "krasava_hide_additional_lessons"
         private const val KEY_AUTO_SCROLL_CURRENT_LESSON = "krasava_auto_scroll_current_lesson"
         private const val KEY_SHOW_ABBREVIATED_NAMES = "krasava_show_abbreviated_names"
+        private const val KEY_USER_LESSONS_ENABLED = "krasava_user_lessons_enabled"
         private const val KEY_APP_THEME = "krasava_app_theme"
         private const val KEY_DOCK_TABS = "krasava_dock_tabs_order"
         private const val KEY_DOCK_HIDDEN = "krasava_dock_hidden"
