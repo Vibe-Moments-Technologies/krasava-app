@@ -166,6 +166,8 @@ class ScheduleRepository(
     val isNewYearTheme: StateFlow<Boolean> = storage.isNewYearTheme
     /** Новый год сейчас активен: сезон без отказа или ручное включение. */
     val isNewYearActive: StateFlow<Boolean> = storage.isNewYearActive
+    /** Строка Нового года видна после первой активации темы. */
+    val isNewYearRowVisible: StateFlow<Boolean> = storage.isNewYearRowVisible
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
     val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = storage.lessonTypeColors

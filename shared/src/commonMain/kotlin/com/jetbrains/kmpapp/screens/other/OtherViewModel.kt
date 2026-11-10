@@ -164,6 +164,8 @@ class OtherViewModel(
     val isHalloweenRowVisible: StateFlow<Boolean> = repository.isHalloweenRowVisible
     /** Новый год действует прямо сейчас: сезон без отказа или включён вручную. */
     val isNewYearActive: StateFlow<Boolean> = repository.isNewYearActive
+    /** Строка Нового года видна после первой активации темы. */
+    val isNewYearRowVisible: StateFlow<Boolean> = repository.isNewYearRowVisible
     /** Темы, найденные квестами: только они плюс Сакура видны в списке. */
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
