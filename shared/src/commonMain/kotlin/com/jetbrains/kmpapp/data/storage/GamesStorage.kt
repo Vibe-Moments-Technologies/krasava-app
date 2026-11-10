@@ -69,6 +69,9 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     private val _smallCellHintEnabled = MutableStateFlow(false)
     val smallCellHintEnabled: StateFlow<Boolean> = _smallCellHintEnabled.asStateFlow()
 
+    private val _shadowBattle = MutableStateFlow(false)
+    val shadowBattle: StateFlow<Boolean> = _shadowBattle.asStateFlow()
+
     private val _tetrisControlVariant = MutableStateFlow(TetrisControlVariant.TYPE_1)
     val tetrisControlVariant: StateFlow<TetrisControlVariant> = _tetrisControlVariant.asStateFlow()
 
@@ -78,6 +81,7 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     init {
         _boardVertical.value = readBool(BOARD_VERTICAL_KEY) ?: true
         _smallCellHintEnabled.value = readBool(SMALL_CELL_HINT_KEY) ?: false
+        _shadowBattle.value = readBool(SHADOW_BATTLE_KEY) ?: false
         _tetrisRecord.value = readTetrisRecord()
         _tetrisControlVariant.value = readTetrisControlVariant()
         _tetrisDifficulty.value = readTetrisDifficulty()
@@ -112,6 +116,16 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         if (_smallCellHintEnabled.value == enabled) return
         _smallCellHintEnabled.value = enabled
         persistBool(SMALL_CELL_HINT_KEY, enabled)
+    }
+
+    /**
+     * «Бой с тенью»: открытые клетки видны только секунду после хода,
+     * затем снова выглядят закрытыми.
+     */
+    fun setShadowBattle(enabled: Boolean) {
+        if (_shadowBattle.value == enabled) return
+        _shadowBattle.value = enabled
+        persistBool(SHADOW_BATTLE_KEY, enabled)
     }
 
     /** Рекорд по ключу; при первом обращении читается с устройства. */
@@ -378,6 +392,7 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     companion object {
         private const val BOARD_VERTICAL_KEY = "games_settings_board_vertical"
         private const val SMALL_CELL_HINT_KEY = "games_settings_small_cell_hint"
+        private const val SHADOW_BATTLE_KEY = "games_settings_minesweeper_shadow_battle"
         private const val TETRIS_CONTROL_VARIANT_KEY = "games_settings_tetris_control_variant"
         private const val TETRIS_DIFFICULTY_KEY = "games_settings_tetris_difficulty"
 

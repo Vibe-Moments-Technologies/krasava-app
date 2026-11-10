@@ -81,9 +81,11 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     /** Настройки «Сапера» из хранилища: доступны и с экрана настроек. */
     val boardVertical: StateFlow<Boolean> = gamesStorage.boardVertical
     val smallCellHintEnabled: StateFlow<Boolean> = gamesStorage.smallCellHintEnabled
+    val shadowBattle: StateFlow<Boolean> = gamesStorage.shadowBattle
 
     fun setBoardVertical(enabled: Boolean) = gamesStorage.setBoardVertical(enabled)
     fun setSmallCellHintEnabled(enabled: Boolean) = gamesStorage.setSmallCellHintEnabled(enabled)
+    fun setShadowBattle(enabled: Boolean) = gamesStorage.setShadowBattle(enabled)
 
     /** Настройки «Тетриса» из хранилища: вариант управления и сложность. */
     val tetrisControlVariant: StateFlow<TetrisControlVariant> = gamesStorage.tetrisControlVariant
@@ -209,12 +211,23 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
 
     // Ходы
 
-    /** Тап по клетке: раскрывает её, либо ставит флаг в режиме флага. */
+    /**
+     * Тап по клетке в обычном режиме раскрывает её. В режиме флага тап ставит
+     * флаг, но по раскрытой цифре с уже выставленными флагами сразу открывает
+     * соседей — без второго тапа.
+     */
     fun onCellClick(index: Int) {
         val x = index % boardW
         val y = index / boardW
         if (_flagMode.value) {
-            onCellLongClick(index)
+            val current = _board.value
+            if (current == null) {
+                // Флагать ещё нечего: первый ход всегда раскрывает клетку.
+                onCellClick(x, y)
+                return
+            }
+            if (tryChord(current, x, y)) return
+            toggleFlagAt(x, y)
             return
         }
         onCellClick(x, y)
@@ -223,8 +236,7 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
     /**
      * Тап по клетке: если это флаг — просто снимает его, не открывая мину под
      * ним. Если вокруг раскрытой цифры помечены все соседние мины — раскрываются
-     * непомеченные соседи (chord). В противном случае клетка раскрывается
-     * (или ставит флаг в режиме флага через [onCellClick]).
+     * непомеченные соседи (chord). В противном случае клетка раскрывается.
      */
     fun onCellClick(x: Int, y: Int) {
         val current = _board.value ?: return onFirstClick(x, y)
@@ -238,8 +250,15 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         revealAt(current, x, y)
     }
 
-    /** Долгое нажатие: поставить или снять флаг. */
+    /**
+     * Долгое нажатие в обычном режиме ставит флаг. В режиме флага, наоборот,
+     * открывает клетку — как обычный тап в обычном режиме.
+     */
     fun onCellLongClick(index: Int) {
+        if (_flagMode.value) {
+            onCellClick(index % boardW, index / boardW)
+            return
+        }
         toggleFlagAt(index % boardW, index / boardW)
     }
 

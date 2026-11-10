@@ -79,15 +79,14 @@ import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.math.abs
 import kotlin.math.floor
 
 /**
  * Игра «Сапер». Поле рисуется одним Canvas: тап открывает клетку (а по
  * раскрытой цифре, вокруг которой собраны все флаги, — открывает остаток
- * области), долгое нажатие ставит флаг сразу при удержании. Щипок
- * масштабирует поле, перетаскивание двигает его по экрану; кнопка в шапке
- * возвращает исходный размер.
+ * области), долгое нажатие ставит флаг сразу при удержании, а в режиме
+ * флага — открывает клетку. Щипок масштабирует поле, перетаскивание двигает
+ * его по экрану; кнопка в шапке возвращает исходный размер.
  */
 @Composable
 fun MinesweeperScreen(
@@ -100,10 +99,10 @@ fun MinesweeperScreen(
     val elapsed by viewModel.elapsedSeconds.collectAsState()
     val flagMode by viewModel.flagMode.collectAsState()
     val difficulty by viewModel.difficulty.collectAsState()
-    val boomIndex by viewModel.boomIndex.collectAsState()
     val errorTheme by viewModel.errorActive.collectAsState()
     val verticalBoard by viewModel.boardVertical.collectAsState()
     val smallCellHintEnabled by viewModel.smallCellHintEnabled.collectAsState()
+    val shadowBattle by viewModel.shadowBattle.collectAsState()
 
     // Эффективные размеры поля с учётом настройки «вертикальная доска».
     // До первого хода доски нет — берём размеры варианта; после — фактические
@@ -200,11 +199,11 @@ fun MinesweeperScreen(
                 height = fieldHeight,
                 board = board,
                 status = status,
-                boomIndex = boomIndex,
                 scheme = scheme,
                 errorTheme = errorTheme,
                 zoomResetRequest = zoomResetTick,
                 smallCellHintEnabled = smallCellHintEnabled,
+                shadowBattle = shadowBattle,
                 onCellClick = { viewModel.onCellClick(it) },
                 onCellLongClick = { viewModel.onCellLongClick(it) },
                 onCellDoubleClick = { viewModel.onCellDoubleClick(it) }
@@ -243,7 +242,7 @@ fun MinesweeperScreen(
                     label = { GlitchText(if (flagMode) "Режим флага" else "Обычный режим") }
                 )
                 GlitchText(
-                    text = "Долгое нажатие — флаг",
+                    text = if (flagMode) "Тап — флаг, долгое — открыть" else "Долгое нажатие — флаг",
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurfaceVariant
                 )
@@ -336,6 +335,9 @@ private const val RevealAnimMillis = 180f
 private const val FlagAnimMillis = 260f
 private const val DoubleTapMillis = 320L
 
+/** «Бой с тенью»: сколько открытые клетки остаются видимыми после хода. */
+private const val ShadowRevealMillis = 1_000L
+
 /** Зона у левого края, где живёт свайп «назад»: там поле не перетаскиваем. */
 private val EdgeSwipeZonePx = 200f
 
@@ -355,11 +357,11 @@ private fun MinesweeperField(
     height: Int,
     board: MinesweeperBoard?,
     status: MinesweeperStatus,
-    boomIndex: Int?,
     scheme: ColorScheme,
     errorTheme: Boolean,
     zoomResetRequest: Long = 0,
     smallCellHintEnabled: Boolean = false,
+    shadowBattle: Boolean = false,
     onCellClick: (Int) -> Unit,
     onCellLongClick: (Int) -> Unit,
     onCellDoubleClick: (Int) -> Unit
@@ -379,12 +381,15 @@ private fun MinesweeperField(
     var framesNeeded by remember { mutableStateOf(false) }
     val animClock = remember { mutableLongStateOf(0L) }
 
+    // «Бой с тенью»: время последнего хода, когда открытые клетки ещё видны.
+    var shadowShownAt by remember { mutableStateOf(Long.MIN_VALUE) }
+    val shadowActive = shadowBattle && status == MinesweeperStatus.PLAYING
+
     // Метки времени раскрытия и установки флага: по ним рисуются анимации.
     var revealAt by remember { mutableStateOf(LongArray(0)) }
     var flagAt by remember { mutableStateOf(LongArray(0)) }
     var prevRevealed = remember { BooleanArray(0) }
     var prevFlagged = remember { BooleanArray(0) }
-    var lastActionIndex by remember { mutableStateOf(-1) }
 
     var pressedCell by remember { mutableStateOf(-1) }
     var pressedSince by remember { mutableStateOf<TimeMark?>(null) }
@@ -470,7 +475,7 @@ private fun MinesweeperField(
             )
         }
 
-        LaunchedEffect(board, status) {
+        LaunchedEffect(board, status, shadowBattle) {
             val b = board ?: return@LaunchedEffect
             val total = b.width * b.height
             if (prevRevealed.size != total) {
@@ -480,25 +485,14 @@ private fun MinesweeperField(
                 flagAt = LongArray(total) { Long.MIN_VALUE }
             }
             val now = withFrameNanos { it }
-            val loss = status == MinesweeperStatus.LOST
-            val win = status == MinesweeperStatus.WON
+            // Часы анимации обновляем сразу: иначе после хода кадр может
+            // отрисоваться со старым временем и показать открытые клетки
+            // закрытыми до следующего касания.
+            animClock.longValue = now
+            shadowShownAt = if (shadowActive) now else Long.MIN_VALUE
             for (i in 0 until total) {
                 val cell = b.cells[i]
-                if (cell.isRevealed && !prevRevealed[i]) {
-                    // Каскад раскрытия идёт от клетки хода; при проигрыше —
-                    // от подорванной мины, при победе флаги встают волной.
-                    val delay = when {
-                        loss && cell.isMine && boomIndex != null ->
-                            minOf(chebyshev(boomIndex, i, b.width) * 25L, 500L)
-                        win -> minOf((cell.x + cell.y) * 6L, 400L)
-                        else -> if (lastActionIndex in 0 until total) {
-                            minOf(chebyshev(lastActionIndex, i, b.width) * 12L, 300L)
-                        } else {
-                            0L
-                        }
-                    }
-                    revealAt[i] = now + delay
-                }
+                if (cell.isRevealed && !prevRevealed[i]) revealAt[i] = now
                 if (cell.isFlagged && !prevFlagged[i]) flagAt[i] = now
                 prevRevealed[i] = cell.isRevealed
                 prevFlagged[i] = cell.isFlagged
@@ -518,10 +512,16 @@ private fun MinesweeperField(
                     since.elapsedNow().inWholeMilliseconds >= longPressMs
                 ) {
                     longFiredCell = pressed
-                    lastActionIndex = pressed
                     onCellLongClick(pressed)
                 }
-                framesNeeded = hasActiveAnimations(animClock.longValue, revealAt, flagAt, pressedCell)
+                framesNeeded = hasActiveAnimations(
+                    now = animClock.longValue,
+                    revealAt = revealAt,
+                    flagAt = flagAt,
+                    pressedCell = pressedCell,
+                    shadowActive = shadowActive,
+                    shadowShownAt = shadowShownAt
+                )
             }
         }
 
@@ -673,12 +673,10 @@ private fun MinesweeperField(
                             if (downCell != null && upCell == downCell && longFiredCell != downCell) {
                                 if (lastTapCell == downCell && upTime - lastTapTime < DoubleTapMillis) {
                                     lastTapCell = -1
-                                    lastActionIndex = downCell
                                     onCellDoubleClick(downCell)
                                 } else {
                                     lastTapCell = downCell
                                     lastTapTime = upTime
-                                    lastActionIndex = downCell
                                     onCellClick(downCell)
                                 }
                             }
@@ -688,6 +686,8 @@ private fun MinesweeperField(
                 }
         ) {
             val now = animClock.longValue
+            val shadowHidden = shadowActive && shadowShownAt != Long.MIN_VALUE &&
+                (now - shadowShownAt).coerceAtLeast(0L) >= ShadowRevealMillis
             val basePx = baseCell.toPx()
             val cellPx = basePx * zoom
             val boardW = cellPx * width
@@ -727,6 +727,7 @@ private fun MinesweeperField(
                             revealStart = revealAt.getOrElse(index) { Long.MIN_VALUE },
                             flagStart = flagAt.getOrElse(index) { Long.MIN_VALUE },
                             now = now,
+                            revealVisible = !shadowHidden,
                             scheme = scheme,
                             errorTheme = errorTheme,
                             glyphs = glyphLayouts
@@ -864,9 +865,16 @@ private fun hasActiveAnimations(
     now: Long,
     revealAt: LongArray,
     flagAt: LongArray,
-    pressedCell: Int
+    pressedCell: Int,
+    shadowActive: Boolean,
+    shadowShownAt: Long
 ): Boolean {
     if (pressedCell >= 0) return true
+    if (shadowActive && shadowShownAt != Long.MIN_VALUE &&
+        now - shadowShownAt < ShadowRevealMillis
+    ) {
+        return true
+    }
     for (i in revealAt.indices) {
         val s = revealAt[i]
         if (s != Long.MIN_VALUE && now - s < RevealAnimMillis) return true
@@ -876,15 +884,6 @@ private fun hasActiveAnimations(
         if (s != Long.MIN_VALUE && now - s < FlagAnimMillis) return true
     }
     return false
-}
-
-/** Расстояние Чебышёва между клетками — как распространяется волна раскрытия. */
-private fun chebyshev(a: Int, b: Int, width: Int): Int {
-    val ax = a % width
-    val ay = a / width
-    val bx = b % width
-    val by = b / width
-    return maxOf(abs(ax - bx), abs(ay - by))
 }
 
 private fun centroid(changes: List<PointerInputChange>): Offset {
@@ -917,11 +916,12 @@ private fun DrawScope.drawCell(
     revealStart: Long,
     flagStart: Long,
     now: Long,
+    revealVisible: Boolean,
     scheme: ColorScheme,
     errorTheme: Boolean,
     glyphs: Map<String, TextLayoutResult>
 ) {
-    val revealed = cell?.isRevealed == true
+    val revealed = cell?.isRevealed == true && revealVisible
     val isMine = cell?.isMine == true
     val flagged = cell?.isFlagged == true
 

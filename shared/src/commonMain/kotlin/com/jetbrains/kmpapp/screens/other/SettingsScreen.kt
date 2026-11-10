@@ -471,7 +471,7 @@ fun SettingsScreen(
             ) {
                 SettingsNavigationRow(
                     title = "Сапер",
-                    subtitle = "Ориентация доски, предупреждение о мелких клетках",
+                    subtitle = "Ориентация доски, мелкие клетки и «Бой с тенью»",
                     onClick = onOpenSaperSettings
                 )
                 HorizontalDivider(
