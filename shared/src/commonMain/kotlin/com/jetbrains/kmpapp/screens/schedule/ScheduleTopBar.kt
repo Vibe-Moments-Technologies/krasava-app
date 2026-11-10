@@ -217,24 +217,12 @@ fun ScheduleTopBar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Правая группа кнопок. Плюс «Добавить расписание» зафиксирован
-        // ПЕРВЫМ слева (требование владельца): он — главное действие шапки,
-        // а всё остальное (бейдж дня, своя пара, QR, «Другое») встаёт
-        // справа от него в порядке добавления.
+        // Правая группа кнопок. Плюс «Добавить расписание» прижат к ПРАВОМУ
+        // краю (требование владельца) и стоит последним: все остальные
+        // кнопки идут левее него, а новые добавляются в том же направлении.
+        // Выборщик группы при этом остаётся слева, как и был.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            FilledIconButton(
-                onClick = onAddClick,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Добавить расписание",
-                    modifier = Modifier.size(22.dp)
-                )
-            }
-
             if (calendarBadgeDay != null) {
-                Spacer(modifier = Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
                         .size(40.dp)
@@ -255,10 +243,10 @@ fun ScheduleTopBar(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             if (onAddUserLessonClick != null) {
-                Spacer(modifier = Modifier.width(8.dp))
                 FilledTonalIconButton(
                     onClick = onAddUserLessonClick,
                     modifier = Modifier.size(40.dp)
@@ -269,10 +257,10 @@ fun ScheduleTopBar(
                         modifier = Modifier.size(22.dp)
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             if (onQrScannerClick != null) {
-                Spacer(modifier = Modifier.width(8.dp))
                 FilledIconButton(
                     onClick = onQrScannerClick,
                     modifier = Modifier.size(40.dp)
@@ -283,6 +271,19 @@ fun ScheduleTopBar(
                         modifier = Modifier.size(22.dp)
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
+            // Крайняя правая кнопка — «плюс».
+            FilledIconButton(
+                onClick = onAddClick,
+                modifier = Modifier.size(40.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Добавить расписание",
+                    modifier = Modifier.size(22.dp)
+                )
             }
         }
     }
