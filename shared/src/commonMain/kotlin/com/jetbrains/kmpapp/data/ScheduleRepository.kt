@@ -63,7 +63,6 @@ class ScheduleRepository(
     val showEmptyLessons: StateFlow<Boolean> = storage.showEmptyLessons
     val themeMode: StateFlow<ThemeMode> = storage.themeMode
     val dockTabs: StateFlow<List<com.jetbrains.kmpapp.screens.components.AppTab>> = storage.dockTabs
-    val dockHidden: StateFlow<Boolean> = storage.dockHidden
     val notePages: StateFlow<List<com.jetbrains.kmpapp.data.model.NotePage>> = storage.notePages
 
     fun updateNotePages(pages: List<com.jetbrains.kmpapp.data.model.NotePage>) {
@@ -72,10 +71,6 @@ class ScheduleRepository(
 
     fun setDockTabs(tabs: List<com.jetbrains.kmpapp.screens.components.AppTab>) {
         storage.setDockTabs(tabs)
-    }
-
-    fun setDockHidden(hidden: Boolean) {
-        storage.setDockHidden(hidden)
     }
 
     private val _activeDiff = MutableStateFlow<ScheduleDiff?>(null)

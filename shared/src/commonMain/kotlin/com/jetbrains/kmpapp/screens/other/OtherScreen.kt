@@ -237,14 +237,12 @@ private fun OtherMainContent(
     val isCheckingUpdate by viewModel.isCheckingUpdate.collectAsState()
     val updateResult by viewModel.updateResult.collectAsState()
     val dockTabs by viewModel.dockTabs.collectAsState()
-    val dockHidden by viewModel.dockHidden.collectAsState()
     val uriHandler = LocalUriHandler.current
-    val hiddenTabs = remember(dockTabs, dockHidden) {
+    // Сервисы, которых нет на панели, показываются блоками здесь. Панель
+    // навигации больше нельзя скрыть целиком (функцию убрали), поэтому
+    // самого док-скрытия в условии нет.
+    val hiddenTabs = remember(dockTabs) {
         when {
-            // Док скрыт: все сервисы живут блоками здесь. «Расписание» и
-            // «Другое» — фиксированные вкладки, не сервисы (isService),
-            // контейнер «Сервисы» дублировал бы сам блок.
-            dockHidden -> AppTab.entries.filter { it.isService }
             // Если раздел «Сервисы» в доке — блок в «Другом» скрыт целиком
             // (правило владельца), вне зависимости от остальных вкладок.
             dockTabs.take(5).contains(AppTab.SERVICES) -> emptyList()

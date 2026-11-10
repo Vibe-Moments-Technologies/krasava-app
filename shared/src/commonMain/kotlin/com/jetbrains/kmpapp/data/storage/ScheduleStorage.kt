@@ -120,10 +120,6 @@ class ScheduleStorage(
     private val _dockTabs = MutableStateFlow<List<AppTab>>(DEFAULT_DOCK_TABS)
     val dockTabs: StateFlow<List<AppTab>> = _dockTabs.asStateFlow()
 
-    /** Док скрыт целиком: «Другое» открывается шестерёнкой на странице расписания. */
-    private val _dockHidden = MutableStateFlow(false)
-    val dockHidden: StateFlow<Boolean> = _dockHidden.asStateFlow()
-
     private val _themeOverlay = MutableStateFlow(ThemeOverlay.NONE)
     val themeOverlay: StateFlow<ThemeOverlay> = _themeOverlay.asStateFlow()
 
@@ -325,7 +321,10 @@ class ScheduleStorage(
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
-        _dockHidden.value = loadBooleanFlag(KEY_DOCK_HIDDEN, false)
+        // Миграция: раньше панель навигации можно было скрыть, и «Другое»
+        // открывалось шестерёнкой. Функцию убрали — дочищаем оставшийся
+        // ключ, чтобы он не тянулся в бэкапах и статистике.
+        platformStorage.remove(KEY_DOCK_HIDDEN)
     }
 
     private fun loadBooleanFlag(key: String, default: Boolean): Boolean = try {
@@ -954,17 +953,6 @@ class ScheduleStorage(
         }
     }
 
-    fun setDockHidden(hidden: Boolean) {
-        _dockHidden.value = hidden
-        scope.launch {
-            try {
-                platformStorage.saveString(KEY_DOCK_HIDDEN, hidden.toString())
-            } catch (e: Exception) {
-                println("Failed to persist dock hidden flag: ${e.message}")
-            }
-        }
-    }
-
     private fun sanitizeDockTabs(tabs: List<AppTab>): List<AppTab> {
         return try {
             var middle = tabs.filter { !it.isFixed }.distinct().take(3)
@@ -1270,7 +1258,6 @@ class ScheduleStorage(
         _cyberpunkVariant.value = CyberpunkVariant.DEFAULT
         _themeMode.value = ThemeMode.SYSTEM
         _dockTabs.value = DEFAULT_DOCK_TABS
-        _dockHidden.value = false
         // Дефолт после сброса — розовая тема включена (решение владельца).
         // Отказ от сезона тоже стирается: сброс возвращает заводское
         // поведение, а не фиксирует прошлое решение пользователя.
@@ -1300,7 +1287,7 @@ class ScheduleStorage(
             platformStorage.saveString(KEY_VPN_WARNING_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, notifyMinutesBeforeBefore.toString())
             platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, askBeforeNoteDeleteBefore.toString())
-            platformStorage.saveString(KEY_DOCK_HIDDEN, false.toString())
+            platformStorage.remove(KEY_DOCK_HIDDEN)
             platformStorage.saveString(KEY_USER_LESSONS_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTES, json.encodeToString(_notePages.value))
         }

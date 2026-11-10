@@ -31,7 +31,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -76,8 +75,6 @@ fun ScheduleTopBar(
     calendarBadgeDay: Int? = null,
     onCalendarBadgeClick: () -> Unit = {},
     onCalendarBadgeLongClick: () -> Unit = {},
-    // Видна при скрытом доке: открывает «Другое» подстраницей расписания.
-    onOpenOtherClick: (() -> Unit)? = null,
     // Кнопка сканера QR (настройка «Дополнительный функционал»): быстрый
     // доступ к отметке на «Пульсе» прямо с экрана расписания.
     onQrScannerClick: (() -> Unit)? = null
@@ -283,20 +280,6 @@ fun ScheduleTopBar(
                     Icon(
                         imageVector = Icons.Default.QrCodeScanner,
                         contentDescription = "Сканер QR",
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
-
-            if (onOpenOtherClick != null) {
-                Spacer(modifier = Modifier.width(8.dp))
-                FilledIconButton(
-                    onClick = onOpenOtherClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Другое",
                         modifier = Modifier.size(22.dp)
                     )
                 }

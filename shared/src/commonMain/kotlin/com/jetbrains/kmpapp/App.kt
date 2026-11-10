@@ -119,7 +119,6 @@ fun App() {
     val themeMode by repository.themeMode.collectAsState()
     val themeOverlay by repository.themeOverlay.collectAsState()
     val dockTabs by repository.dockTabs.collectAsState()
-    val dockHidden by repository.dockHidden.collectAsState()
     // Пользовательские цвета типов занятий: пробрасываются вниз через
     // LocalLessonTypeOverrides, чтобы бейджи и точки календаря перерисовывались
     // сразу после выбора цвета.
@@ -377,34 +376,6 @@ fun App() {
             }
 
             Box(modifier = Modifier.fillMaxSize()) {
-                if (dockHidden) {
-                    // Док скрыт: корень — расписание, «Другое» — его дочерний
-                    // слой (шестерёнка в топбаре, назад — стрелка/свайп/системная).
-                    // Единый источник истины — currentTab: при переключении
-                    // тумблера из «Другого» нет кадра-вспышки другой страницы.
-                    LayeredNavHost(
-                        screen = if (currentTab == AppTab.OTHER) AppTab.OTHER else null,
-                        parentScreen = null,
-                        onBackToParent = { currentTab = AppTab.SCHEDULE },
-                        // Только на момент создания ветки: если док скрыли,
-                        // уже находясь в «Другом», — показать сразу, без въезда.
-                        initiallyRevealed = remember { currentTab == AppTab.OTHER },
-                        rootContent = {
-                            ScheduleScreen(
-                                viewModel = scheduleViewModel,
-                                onOpenOther = { currentTab = AppTab.OTHER }
-                            )
-                        },
-                        screenContent = { _, back ->
-                            OtherScreen(
-                                viewModel = otherViewModel,
-                                gamesViewModel = gamesViewModel,
-                                onNavigateToTab = { currentTab = it },
-                                onBack = back
-                            )
-                        }
-                    )
-                } else {
                 Crossfade(targetState = currentTab) { tab ->
                     when (tab) {
                         AppTab.SCHEDULE -> {
@@ -530,7 +501,6 @@ fun App() {
                         backModeTab = backModeTab,
                         modifier = Modifier.align(Alignment.BottomCenter)
                     )
-                }
                 }
 
                 // Однотонные поверхности приложения во время темы Error дают

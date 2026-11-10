@@ -75,8 +75,6 @@ import kotlin.math.abs
 fun ScheduleScreen(
     viewModel: ScheduleViewModel,
     modifier: Modifier = Modifier,
-    // Не null при скрытом доке: шестерёнка в топбаре открывает «Другое».
-    onOpenOther: (() -> Unit)? = null,
     // Значок QR в шапке: переход в раздел сканера (не null, когда
     // настройка «Кнопка сканера QR» включена).
     onOpenQrScanner: (() -> Unit)? = null
@@ -92,7 +90,6 @@ fun ScheduleScreen(
         rootContent = {
             ScheduleMainContent(
                 viewModel = viewModel,
-                onOpenOther = onOpenOther,
                 onOpenQrScanner = onOpenQrScanner
             )
         },
@@ -116,7 +113,6 @@ fun ScheduleScreen(
 private fun ScheduleMainContent(
     viewModel: ScheduleViewModel,
     modifier: Modifier = Modifier,
-    onOpenOther: (() -> Unit)? = null,
     onOpenQrScanner: (() -> Unit)? = null
 ) {
     val savedTargets by viewModel.savedTargets.collectAsState()
@@ -214,7 +210,6 @@ private fun ScheduleMainContent(
                 calendarBadgeDay = if (selectedTarget != null && calendarCollapsed) selectedDate.day else null,
                 onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
                 onCalendarBadgeLongClick = { showMonthPicker = true },
-                onOpenOtherClick = onOpenOther,
                 // Шапка: значок QR открывает РАЗДЕЛ сканера (не оверлей)
                 // — когда колбэк передан и настройка включена.
                 onQrScannerClick = if (qrButtonEnabled) {
