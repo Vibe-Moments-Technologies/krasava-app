@@ -259,31 +259,21 @@ fun LessonCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Details: show the useful entity for the selected schedule target.
-                val groupsText = lesson.groups.joinToString(", ")
-                val showGroupsAsTeacherReplacement = scheduleTargetType == ScheduleTargetType.TEACHER && lesson.groups.isNotEmpty()
+                // Счётчик групп вместо перечисления названий: список
+                // обрезался («видно одну и часть второй»), а число читается
+                // сразу. В расписании самой группы единица ничего не
+                // добавляет — она и есть выбранное расписание, поэтому там
+                // счётчик появляется только при нескольких группах.
+                val showGroupsCount = when {
+                    lesson.groups.isEmpty() -> false
+                    scheduleTargetType == ScheduleTargetType.GROUP -> lesson.groups.size > 1
+                    else -> true
+                }
 
-                if (showGroupsAsTeacherReplacement) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Group,
-                            contentDescription = "Группы",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        GlitchText(
-                            text = groupsText,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                } else if (lesson.teachers.isNotEmpty()) {
+                // Для расписания преподавателя группы важнее его самого —
+                // он и так известен, поэтому строка «преподаватель» не
+                // рисуется. Осталась строка с аудиторией/форматом.
+                if (lesson.teachers.isNotEmpty() && scheduleTargetType != ScheduleTargetType.TEACHER) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(vertical = 2.dp)
@@ -305,28 +295,21 @@ fun LessonCard(
                     }
                 }
 
-                if (lesson.classrooms.isNotEmpty() || lesson.groups.size > 1) {
+                // Строка деталей: формат пары / аудитория / счётчик групп,
+                // а справа — кнопка «скрыть». Раньше кнопка стояла отдельной
+                // строкой под деталями и добавляла карточке пустую полосу
+                // снизу (баг с устройства владельца).
+                val hasDetailsRow = lesson.isRemote ||
+                    lesson.physicalClassrooms.isNotEmpty() ||
+                    showGroupsCount ||
+                    onHide != null
+
+                if (hasDetailsRow) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (scheduleTargetType == ScheduleTargetType.AUDITORIUM && lesson.groups.isNotEmpty()) {
-                            Icon(
-                                imageVector = Icons.Default.Group,
-                                contentDescription = "Группы",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            GlitchText(
-                                text = groupsText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
-                        } else if (lesson.isRemote) {
+                        if (lesson.isRemote) {
                             // «СДО» из фида — это сайт вуза
                             // (online-edu.mirea.ru), не корпус и не аудитория:
                             // рисуем подпись дистанционной пары, а не строку
@@ -359,28 +342,43 @@ fun LessonCard(
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
 
-                        if (scheduleTargetType == ScheduleTargetType.GROUP && lesson.groups.size > 1) {
-                            Spacer(modifier = Modifier.width(16.dp))
+                        if (showGroupsCount) {
+                            if (lesson.isRemote || lesson.physicalClassrooms.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(14.dp))
+                            }
                             Icon(
                                 imageVector = Icons.Default.Group,
-                                contentDescription = "Группы",
+                                contentDescription = "Групп на паре",
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(15.dp)
                             )
                             Spacer(modifier = Modifier.width(5.dp))
                             GlitchText(
-                                text = groupsText,
+                                text = groupsCountLabel(lesson.groups.size),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                maxLines = 1
                             )
+                        }
+
+                        Spacer(modifier = Modifier.weight(1f))
+
+                        if (onHide != null) {
+                            IconButton(
+                                onClick = onHide,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.VisibilityOff,
+                                    contentDescription = "Скрыть пару",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -414,54 +412,35 @@ fun LessonCard(
                     }
                 }
 
-                if (pageIndicator != null || onHide != null) {
+                // Строка пагинатора — только для нескольких пар в одно время.
+                // Кнопка «скрыть» переехала на строку деталей выше: раньше
+                // она жила здесь и, когда пагинатора не было, оставляла
+                // под собой пустую полосу (баг с устройства владельца).
+                if (pageIndicator != null) {
+                    val (total, current) = pageIndicator
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 10.dp)
                     ) {
-                        if (pageIndicator != null) {
-                            val (total, current) = pageIndicator
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                GlitchText(
-                                    text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                                repeat(total) { index ->
-                                    Box(
-                                        modifier = Modifier
-                                            .size(if (index == current) 6.dp else 4.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (index == current) MaterialTheme.colorScheme.primary
-                                                else MaterialTheme.colorScheme.outlineVariant
-                                            )
+                        GlitchText(
+                            text = "$total ${if (total in 2..4) "пары" else "пар"} в это время",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        repeat(total) { index ->
+                            Box(
+                                modifier = Modifier
+                                    .size(if (index == current) 6.dp else 4.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (index == current) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.outlineVariant
                                     )
-                                }
-                            }
-                        } else {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
-
-                        if (onHide != null) {
-                            IconButton(
-                                onClick = onHide,
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.VisibilityOff,
-                                    contentDescription = "Скрыть пару",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
+                            )
                         }
                     }
                 }
@@ -801,6 +780,16 @@ fun LessonBreakIndicator(
     }
 }
 
+
+/** «1 группа», «2 группы», «5 групп» — число вместо перечисления названий. */
+internal fun groupsCountLabel(count: Int): String {
+    val word = when {
+        count % 10 == 1 && count % 100 != 11 -> "группа"
+        count % 10 in 2..4 && count % 100 !in 12..14 -> "группы"
+        else -> "групп"
+    }
+    return "$count $word"
+}
 
 /** Пары (фон, текст) для каждого типа: [0] = тёмная тема, [1] = светлая. */
 private val TYPE_BADGE_COLORS = mapOf(
