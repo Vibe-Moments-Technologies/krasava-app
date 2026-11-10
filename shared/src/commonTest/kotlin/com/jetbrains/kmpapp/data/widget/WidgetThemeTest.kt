@@ -7,6 +7,8 @@ import com.jetbrains.kmpapp.theme.CyberpunkLightColors
 import com.jetbrains.kmpapp.theme.CyberpunkClassicLightColors
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.HalloweenDarkColors
+import com.jetbrains.kmpapp.theme.NewYearDarkColors
+import com.jetbrains.kmpapp.theme.NewYearLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
 import com.jetbrains.kmpapp.theme.SakuraLightColors
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -73,15 +75,54 @@ class WidgetThemeTest {
     }
 
     @Test
-    fun halloweenOverridesOverlayEvenInLightMode() {
+    fun halloweenUsesDarkPaletteWhenActive() {
         val colors = WidgetThemeResolver.resolve(
             themeMode = ThemeMode.LIGHT,
-            overlay = ThemeOverlay.CYBERPUNK,
+            overlay = ThemeOverlay.NONE,
             systemDark = false,
             halloweenActive = true
         )
         assertEquals(HalloweenDarkColors.background.toArgb(), colors.background)
         assertEquals(HalloweenDarkColors.onSurface.toArgb(), colors.subjectText)
+    }
+
+    @Test
+    fun newYearUsesLightPaletteWhenActive() {
+        val colors = WidgetThemeResolver.resolve(
+            themeMode = ThemeMode.LIGHT,
+            overlay = ThemeOverlay.NONE,
+            systemDark = true,
+            halloweenActive = false,
+            newYearActive = true
+        )
+        assertEquals(NewYearLightColors.background.toArgb(), colors.background)
+        assertEquals(NewYearLightColors.primary.toArgb(), colors.accent)
+    }
+
+    @Test
+    fun newYearUsesDarkPaletteInDarkMode() {
+        val colors = WidgetThemeResolver.resolve(
+            themeMode = ThemeMode.DARK,
+            overlay = ThemeOverlay.NONE,
+            systemDark = false,
+            halloweenActive = false,
+            newYearActive = true
+        )
+        assertEquals(NewYearDarkColors.background.toArgb(), colors.background)
+        assertEquals(NewYearDarkColors.onSurface.toArgb(), colors.subjectText)
+    }
+
+    @Test
+    fun selectedThematicThemeWinsOverInactiveSeason() {
+        val sakura = WidgetThemeResolver.resolve(
+            themeMode = ThemeMode.LIGHT,
+            overlay = ThemeOverlay.SAKURA,
+            systemDark = true,
+            halloweenActive = false,
+            newYearActive = false
+        )
+        assertEquals(SakuraLightColors.background.toArgb(), sakura.background)
+        assertEquals(SakuraLightColors.primary.toArgb(), sakura.accent)
     }
 
     @Test

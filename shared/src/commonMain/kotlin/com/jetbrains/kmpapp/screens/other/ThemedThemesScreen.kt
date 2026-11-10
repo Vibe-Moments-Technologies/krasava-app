@@ -1,4 +1,4 @@
-package com.jetbrains.kmpapp.screens.other
+﻿package com.jetbrains.kmpapp.screens.other
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,7 +48,10 @@ import com.jetbrains.kmpapp.theme.ThemeOverlay
  *   нужно; потерянная Матрица исчезает из списка навсегда;
  * - Хэллоуин — сезонная строка: появляется, пока действует её правило
  *   (сезон 28 октября — 3 ноября или включение вручную), чтобы её можно было
- *   выключить из обычного меню. Когда сезон кончается, строка исчезает сама.
+ *   выключить из обычного меню. Когда сезон кончается, строка исчезает сама;
+ * - Новый год — после первой активации остаётся в списке навсегда, как
+ *   найденная тема. В сезон он заменяет базовую тему, пока остальные
+ *   тематические тумблеры выключены.
  *
  * У «Киберпанка» под строкой появляется выборщик палитры (новая/старая) — но
  * только пока тема включена. Выбор хранится отдельно от оверлея, поэтому
@@ -75,14 +78,13 @@ fun ThemedThemesScreen(
     val isMatrix by viewModel.isMatrixTheme.collectAsState()
     val isHalloween by viewModel.isHalloweenActive.collectAsState()
     val halloweenVisible by viewModel.isHalloweenRowVisible.collectAsState()
+    val isNewYear by viewModel.isNewYearActive.collectAsState()
+    val newYearVisible by viewModel.isNewYearRowVisible.collectAsState()
     val cyberpunkVariant by viewModel.cyberpunkVariant.collectAsState()
     val unlocked by viewModel.unlockedThemes.collectAsState()
 
-    // Сезонная тема перекрывает оформление, но не стирает выбранную базу:
-    // после 3 ноября Сакура вернётся сама. Поэтому в списке «включённой»
-    // считается только та тема, которая реально рисует приложение — иначе
-    // в сезон два тумблера выглядели бы включёнными одновременно.
-    fun acting(selected: Boolean): Boolean = selected && !isHalloween
+    // Сезонная тема рисуется только когда оверлей пуст, поэтому выбранная
+    // тема и сезон не могут выглядеть включёнными одновременно.
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -127,7 +129,7 @@ fun ThemedThemesScreen(
                 Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 6.dp)) {
                     ThemeRow(
                         title = "Сакура",
-                        checked = acting(isSakura),
+                        checked = isSakura,
                         onCheckedChange = viewModel::setSakuraTheme
                     )
 
@@ -137,18 +139,18 @@ fun ThemedThemesScreen(
                     val questRows = listOfNotNull(
                         if (ThemeOverlay.KAWAII in unlocked) ThemeRowData(
                             title = "Кавай",
-                            checked = acting(isKawaii),
+                            checked = isKawaii,
                             onCheckedChange = viewModel::setKawaiiTheme
                         ) else null,
                         if (ThemeOverlay.CYBERPUNK in unlocked) ThemeRowData(
                             title = "Киберпанк",
-                            checked = acting(isCyberpunk),
+                            checked = isCyberpunk,
                             onCheckedChange = viewModel::setCyberpunkTheme,
                             hasVariantPicker = true
                         ) else null,
                         if (ThemeOverlay.MATRIX in unlocked) ThemeRowData(
                             title = "Матрица",
-                            checked = acting(isMatrix),
+                            checked = isMatrix,
                             onCheckedChange = viewModel::setMatrixTheme
                         ) else null
                     )
@@ -181,6 +183,17 @@ fun ThemedThemesScreen(
                             title = "Хэллоуин",
                             checked = isHalloween,
                             onCheckedChange = viewModel::setHalloweenTheme
+                        )
+                    }
+
+                    // Новый год появляется здесь после первой активации
+                    // (в сезон или вручную) и больше не исчезает.
+                    if (newYearVisible) {
+                        ThemeRowDivider()
+                        ThemeRow(
+                            title = "Новый год",
+                            checked = isNewYear,
+                            onCheckedChange = viewModel::setNewYearTheme
                         )
                     }
                 }

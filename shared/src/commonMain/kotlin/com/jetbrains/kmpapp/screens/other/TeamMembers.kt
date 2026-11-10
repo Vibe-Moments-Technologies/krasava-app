@@ -18,6 +18,11 @@ enum class TeamLinkType {
     GITHUB, TELEGRAM, OTHER
 }
 
+/** Новогодний головной убор над аватаркой участника. */
+enum class TeamNewYearHat {
+    SANTA, SNEGUROCHKA
+}
+
 data class TeamLink(
     val type: TeamLinkType,
     val url: String
@@ -29,7 +34,8 @@ data class TeamMember(
     val department: String,
     val email: String? = null,
     val avatar: DrawableResource? = null,
-    val links: List<TeamLink> = emptyList()
+    val links: List<TeamLink> = emptyList(),
+    val newYearHat: TeamNewYearHat = TeamNewYearHat.SANTA
 )
 
 /** Отделы для группировки; карточки выводятся по этому порядку. */
@@ -64,6 +70,7 @@ val projectTeam = listOf(
         role = "Картограф",
         department = "Карты",
         avatar = Res.drawable.team_kristalina5058,
-        links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/kristalina5058"))
+        links = listOf(TeamLink(TeamLinkType.GITHUB, "https://github.com/kristalina5058")),
+        newYearHat = TeamNewYearHat.SNEGUROCHKA
     )
 )

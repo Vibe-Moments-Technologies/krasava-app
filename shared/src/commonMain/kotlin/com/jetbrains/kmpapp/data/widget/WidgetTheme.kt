@@ -10,6 +10,8 @@ import com.jetbrains.kmpapp.theme.KawaiiDarkColors
 import com.jetbrains.kmpapp.theme.KawaiiLightColors
 import com.jetbrains.kmpapp.theme.MatrixDarkColors
 import com.jetbrains.kmpapp.theme.MatrixLightColors
+import com.jetbrains.kmpapp.theme.NewYearDarkColors
+import com.jetbrains.kmpapp.theme.NewYearLightColors
 import com.jetbrains.kmpapp.theme.SakuraDarkColors
 import com.jetbrains.kmpapp.theme.SakuraLightColors
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -47,6 +49,7 @@ object WidgetThemeResolver {
         overlay: ThemeOverlay,
         systemDark: Boolean,
         halloweenActive: Boolean,
+        newYearActive: Boolean = false,
         /** Вариант палитры «Киберпанка» (новая/старая) — как в App(). */
         cyberpunkVariant: CyberpunkVariant = CyberpunkVariant.DEFAULT
     ): WidgetThemeColors {
@@ -55,7 +58,9 @@ object WidgetThemeResolver {
             ThemeMode.LIGHT -> false
             ThemeMode.DARK -> true
         }
-        val scheme: ColorScheme = if (halloweenActive) {
+        val scheme: ColorScheme = if (newYearActive) {
+            if (isDark) NewYearDarkColors else NewYearLightColors
+        } else if (halloweenActive) {
             HalloweenDarkColors
         } else {
             when (overlay) {
@@ -67,6 +72,7 @@ object WidgetThemeResolver {
                 ThemeOverlay.CYBERPUNK -> cyberpunkColors(cyberpunkVariant, isDark)
                 ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
                 ThemeOverlay.HALLOWEEN -> HalloweenDarkColors
+                ThemeOverlay.NEW_YEAR -> if (isDark) NewYearDarkColors else NewYearLightColors
                 ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
             }
         }
