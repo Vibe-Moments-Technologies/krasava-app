@@ -161,7 +161,7 @@ class OtherViewModel(
      * нельзя было бы выключить. Как только правило её гасит, строка исчезает.
      */
     val isHalloweenActive: StateFlow<Boolean> = repository.isHalloweenActive
-    /** Строка Хэллоуина в списке тем: сезон идёт или тема включена вручную. */
+    /** Строка Хэллоуина: сезон, текущее включение или хотя бы одно прошлое. */
     val isHalloweenRowVisible: StateFlow<Boolean> = repository.isHalloweenRowVisible
     /** Темы, найденные квестами: они доступны в списке тем. */
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes

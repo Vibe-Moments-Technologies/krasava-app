@@ -171,7 +171,7 @@ class ScheduleRepository(
     val isHalloweenTheme: StateFlow<Boolean> = storage.isHalloweenTheme
     /** Хэллоуин сейчас активен: сезон без отказа или ручное включение. */
     val isHalloweenActive: StateFlow<Boolean> = storage.isHalloweenActive
-    /** Строка Хэллоуина видна в списке тем: сезон идёт или тема включена. */
+    /** Строка Хэллоуина: сезон, текущее включение или хотя бы одно прошлое. */
     val isHalloweenRowVisible: StateFlow<Boolean> = storage.isHalloweenRowVisible
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
     val revokedThemes: StateFlow<Set<ThemeOverlay>> = storage.revokedThemes

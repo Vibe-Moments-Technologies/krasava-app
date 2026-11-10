@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
@@ -186,6 +187,14 @@ class ScheduleStorage(
     private val _halloweenDismissedYear = MutableStateFlow<Int?>(null)
 
     /**
+     * Хэллоуин хотя бы раз включался: сезоном автоматически, вручную из
+     * списка тем или через «Отладку и эксперименты». После первого включения
+     * строка навсегда остаётся в «Тематических темах», чтобы её можно было
+     * включить повторно вне сезона.
+     */
+    private val _halloweenEverActivated = MutableStateFlow(false)
+
+    /**
      * Текущая дата как поток: сезонные правила должны переключаться сами,
      * даже если приложение не закрывали на ночь. Тик раз в 15 минут —
      * компромисс между точностью границы сезона и лишними пересчётами;
@@ -223,13 +232,14 @@ class ScheduleStorage(
      *
      * Шире [isHalloweenActive] намеренно: пока сезон идёт, строка остаётся,
      * даже если тему уже выключили — иначе выключить было бы можно, а вернуть
-     * обратно нельзя. Сезон кончился — правило гасит и тему, и строку, как и
-     * просил владелец. Ручное включение вне сезона тоже держит строку
-     * видимой, чтобы её было чем выключить.
+     * обратно нельзя. После первого включения строка остаётся навсегда:
+     * сезон, ручной тумблер или отладочное включение запоминаются флагом.
      */
     val isHalloweenRowVisible: StateFlow<Boolean> =
-        combine(themeOverlay, todayFlow) { overlay, today ->
-            overlay == ThemeOverlay.HALLOWEEN || DateUtils.isHalloweenSeason(today)
+        combine(themeOverlay, todayFlow, _halloweenEverActivated) { overlay, today, ever ->
+            overlay == ThemeOverlay.HALLOWEEN ||
+                DateUtils.isHalloweenSeason(today) ||
+                ever
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _cheatsAgreed = MutableStateFlow<Boolean?>(null)
@@ -275,6 +285,25 @@ class ScheduleStorage(
 
     init {
         loadPersistedState()
+        // Запоминаем первое включение Хэллоуина: сезон может начаться, пока
+        // приложение открыто, а тумблер в отладке использует тот же путь.
+        scope.launch {
+            isHalloweenActive.collect { active ->
+                if (active) markHalloweenEverActivated()
+            }
+        }
+    }
+
+    private fun markHalloweenEverActivated() {
+        if (_halloweenEverActivated.value) return
+        _halloweenEverActivated.value = true
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_HALLOWEEN_EVER_ACTIVATED, true.toString())
+            } catch (e: Exception) {
+                println("Failed to persist halloween ever activated: ${e.message}")
+            }
+        }
     }
 
     private fun loadPersistedState() {
@@ -311,6 +340,15 @@ class ScheduleStorage(
             CyberpunkVariant.fromName(platformStorage.getString(KEY_CYBERPUNK_VARIANT))
         _halloweenDismissedYear.value =
             platformStorage.getString(KEY_HALLOWEEN_DISMISSED_YEAR)?.toIntOrNull()
+        _halloweenEverActivated.value =
+            loadBooleanFlag(KEY_HALLOWEEN_EVER_ACTIVATED, false)
+        // Миграция и сезонный дефолт: если тема уже была активна, когда
+        // появился этот флаг, считаем её найденной.
+        if (_themeOverlay.value == ThemeOverlay.HALLOWEEN ||
+            DateUtils.isHalloweenSeason(DateUtils.today())
+        ) {
+            markHalloweenEverActivated()
+        }
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
         _diagnosticsEnabled.value = loadBooleanFlag(KEY_DIAGNOSTICS_ENABLED, false)
@@ -663,6 +701,7 @@ class ScheduleStorage(
      *  «на пробу» тумблер тихо отменил бы осенний показ. */
     fun setHalloweenTheme(enabled: Boolean) {
         if (enabled) {
+            markHalloweenEverActivated()
             clearHalloweenSeasonDismissal()
             applyThemeOverlay(ThemeOverlay.HALLOWEEN, dismissSeason = false)
         } else {
@@ -1309,6 +1348,7 @@ class ScheduleStorage(
         // поведение, а не фиксирует прошлое решение пользователя.
         applyThemeOverlay(ThemeOverlay.SAKURA, dismissSeason = false)
         _halloweenDismissedYear.value = null
+        _halloweenEverActivated.value = false
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
         _diagnosticsEnabled.value = diagnosticsEnabledBefore
@@ -1432,6 +1472,7 @@ class ScheduleStorage(
         private const val KEY_MATRIX_THEME = "krasava_matrix_theme_secret"
         private const val KEY_HALLOWEEN_THEME = "krasava_halloween_theme_secret"
         private const val KEY_HALLOWEEN_DISMISSED_YEAR = "krasava_halloween_dismissed_year"
+        private const val KEY_HALLOWEEN_EVER_ACTIVATED = "krasava_halloween_ever_activated"
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
         // Разблокировки квестовых тем для списка «Тематические темы».
         private const val KEY_UNLOCKED_KAWAII = "krasava_unlocked_kawaii"
