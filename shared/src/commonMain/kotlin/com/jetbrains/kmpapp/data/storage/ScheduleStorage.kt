@@ -1081,6 +1081,34 @@ class ScheduleStorage(
         }
     }
 
+    fun createEmptyTarget(name: String): ScheduleTarget? {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return null
+
+        val existingTitles = _savedTargets.value
+            .flatMap { listOf(it.targetTitle, it.fullTitle) }
+            .toSet()
+        val baseTitle = "$trimmed (п)"
+        var title = baseTitle
+        var index = 1
+        while (title in existingTitles) {
+            title = "$baseTitle$index"
+            index++
+        }
+
+        var id = -1
+        while (_savedTargets.value.any { it.id == id }) id--
+
+        val target = ScheduleTarget(
+            id = id,
+            targetTitle = title,
+            fullTitle = title,
+            isLocal = true
+        )
+        addTarget(target)
+        return target
+    }
+
     fun removeTarget(targetId: Int) {
         val removed = _savedTargets.value.firstOrNull { it.id == targetId }
         // Пользовательские пары принадлежат конкретному расписанию: удаление

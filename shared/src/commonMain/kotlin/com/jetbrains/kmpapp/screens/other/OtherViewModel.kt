@@ -438,4 +438,8 @@ class OtherViewModel(
     fun addAndSelectTarget(target: ScheduleTarget) {
         repository.addAndSelectTarget(target)
     }
+
+    fun createEmptySchedule(name: String) {
+        repository.createEmptySchedule(name)
+    }
 }

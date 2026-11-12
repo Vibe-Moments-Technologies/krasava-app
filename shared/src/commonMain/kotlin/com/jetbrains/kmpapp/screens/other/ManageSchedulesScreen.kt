@@ -316,7 +316,7 @@ fun ManageSchedulesScreen(
                                                 }
                                             }
                                             GlitchText(
-                                                text = target.type.displayName,
+                                                text = target.displayTypeName,
                                                 fontSize = 12.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
@@ -352,6 +352,9 @@ fun ManageSchedulesScreen(
             onSearch = { viewModel.search(it) },
             onSelectTarget = { target ->
                 viewModel.addAndSelectTarget(target)
+            },
+            onCreateEmpty = { name ->
+                viewModel.createEmptySchedule(name)
             }
         )
     }

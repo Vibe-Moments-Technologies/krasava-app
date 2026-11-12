@@ -170,7 +170,7 @@ fun ScheduleTopBar(
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                             )
                                             GlitchText(
-                                                text = target.type.displayName,
+                                                text = target.displayTypeName,
                                                 fontSize = 11.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )

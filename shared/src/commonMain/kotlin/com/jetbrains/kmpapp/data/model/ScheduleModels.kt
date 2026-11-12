@@ -20,10 +20,14 @@ data class ScheduleTarget(
     val id: Int,
     val targetTitle: String,
     val fullTitle: String,
-    val scheduleTarget: Int = 1
+    val scheduleTarget: Int = 1,
+    val isLocal: Boolean = false
 ) {
     val type: ScheduleTargetType
         get() = ScheduleTargetType.fromId(scheduleTarget)
+
+    val displayTypeName: String
+        get() = if (isLocal) "Своё" else type.displayName
 }
 
 @Serializable

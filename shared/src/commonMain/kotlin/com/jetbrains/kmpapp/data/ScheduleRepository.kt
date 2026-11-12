@@ -410,6 +410,10 @@ class ScheduleRepository(
         scope.launch {
             storage.selectedTarget.collect { target ->
                 if (target != null) {
+                    if (target.isLocal) {
+                        _errorMessage.value = null
+                        return@collect
+                    }
                     val cached = storage.getLessons(target.id)
                     val hasCached = cached != null && cached.isNotEmpty()
                     val lastSync = storage.getLastSyncTime(target.id)
@@ -445,10 +449,13 @@ class ScheduleRepository(
 
     fun addAndSelectTarget(target: ScheduleTarget) {
         storage.addTarget(target)
+        if (target.isLocal) return
         scope.launch {
             refreshSchedule(target, silent = false)
         }
     }
+
+    fun createEmptySchedule(name: String): ScheduleTarget? = storage.createEmptyTarget(name)
 
     fun selectTarget(target: ScheduleTarget) {
         storage.selectTarget(target)
@@ -484,6 +491,7 @@ class ScheduleRepository(
     }
 
     private suspend fun refreshSchedule(target: ScheduleTarget, silent: Boolean = false) {
+        if (target.isLocal) return
         if (!silent) {
             _isLoading.value = true
             _errorMessage.value = null
