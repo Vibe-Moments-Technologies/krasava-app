@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.data.ScheduleRepository
+import com.jetbrains.kmpapp.data.share.ScheduleShareInbox
+import com.jetbrains.kmpapp.data.share.ScheduleShareRequest
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.FloatingDock
@@ -129,6 +131,7 @@ fun App() {
     // Вариант палитры «Киберпанка» хранится отдельно от оверлея: тема может
     // быть выключена, но выбранный вариант переживает переключения тем.
     val cyberpunkVariant by repository.cyberpunkVariant.collectAsState()
+    val shareRequest by ScheduleShareInbox.request.collectAsState()
 
     val scheduleViewModel: ScheduleViewModel = koinViewModel()
     val otherViewModel: OtherViewModel = koinViewModel()
@@ -359,6 +362,70 @@ fun App() {
                         }
                     }
                 )
+            }
+
+            when (val request = shareRequest) {
+                is ScheduleShareRequest.Confirm -> {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { ScheduleShareInbox.consume() },
+                        title = {
+                            com.jetbrains.kmpapp.theme.GlitchText(
+                                text = "Вы хотите добавить расписание?",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        },
+                        text = {
+                            androidx.compose.foundation.layout.Column {
+                                com.jetbrains.kmpapp.theme.GlitchText(
+                                    text = "«${request.schedule.name}», пар: ${request.schedule.lessons.size}",
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(onClick = {
+                                repository.importSharedSchedule(request.schedule)
+                                ScheduleShareInbox.consume()
+                            }) {
+                                com.jetbrains.kmpapp.theme.GlitchText("Да")
+                            }
+                        },
+                        dismissButton = {
+                            androidx.compose.material3.TextButton(onClick = {
+                                ScheduleShareInbox.consume()
+                            }) {
+                                com.jetbrains.kmpapp.theme.GlitchText("Нет")
+                            }
+                        }
+                    )
+                }
+                is ScheduleShareRequest.Error -> {
+                    androidx.compose.material3.AlertDialog(
+                        onDismissRequest = { ScheduleShareInbox.consume() },
+                        title = {
+                            com.jetbrains.kmpapp.theme.GlitchText(
+                                text = "Ошибка",
+                                style = androidx.compose.material3.MaterialTheme.typography.titleLarge,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                            )
+                        },
+                        text = {
+                            com.jetbrains.kmpapp.theme.GlitchText(
+                                text = request.message,
+                                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium
+                            )
+                        },
+                        confirmButton = {
+                            androidx.compose.material3.TextButton(onClick = {
+                                ScheduleShareInbox.consume()
+                            }) {
+                                com.jetbrains.kmpapp.theme.GlitchText("Понятно")
+                            }
+                        }
+                    )
+                }
+                null -> Unit
             }
 
             // Синхронизация чекбокса с фактом подавления при каждом открытии

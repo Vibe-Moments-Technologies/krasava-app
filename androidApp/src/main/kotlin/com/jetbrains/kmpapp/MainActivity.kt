@@ -1,6 +1,7 @@
 package com.jetbrains.kmpapp
 
 import android.Manifest
+import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
@@ -12,6 +13,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.NotificationManagerCompat
 import androidx.compose.runtime.LaunchedEffect
+import com.jetbrains.kmpapp.data.share.ScheduleShareInbox
 import com.jetbrains.kmpapp.notifications.AndroidNotificationsEngine
 import com.jetbrains.kmpapp.widget.ScheduleWidgetStore
 import kotlinx.coroutines.CoroutineScope
@@ -25,6 +27,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleShareIntent(intent)
         // Если процесс убили до того, как иконка успела примениться в onStop,
         // добираем сохранённое состояние при следующем запуске (до показа UI).
         applyPendingIconIfNeeded()
@@ -55,6 +58,21 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(Unit) {
                 ScheduleWidgetStore.publish(this@MainActivity)
             }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleShareIntent(intent)
+    }
+
+    private fun handleShareIntent(intent: Intent?) {
+        val data = intent?.data ?: return
+        if (data.scheme.equals("krasava", ignoreCase = true) &&
+            data.host.equals("my", ignoreCase = true)
+        ) {
+            ScheduleShareInbox.submitLink(data.toString())
         }
     }
 

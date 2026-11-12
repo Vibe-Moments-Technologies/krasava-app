@@ -15,6 +15,8 @@ import com.jetbrains.kmpapp.data.model.UserLesson
 import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.data.model.orderedForDisplay
 import com.jetbrains.kmpapp.data.network.detectVpnActive
+import com.jetbrains.kmpapp.data.share.ScheduleShareCodec
+import com.jetbrains.kmpapp.data.share.SharedSchedule
 import com.jetbrains.kmpapp.data.parser.MireaICalParser
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
@@ -456,6 +458,21 @@ class ScheduleRepository(
     }
 
     fun createEmptySchedule(name: String): ScheduleTarget? = storage.createEmptyTarget(name)
+
+    fun createShareLink(target: ScheduleTarget): String? {
+        if (!target.isLocal) return null
+        return runCatching {
+            ScheduleShareCodec.encode(
+                SharedSchedule(
+                    name = target.targetTitle,
+                    lessons = storage.userLessonsFor(target)
+                )
+            )
+        }.getOrNull()
+    }
+
+    fun importSharedSchedule(schedule: SharedSchedule): ScheduleTarget? =
+        storage.importLocalTarget(schedule.name, schedule.lessons)
 
     fun selectTarget(target: ScheduleTarget) {
         storage.selectTarget(target)

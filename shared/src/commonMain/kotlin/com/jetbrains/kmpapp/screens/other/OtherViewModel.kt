@@ -442,4 +442,7 @@ class OtherViewModel(
     fun createEmptySchedule(name: String) {
         repository.createEmptySchedule(name)
     }
+
+    fun createShareLink(target: ScheduleTarget): String? =
+        repository.createShareLink(target)
 }

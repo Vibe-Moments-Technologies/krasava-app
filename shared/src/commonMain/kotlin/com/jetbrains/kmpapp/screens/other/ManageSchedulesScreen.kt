@@ -29,6 +29,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -77,6 +82,7 @@ fun ManageSchedulesScreen(
 ) {
     PlatformBackHandler(onBack = onBack)
     val focusManager = LocalFocusManager.current
+    val clipboardManager = LocalClipboardManager.current
 
     val savedTargets by viewModel.savedTargets.collectAsState()
     val filteredTargets by viewModel.filteredSavedTargets.collectAsState()
@@ -90,10 +96,17 @@ fun ManageSchedulesScreen(
     var filterMenuExpanded by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier.padding(bottom = 96.dp)
+            )
+        },
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
@@ -319,6 +332,34 @@ fun ManageSchedulesScreen(
                                                 text = target.displayTypeName,
                                                 fontSize = 12.sp,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+
+                                    if (target.isLocal) {
+                                        IconButton(
+                                            onClick = {
+                                                val link = viewModel.createShareLink(target)
+                                                if (link == null) {
+                                                    scope.launch {
+                                                        snackbarHostState.showSnackbar(
+                                                            "Не удалось создать ссылку"
+                                                        )
+                                                    }
+                                                } else {
+                                                    clipboardManager.setText(AnnotatedString(link))
+                                                    scope.launch {
+                                                        snackbarHostState.showSnackbar(
+                                                            "Ссылка скопирована"
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Share,
+                                                contentDescription = "Поделиться",
+                                                tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
                                     }

@@ -51,6 +51,17 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>ru.vibemoments.krasava.share</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>krasava</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Красава! использует камеру, чтобы сканировать QR-коды для отметки посещаемости на «Пульсе».</string>
 </dict>

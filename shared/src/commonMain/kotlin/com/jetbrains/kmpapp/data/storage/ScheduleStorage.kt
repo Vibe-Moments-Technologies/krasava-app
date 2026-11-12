@@ -1085,28 +1085,53 @@ class ScheduleStorage(
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return null
 
-        val existingTitles = _savedTargets.value
-            .flatMap { listOf(it.targetTitle, it.fullTitle) }
-            .toSet()
-        val baseTitle = "$trimmed (п)"
-        var title = baseTitle
-        var index = 1
-        while (title in existingTitles) {
-            title = "$baseTitle$index"
-            index++
-        }
-
-        var id = -1
-        while (_savedTargets.value.any { it.id == id }) id--
-
+        val title = uniqueLocalTitle("$trimmed (п)")
         val target = ScheduleTarget(
-            id = id,
+            id = nextLocalTargetId(),
             targetTitle = title,
             fullTitle = title,
             isLocal = true
         )
         addTarget(target)
         return target
+    }
+
+    fun importLocalTarget(name: String, lessons: List<UserLesson>): ScheduleTarget? {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || lessons.size > 2000) return null
+
+        val title = uniqueLocalTitle(trimmed)
+        val target = ScheduleTarget(
+            id = nextLocalTargetId(),
+            targetTitle = title,
+            fullTitle = title,
+            isLocal = true
+        )
+        addTarget(target)
+        if (lessons.isNotEmpty()) {
+            _userLessons.update { map -> map + (userLessonsKey(target) to lessons) }
+            persistUserLessons()
+        }
+        return target
+    }
+
+    private fun uniqueLocalTitle(base: String): String {
+        val existingTitles = _savedTargets.value
+            .flatMap { listOf(it.targetTitle, it.fullTitle) }
+            .toSet()
+        var title = base
+        var index = 1
+        while (title in existingTitles) {
+            title = "$base$index"
+            index++
+        }
+        return title
+    }
+
+    private fun nextLocalTargetId(): Int {
+        var id = -1
+        while (_savedTargets.value.any { it.id == id }) id--
+        return id
     }
 
     fun removeTarget(targetId: Int) {
