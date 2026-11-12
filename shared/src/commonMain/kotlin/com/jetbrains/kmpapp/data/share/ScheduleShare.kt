@@ -7,12 +7,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okio.Buffer
+import okio.BufferedSource
 import okio.GzipSink
 import okio.GzipSource
 import okio.buffer
 
 private const val BASE64_URL_ALPHABET =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+private const val MAX_JSON_BYTES = 8L * 1024 * 1024
 
 @Serializable
 data class SharedSchedule(
@@ -78,18 +81,36 @@ object ScheduleShareCodec {
     fun encode(schedule: SharedSchedule): String {
         val source = Buffer().writeUtf8(json.encodeToString(SharedSchedule.serializer(), schedule))
         val compressed = Buffer()
-        GzipSink(compressed).buffer().use { sink ->
+        val sink = GzipSink(compressed).buffer()
+        try {
             sink.writeAll(source)
+        } finally {
+            sink.close()
         }
         return LINK_PREFIX + compressed.readByteArray().toBase64Url()
     }
 
     fun decode(raw: String): Result<SharedSchedule> = runCatching {
         val bytes = payload(raw).decodeBase64Url()
-        GzipSource(Buffer().write(bytes)).buffer().use { source ->
-            val schedule = json.decodeFromString(SharedSchedule.serializer(), source.readUtf8())
-            schedule.validate()
+        val source = GzipSource(Buffer().write(bytes)).buffer()
+        val schedule = try {
+            json.decodeFromString(SharedSchedule.serializer(), source.readLimitedJson())
+        } finally {
+            source.close()
         }
+        schedule.validate()
+    }
+
+    private fun BufferedSource.readLimitedJson(): String {
+        val output = Buffer()
+        var total = 0L
+        while (true) {
+            val read = read(output, 8192L)
+            if (read == -1L) break
+            total += read
+            require(total <= MAX_JSON_BYTES) { "Schedule payload is too large" }
+        }
+        return output.readUtf8()
     }
 
     private fun payload(raw: String): String {
