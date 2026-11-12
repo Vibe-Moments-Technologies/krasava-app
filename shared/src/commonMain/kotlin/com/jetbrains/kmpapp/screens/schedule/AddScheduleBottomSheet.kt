@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Bolt
@@ -36,11 +35,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -74,7 +71,6 @@ fun AddScheduleBottomSheet(
     onDismiss: () -> Unit,
     onSearch: suspend (String) -> List<ScheduleTarget>,
     onSelectTarget: (ScheduleTarget) -> Unit,
-    onCreateEmpty: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var query by remember { mutableStateOf("") }
@@ -82,21 +78,7 @@ fun AddScheduleBottomSheet(
     var isLoading by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf<ScheduleTargetType?>(null) }
     var showCyberpunkDialog by remember { mutableStateOf(false) }
-    var showEmptyDialog by remember { mutableStateOf(false) }
-    var emptyName by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
-
-    val submitEmptySchedule = {
-        val name = emptyName.trim()
-        if (name.isNotEmpty()) {
-            onCreateEmpty(name)
-            showEmptyDialog = false
-            emptyName = ""
-            query = ""
-            focusManager.clearFocus()
-            onDismiss()
-        }
-    }
 
     LaunchedEffect(query) {
         val trimmed = query.trim()
@@ -153,20 +135,6 @@ fun AddScheduleBottomSheet(
             }
 
             Spacer(modifier = Modifier.height(4.dp))
-
-            OutlinedButton(
-                onClick = {
-                    emptyName = ""
-                    showEmptyDialog = true
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                GlitchText("Создать пустое расписание")
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
 
             // Search input with auto-focus and compact placeholder
             OutlinedTextField(
@@ -322,45 +290,6 @@ fun AddScheduleBottomSheet(
                 }
             }
         }
-    }
-
-    if (showEmptyDialog) {
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = { showEmptyDialog = false },
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
-            title = { GlitchText("Пустое расписание", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    GlitchText(
-                        "Введите название — к нему добавится «(п)».",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = emptyName,
-                        onValueChange = { emptyName = it },
-                        label = { GlitchText("Название") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { submitEmptySchedule() }),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = submitEmptySchedule,
-                    enabled = emptyName.isNotBlank()
-                ) {
-                    GlitchText("Создать")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEmptyDialog = false }) {
-                    GlitchText("Отмена")
-                }
-            }
-        )
     }
 
     if (showCyberpunkDialog) {

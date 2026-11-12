@@ -29,7 +29,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -49,9 +53,11 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -63,12 +69,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
+import com.jetbrains.kmpapp.data.share.ScheduleShareInbox
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import com.jetbrains.kmpapp.screens.schedule.AddScheduleBottomSheet
 import kotlinx.coroutines.launch
@@ -92,11 +100,35 @@ fun ManageSchedulesScreen(
     val sortOrder by viewModel.sortOrder.collectAsState()
 
     var showAddSheet by remember { mutableStateOf(false) }
+    var showEmptyDialog by remember { mutableStateOf(false) }
+    var showImportDialog by remember { mutableStateOf(false) }
+    var emptyName by remember { mutableStateOf("") }
+    var importLink by remember { mutableStateOf("") }
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var filterMenuExpanded by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val submitEmptySchedule = {
+        val name = emptyName.trim()
+        if (name.isNotEmpty()) {
+            viewModel.createEmptySchedule(name)
+            showEmptyDialog = false
+            emptyName = ""
+            focusManager.clearFocus()
+        }
+    }
+
+    val submitImportLink = {
+        val link = importLink.trim()
+        if (link.isNotEmpty()) {
+            ScheduleShareInbox.submitLink(link)
+            showImportDialog = false
+            importLink = ""
+            focusManager.clearFocus()
+        }
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
@@ -221,157 +253,174 @@ fun ManageSchedulesScreen(
             }
         }
     ) { innerPadding ->
-        if (savedTargets.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.EventNote,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    GlitchText(
-                        text = "Список расписаний пуст",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    GlitchText(
-                        text = "Добавьте группу, преподавателя или аудиторию",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Button(
-                        onClick = { showAddSheet = true },
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        GlitchText("Добавить расписание")
-                    }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            ManageScheduleActions(
+                onCreateEmpty = {
+                    emptyName = ""
+                    showEmptyDialog = true
+                },
+                onImportLink = {
+                    importLink = ""
+                    showImportDialog = true
                 }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                // Поиск по добавленным расписаниям убран (репорт владельца):
-                // список обычно короткий; сортировка и фильтр — в топбаре.
+            )
 
-                Spacer(modifier = Modifier.height(6.dp))
-
-                // List of filtered targets
-                if (filteredTargets.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+            if (savedTargets.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.EventNote,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
                         GlitchText(
-                            text = "Ничего не найдено",
+                            text = "Список расписаний пуст",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        GlitchText(
+                            text = "Добавьте группу, преподавателя или аудиторию",
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(20.dp))
+                        Button(
+                            onClick = { showAddSheet = true },
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            GlitchText("Добавить расписание")
+                        }
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        items(filteredTargets, key = { "${it.type}_${it.id}" }) { target ->
-                            val isSelected = target.id == selectedTarget?.id
-                            Card(
-                                shape = RoundedCornerShape(18.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
-                                    else MaterialTheme.colorScheme.surfaceContainer
-                                ),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.selectTarget(target) }
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
+                    // Поиск по добавленным расписаниям убран (репорт владельца):
+                    // список обычно короткий; сортировка и фильтр — в топбаре.
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // List of filtered targets
+                    if (filteredTargets.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GlitchText(
+                                text = "Ничего не найдено",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(filteredTargets, key = { "${it.type}_${it.id}" }) { target ->
+                                val isSelected = target.id == selectedTarget?.id
+                                Card(
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                        else MaterialTheme.colorScheme.surfaceContainer
+                                    ),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { viewModel.selectTarget(target) }
+                                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Column {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                GlitchText(
-                                                    text = target.targetTitle,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
-                                                )
-                                                if (isSelected) {
-                                                    Spacer(modifier = Modifier.width(8.dp))
-                                                    Icon(
-                                                        imageVector = Icons.Default.Check,
-                                                        contentDescription = "Активно",
-                                                        tint = MaterialTheme.colorScheme.primary,
-                                                        modifier = Modifier.size(18.dp)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Column {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    GlitchText(
+                                                        text = target.targetTitle,
+                                                        style = MaterialTheme.typography.titleMedium,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                                                     )
+                                                    if (isSelected) {
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Icon(
+                                                            imageVector = Icons.Default.Check,
+                                                            contentDescription = "Активно",
+                                                            tint = MaterialTheme.colorScheme.primary,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
                                                 }
+                                                GlitchText(
+                                                    text = target.displayTypeName,
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
-                                            GlitchText(
-                                                text = target.displayTypeName,
-                                                fontSize = 12.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
                                         }
-                                    }
 
-                                    if (target.isLocal) {
-                                        IconButton(
-                                            onClick = {
-                                                val link = viewModel.createShareLink(target)
-                                                if (link == null) {
-                                                    scope.launch {
-                                                        snackbarHostState.showSnackbar(
-                                                            "Не удалось создать ссылку"
-                                                        )
-                                                    }
-                                                } else {
-                                                    clipboardManager.setText(AnnotatedString(link))
-                                                    scope.launch {
-                                                        snackbarHostState.showSnackbar(
-                                                            "Ссылка скопирована"
-                                                        )
+                                        if (target.isLocal) {
+                                            IconButton(
+                                                onClick = {
+                                                    val link = viewModel.createShareLink(target)
+                                                    if (link == null) {
+                                                        scope.launch {
+                                                            snackbarHostState.showSnackbar(
+                                                                "Не удалось создать ссылку"
+                                                            )
+                                                        }
+                                                    } else {
+                                                        clipboardManager.setText(AnnotatedString(link))
+                                                        scope.launch {
+                                                            snackbarHostState.showSnackbar(
+                                                                "Ссылка скопирована"
+                                                            )
+                                                        }
                                                     }
                                                 }
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Share,
+                                                    contentDescription = "Поделиться",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
                                             }
+                                        }
+
+                                        IconButton(
+                                            onClick = { viewModel.removeTarget(target.id) }
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.Share,
-                                                contentDescription = "Поделиться",
-                                                tint = MaterialTheme.colorScheme.primary
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Удалить",
+                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
                                             )
                                         }
-                                    }
-
-                                    IconButton(
-                                        onClick = { viewModel.removeTarget(target.id) }
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Удалить",
-                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
-                                        )
                                     }
                                 }
                             }
@@ -393,11 +442,127 @@ fun ManageSchedulesScreen(
             onSearch = { viewModel.search(it) },
             onSelectTarget = { target ->
                 viewModel.addAndSelectTarget(target)
-            },
-            onCreateEmpty = { name ->
-                viewModel.createEmptySchedule(name)
             }
         )
+    }
+
+    if (showEmptyDialog) {
+        AlertDialog(
+            onDismissRequest = { showEmptyDialog = false },
+            icon = { Icon(Icons.Default.Add, contentDescription = null) },
+            title = { GlitchText("Пустое расписание", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    GlitchText(
+                        "Введите название — к нему добавится «(п)».",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = emptyName,
+                        onValueChange = { emptyName = it },
+                        label = { GlitchText("Название") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submitEmptySchedule() }),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = submitEmptySchedule,
+                    enabled = emptyName.isNotBlank()
+                ) {
+                    GlitchText("Создать")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEmptyDialog = false }) {
+                    GlitchText("Отмена")
+                }
+            }
+        )
+    }
+
+    if (showImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            icon = { Icon(Icons.Default.Link, contentDescription = null) },
+            title = { GlitchText("Импортировать по ссылке", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    GlitchText(
+                        "Вставьте ссылку, которой с вами поделились.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = importLink,
+                        onValueChange = { importLink = it },
+                        label = { GlitchText("Ссылка") },
+                        placeholder = { GlitchText("krasava://my/...") },
+                        minLines = 2,
+                        maxLines = 4,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submitImportLink() }),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    TextButton(
+                        onClick = {
+                            clipboardManager.getText()?.text?.let { importLink = it }
+                        }
+                    ) {
+                        GlitchText("Вставить из буфера")
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = submitImportLink,
+                    enabled = importLink.isNotBlank()
+                ) {
+                    GlitchText("Импортировать")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    GlitchText("Отмена")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun ManageScheduleActions(
+    onCreateEmpty: () -> Unit,
+    onImportLink: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .padding(top = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        OutlinedButton(
+            onClick = onCreateEmpty,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            GlitchText("Создать пустое расписание")
+        }
+        OutlinedButton(
+            onClick = onImportLink,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Link, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            GlitchText("Импортировать по ссылке")
+        }
     }
 }
 
