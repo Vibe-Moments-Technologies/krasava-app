@@ -76,6 +76,7 @@ fun ThemedThemesScreen(
     val isKawaii by viewModel.isKawaiiTheme.collectAsState()
     val isCyberpunk by viewModel.isCyberpunkTheme.collectAsState()
     val isMatrix by viewModel.isMatrixTheme.collectAsState()
+    val isCoffee by viewModel.isCoffeeTheme.collectAsState()
     val isHalloween by viewModel.isHalloweenActive.collectAsState()
     val halloweenVisible by viewModel.isHalloweenRowVisible.collectAsState()
     val isNewYear by viewModel.isNewYearActive.collectAsState()
@@ -152,6 +153,11 @@ fun ThemedThemesScreen(
                             title = "Матрица",
                             checked = isMatrix,
                             onCheckedChange = viewModel::setMatrixTheme
+                        ) else null,
+                        if (ThemeOverlay.COFFEE in unlocked) ThemeRowData(
+                            title = "Кофе",
+                            checked = isCoffee,
+                            onCheckedChange = viewModel::setCoffeeTheme
                         ) else null
                     )
 

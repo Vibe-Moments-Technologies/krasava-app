@@ -167,6 +167,8 @@ class OtherViewModel(
     val isNewYearActive: StateFlow<Boolean> = repository.isNewYearActive
     /** Строка Нового года видна после первой активации темы. */
     val isNewYearRowVisible: StateFlow<Boolean> = repository.isNewYearRowVisible
+    val isCoffeeTheme: StateFlow<Boolean> = repository.isCoffeeTheme
+    val coffeeNotificationPending: StateFlow<Boolean> = repository.coffeeNotificationPending
     /** Темы, найденные квестами: только они плюс Сакура видны в списке. */
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = repository.unlockedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
@@ -251,6 +253,10 @@ class OtherViewModel(
     fun setMatrixTheme(enabled: Boolean) = repository.setMatrixTheme(enabled)
     fun setHalloweenTheme(enabled: Boolean) = repository.setHalloweenTheme(enabled)
     fun setNewYearTheme(enabled: Boolean) = repository.setNewYearTheme(enabled)
+    fun setCoffeeTheme(enabled: Boolean) = repository.setCoffeeTheme(enabled)
+    fun recordDeveloperRepositoryVisit(url: String) =
+        repository.recordDeveloperRepositoryVisit(url)
+    fun dismissCoffeeNotification() = repository.dismissCoffeeNotification()
 
     fun setLessonTypeColor(type: LessonType, color: LessonColor) =
         repository.setLessonTypeColor(type, color)

@@ -178,6 +178,8 @@ class ScheduleRepository(
     val isNewYearActive: StateFlow<Boolean> = storage.isNewYearActive
     /** Строка Нового года видна после первой активации темы. */
     val isNewYearRowVisible: StateFlow<Boolean> = storage.isNewYearRowVisible
+    val isCoffeeTheme: StateFlow<Boolean> = storage.isCoffeeTheme
+    val coffeeNotificationPending: StateFlow<Boolean> = storage.coffeeNotificationPending
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
     val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = storage.lessonTypeColors
@@ -364,6 +366,10 @@ class ScheduleRepository(
     fun setNewYearTheme(enabled: Boolean) = storage.setNewYearTheme(enabled)
     fun dismissNewYearSeason() = storage.dismissNewYearSeason()
     fun clearNewYearSeasonDismissal() = storage.clearNewYearSeasonDismissal()
+    fun setCoffeeTheme(enabled: Boolean) = storage.setCoffeeTheme(enabled)
+    fun recordDeveloperRepositoryVisit(url: String) =
+        storage.recordDeveloperRepositoryVisit(url)
+    fun dismissCoffeeNotification() = storage.dismissCoffeeNotification()
     fun setCheatsAgreed(agreed: Boolean?) = storage.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = storage.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = storage.setDiagnosticsEnabled(enabled)
