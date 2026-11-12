@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 class ScheduleShareCodecTest {
 
     private val schedule = SharedSchedule(
-        name = "Тест (п)",
+        name = "Тест *",
         lessons = listOf(
             UserLesson(
                 id = "rule-1",

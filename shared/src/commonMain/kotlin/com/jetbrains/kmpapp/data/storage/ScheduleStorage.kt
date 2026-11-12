@@ -1085,7 +1085,7 @@ class ScheduleStorage(
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return null
 
-        val title = uniqueLocalTitle("$trimmed (п)")
+        val title = uniqueStarredLocalTitle(trimmed, existingLocalTitles())
         val target = ScheduleTarget(
             id = nextLocalTargetId(),
             targetTitle = title,
@@ -1115,10 +1115,13 @@ class ScheduleStorage(
         return target
     }
 
-    private fun uniqueLocalTitle(base: String): String {
-        val existingTitles = _savedTargets.value
+    private fun existingLocalTitles(): Set<String> =
+        _savedTargets.value
             .flatMap { listOf(it.targetTitle, it.fullTitle) }
             .toSet()
+
+    private fun uniqueLocalTitle(base: String): String {
+        val existingTitles = existingLocalTitles()
         var title = base
         var index = 1
         while (title in existingTitles) {
@@ -1563,6 +1566,14 @@ class ScheduleStorage(
         fun userLessonsKey(target: ScheduleTarget): String =
             "${target.scheduleTarget}:${target.id}"
     }
+}
+
+internal fun uniqueStarredLocalTitle(base: String, existingTitles: Set<String>): String {
+    var title = "$base *"
+    while (title in existingTitles) {
+        title += "*"
+    }
+    return title
 }
 
 

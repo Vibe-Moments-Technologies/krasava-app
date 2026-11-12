@@ -454,7 +454,7 @@ fun ManageSchedulesScreen(
             text = {
                 Column {
                     GlitchText(
-                        "Введите название — к нему добавится «(п)».",
+                        "Введите название — к нему добавится «*», а при дубликате — ещё одна.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Spacer(modifier = Modifier.height(12.dp))
