@@ -31,11 +31,13 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Domain
 import androidx.compose.material.icons.filled.Forest
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Handshake
@@ -53,6 +55,7 @@ import androidx.compose.material.icons.filled.RocketLaunch
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.SportsEsports
+import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -200,6 +203,8 @@ data class ResourceLink(
     val symbol: String,
     val url: String?,
     val accentColor: Color,
+    /** Вторая ссылка в карточке: для сообществ — Telegram рядом с ВК. */
+    val secondaryUrl: String? = null,
     val fetchAvatarFrom: String? = null,
     /** Иконка вместо эмодзи-символа; null — рисуем [symbol]. */
     val icon: ImageVector? = null,
@@ -218,13 +223,15 @@ private fun vkLink(
     url: String,
     accent: Color,
     logo: DrawableResource? = null,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    secondaryUrl: String? = null
 ) = ResourceLink(
     title = title,
     description = description,
     symbol = symbol,
     url = url,
     accentColor = accent,
+    secondaryUrl = secondaryUrl,
     fetchAvatarFrom = url,
     icon = icon,
     logo = logo,
@@ -435,20 +442,13 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     accentColor = Color(0xFF007AFF),
                     children = listOf(
                         vkLink(
-                            title = "ВК сообщество",
-                            description = "ВК группа, где публикуются новости об организации",
+                            title = "Сообщество",
+                            description = "Главные новости Студенческого союза, анонсы событий и возможности для студентов РТУ МИРЭА.",
                             symbol = "🤝",
                             url = "https://vk.ru/sumirea",
                             accent = Color(0xFF007AFF),
-                            logo = Res.drawable.res_social_sumirea
-                        ),
-                        tgLink(
-                            title = "ТГ сообщество",
-                            description = "Официальный ТГ канал организации",
-                            symbol = "📢",
-                            url = "https://t.me/sumirea",
-                            accent = Color(0xFF007AFF),
-                            logo = Res.drawable.res_social_sumirea
+                            logo = Res.drawable.res_social_sumirea,
+                            secondaryUrl = "https://t.me/sumirea"
                         ),
                         ResourceLink(
                             title = "Сайт",
@@ -476,13 +476,62 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                                     title = "Подразделения",
                                     icon = Icons.Default.AccountTree,
                                     accentColor = Color(0xFF007AFF),
-                                    children = emptyList()
+                                    children = listOf(
+                                        ResourceFolder(
+                                            title = "Волонтёрский центр РТУ МИРЭА",
+                                            icon = Icons.Default.VolunteerActivism,
+                                            accentColor = Color(0xFF34C759),
+                                            children = listOf(
+                                                vkLink(
+                                                    title = "Волонтёрский центр во ВКонтакте",
+                                                    description = "Новости центра, наборы на события и полезные материалы для добровольцев.",
+                                                    symbol = "💚",
+                                                    url = "https://vk.com/vcrtumirea",
+                                                    accent = Color(0xFF0077FF),
+                                                    icon = Icons.Default.VolunteerActivism
+                                                ),
+                                                tgLink(
+                                                    title = "Волонтёрский центр в Telegram",
+                                                    description = "Анонсы акций, наборы волонтёров и новости добровольческого движения РТУ МИРЭА.",
+                                                    symbol = "📣",
+                                                    url = "https://t.me/vc_rtumirea",
+                                                    accent = Color(0xFF29A9EB),
+                                                    icon = Icons.Default.Campaign
+                                                ),
+                                                tgLink(
+                                                    title = "Волонтёрский штаб в Telegram",
+                                                    description = "Оперативные объявления, дежурства и координация волонтёров на мероприятиях.",
+                                                    symbol = "🗣️",
+                                                    url = "https://t.me/volunteer_sch",
+                                                    accent = Color(0xFF34C759),
+                                                    icon = Icons.Default.Groups
+                                                ),
+                                                ResourceLink(
+                                                    title = "Волонтёрская беседа во ВКонтакте",
+                                                    description = "Открытая беседа для общения волонтёров, обмена опытом и поиска единомышленников.",
+                                                    symbol = "🫶",
+                                                    url = "https://vk.me/join/ATwVdJzu5TEfATv8MQF0mgD2Fmaa71bZkbM=",
+                                                    accentColor = Color(0xFF0077FF),
+                                                    icon = Icons.Default.Forum
+                                                )
+                                            )
+                                        )
+                                    )
                                 ),
                                 ResourceFolder(
                                     title = "Клубы по интересам",
                                     icon = Icons.Default.Interests,
                                     accentColor = Color(0xFFFF2D55),
-                                    children = emptyList()
+                                    children = listOf(
+                                        tgLink(
+                                            title = "Клуб Спортивной Мафии",
+                                            description = "Вечера спортивной мафии: игры для новичков и опытных, разборы партий и дружеская атмосфера.",
+                                            symbol = "🕵️",
+                                            url = "https://t.me/mirea_mafia",
+                                            accent = Color(0xFF8E24AA),
+                                            icon = Icons.Default.Casino
+                                        )
+                                    )
                                 ),
                                 ResourceFolder(
                                     title = "Отряды",
@@ -600,20 +649,13 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     accentColor = Color(0xFF5856D6),
                     children = listOf(
                         vkLink(
-                            title = "ВК сообщество",
-                            description = "ВК группа, где публикуются новости об организации",
+                            title = "Сообщество",
+                            description = "Новости профсоюзной организации, защита прав студентов и анонсы мероприятий.",
                             symbol = "🤝",
                             url = "https://vk.ru/rtuprofkom",
                             accent = Color(0xFF5856D6),
-                            logo = Res.drawable.res_social_profkom
-                        ),
-                        tgLink(
-                            title = "ТГ сообщество",
-                            description = "Официальный ТГ канал организации",
-                            symbol = "📢",
-                            url = "https://t.me/mireaprofkom",
-                            accent = Color(0xFF5856D6),
-                            logo = Res.drawable.res_social_profkom
+                            logo = Res.drawable.res_social_profkom,
+                            secondaryUrl = "https://t.me/mireaprofkom"
                         ),
                         vkLink(
                             title = "Априори",
@@ -646,20 +688,13 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                             iconBackground = Color(0xFF0B0B0F)
                         ),
                         vkLink(
-                            title = "ВКонтакте",
-                            description = "Новости киберспорта, турниры и анонсы мероприятий киберзоны РТУ МИРЭА.",
+                            title = "Сообщество",
+                            description = "Новости киберспорта, турниры, анонсы мероприятий и жизнь киберзоны РТУ МИРЭА.",
                             symbol = "🎮",
                             url = "https://vk.ru/esports.mirea",
                             accent = Color(0xFF0077FF),
-                            logo = Res.drawable.res_social_esports
-                        ),
-                        tgLink(
-                            title = "Telegram",
-                            description = "Официальный Telegram-канал киберспорта и киберзоны РТУ МИРЭА.",
-                            symbol = "💬",
-                            url = "https://t.me/mirea_esports",
-                            accent = Color(0xFF29A9EB),
-                            icon = TelegramMark
+                            logo = Res.drawable.res_social_esports,
+                            secondaryUrl = "https://t.me/mirea_esports"
                         ),
                         tgLink(
                             title = "Настольные игры",
@@ -1128,26 +1163,10 @@ private fun ResourceLinkCard(
             Spacer(modifier = Modifier.height(14.dp))
 
             if (link.url != null) {
-                Button(
-                    onClick = { uriHandler.openUri(link.url) },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    GlitchText(
-                        text = linkButtonLabel(link.url),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                ResourceLinkButton(url = link.url, uriHandler = uriHandler)
+                link.secondaryUrl?.let { secondaryUrl ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ResourceLinkButton(url = secondaryUrl, uriHandler = uriHandler)
                 }
             } else {
                 // «В разработке»: никуда не ведёт, нажатие в пустоту.
@@ -1174,6 +1193,31 @@ private fun ResourceLinkCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ResourceLinkButton(url: String, uriHandler: UriHandler) {
+    Button(
+        onClick = { uriHandler.openUri(url) },
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.primary
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        GlitchText(
+            text = linkButtonLabel(url),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 
@@ -1309,6 +1353,7 @@ private fun displayWithoutProtocol(url: String): String =
 
 private fun linkButtonLabel(url: String): String = when {
     url.contains("t.me") -> "Перейти в Telegram"
+    url.contains("vk.me/join") -> "Присоединиться в ВК"
     url.contains("vk.") || url.contains("vk.ru") -> "Открыть страницу ВК"
     else -> "Перейти"
 }
