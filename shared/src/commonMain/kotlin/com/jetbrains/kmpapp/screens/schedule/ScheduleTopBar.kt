@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.model.ScheduleDiff
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
+import com.jetbrains.kmpapp.data.model.badgeLabel
 
 @Composable
 fun ScheduleTopBar(
@@ -94,7 +95,10 @@ fun ScheduleTopBar(
             modifier = Modifier.weight(1f, fill = false),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box {
+            // Капсула группы — единственное СЖИМАЕМОЕ звено левой половины:
+            // при нехватке места её название уходит в многоточие, а бейдж
+            // изменений сохраняет свою ширину и не переносится на две строки.
+            Box(modifier = Modifier.weight(1f, fill = false)) {
                 // Ширина капсулы группы измеряется живьём (onSizeChanged):
                 // список выбора открывается РОВНО по ширине блока группы
                 // (репорт владельца: «список теперь больше самого блока»).
@@ -197,8 +201,17 @@ fun ScheduleTopBar(
 
             if (activeDiff != null && activeDiff.items.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(8.dp))
+                // Бейдж изменений: «±N» вместо «Diff (N)» (решение владельца).
+                // Знак плюс-минус читается как «изменения» без латинского слова
+                // и занимает вдвое меньше места. Число ограничено разрядностью
+                // (см. badgeLabel) — ширина бейджа перестала плавать вместе с
+                // количеством правок, поэтому он не вытесняет капсулу группы.
+                // maxLines=1 + softWrap=false — прямая защита от «корёжится»:
+                // у прежнего текста не было ограничения строк, и трёхзначное
+                // «Diff (147)» переносилось, растягивая шапку по высоте.
                 Box(
                     modifier = Modifier
+                        .widthIn(min = 40.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(MaterialTheme.colorScheme.primaryContainer)
                         .clickable(onClick = onDiffClick)
@@ -206,9 +219,12 @@ fun ScheduleTopBar(
                     contentAlignment = Alignment.Center
                 ) {
                     GlitchText(
-                        text = "Diff (${activeDiff.items.size})",
+                        text = activeDiff.badgeLabel(),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Clip,
                         color = MaterialTheme.colorScheme.onPrimaryContainer
                     )
                 }

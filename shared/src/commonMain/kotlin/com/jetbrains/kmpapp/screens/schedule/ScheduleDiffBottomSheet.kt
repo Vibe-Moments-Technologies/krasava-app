@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.model.LessonDiffItem
 import com.jetbrains.kmpapp.data.model.LessonDiffType
 import com.jetbrains.kmpapp.data.model.ScheduleDiff
+import com.jetbrains.kmpapp.data.model.changesCountLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,7 +74,7 @@ fun ScheduleDiffBottomSheet(
                         fontWeight = FontWeight.Bold
                     )
                     GlitchText(
-                        text = "${diff.targetTitle} • ${diff.items.size} изменений",
+                        text = "${diff.targetTitle} • ${changesCountLabel(diff.items.size)}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
