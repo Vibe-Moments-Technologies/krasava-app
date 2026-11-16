@@ -15,6 +15,8 @@ import com.jetbrains.kmpapp.data.model.UserLesson
 import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.data.model.orderedForDisplay
 import com.jetbrains.kmpapp.data.network.detectVpnActive
+import com.jetbrains.kmpapp.data.share.ScheduleShareCodec
+import com.jetbrains.kmpapp.data.share.SharedSchedule
 import com.jetbrains.kmpapp.data.parser.MireaICalParser
 import com.jetbrains.kmpapp.data.storage.ScheduleStorage
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
@@ -416,6 +418,10 @@ class ScheduleRepository(
         scope.launch {
             storage.selectedTarget.collect { target ->
                 if (target != null) {
+                    if (target.isLocal) {
+                        _errorMessage.value = null
+                        return@collect
+                    }
                     val cached = storage.getLessons(target.id)
                     val hasCached = cached != null && cached.isNotEmpty()
                     val lastSync = storage.getLastSyncTime(target.id)
@@ -451,10 +457,28 @@ class ScheduleRepository(
 
     fun addAndSelectTarget(target: ScheduleTarget) {
         storage.addTarget(target)
+        if (target.isLocal) return
         scope.launch {
             refreshSchedule(target, silent = false)
         }
     }
+
+    fun createEmptySchedule(name: String): ScheduleTarget? = storage.createEmptyTarget(name)
+
+    fun createShareLink(target: ScheduleTarget): String? {
+        if (!target.isLocal) return null
+        return runCatching {
+            ScheduleShareCodec.encode(
+                SharedSchedule(
+                    name = target.targetTitle,
+                    lessons = storage.userLessonsFor(target)
+                )
+            )
+        }.getOrNull()
+    }
+
+    fun importSharedSchedule(schedule: SharedSchedule): ScheduleTarget? =
+        storage.importLocalTarget(schedule.name, schedule.lessons)
 
     fun selectTarget(target: ScheduleTarget) {
         storage.selectTarget(target)
@@ -490,6 +514,7 @@ class ScheduleRepository(
     }
 
     private suspend fun refreshSchedule(target: ScheduleTarget, silent: Boolean = false) {
+        if (target.isLocal) return
         if (!silent) {
             _isLoading.value = true
             _errorMessage.value = null

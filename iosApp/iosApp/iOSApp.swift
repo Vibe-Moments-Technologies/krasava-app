@@ -52,6 +52,11 @@ struct iOSApp: App {
         WindowGroup {
             ContentView()
                 .onAppear { WidgetSync.push() }
+                .onOpenURL { url in
+                    if url.scheme?.caseInsensitiveCompare("krasava") == .orderedSame {
+                        ScheduleShareInbox.shared.submitLink(raw: url.absoluteString)
+                    }
+                }
         }
         .onChange(of: scenePhase) { phase in
             // Перед уходом в фон и по возврате — виджет всегда со свежим снимком.

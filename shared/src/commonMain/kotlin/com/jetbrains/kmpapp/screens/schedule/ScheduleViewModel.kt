@@ -260,6 +260,11 @@ class ScheduleViewModel(
         resetAutoScroll()
     }
 
+    fun createEmptySchedule(name: String) {
+        repository.createEmptySchedule(name)
+        resetAutoScroll()
+    }
+
     /** Создаёт пользовательскую пару в текущем расписании. */
     fun addUserLesson(
         subject: String,

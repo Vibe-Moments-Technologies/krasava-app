@@ -860,7 +860,7 @@ fun SettingsScreen(
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                     GlitchText(
-                                        text = target.type.displayName,
+                                        text = target.displayTypeName,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )

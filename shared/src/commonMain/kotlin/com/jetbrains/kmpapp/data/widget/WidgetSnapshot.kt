@@ -123,7 +123,7 @@ object WidgetSnapshotBuilder {
                 WidgetTarget(
                     id = target.id,
                     title = target.targetTitle,
-                    typeName = target.type.displayName,
+                    typeName = target.displayTypeName,
                     lessons = lessonsByTarget[target.id]
                         ?.filter { it.date >= today && it.date <= lastDay }
                         ?.orderedForDisplay(hiddenIds)

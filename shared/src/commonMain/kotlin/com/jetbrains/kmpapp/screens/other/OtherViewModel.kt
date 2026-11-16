@@ -444,4 +444,11 @@ class OtherViewModel(
     fun addAndSelectTarget(target: ScheduleTarget) {
         repository.addAndSelectTarget(target)
     }
+
+    fun createEmptySchedule(name: String) {
+        repository.createEmptySchedule(name)
+    }
+
+    fun createShareLink(target: ScheduleTarget): String? =
+        repository.createShareLink(target)
 }

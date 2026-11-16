@@ -38,7 +38,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -279,7 +278,7 @@ fun AddScheduleBottomSheet(
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     GlitchText(
-                                        text = item.type.displayName,
+                                        text = item.displayTypeName,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer

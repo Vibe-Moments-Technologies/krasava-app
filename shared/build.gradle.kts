@@ -61,6 +61,7 @@ kotlin {
             implementation(libs.compose.material.icons.core)
             implementation(libs.compose.material.icons.extended)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.okio)
 
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
