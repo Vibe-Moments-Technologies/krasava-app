@@ -124,8 +124,8 @@ fun ExperimentalSettingsScreen(
         onDismiss = { showDisappointment = false },
         onConfirm = {
             viewModel.setCheatsBlocked(true)
-            // Матрица потеряна: тема выключается и исчезает из списка
-            // «Тематические темы» навсегда — второго шанса нет.
+            // Матрица потеряна: тема выключается и остаётся в списке
+            // «Тематические темы» заблокированной навсегда.
             viewModel.revokeMatrixUnlock()
             showDisappointment = false
         }

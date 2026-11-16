@@ -173,7 +173,7 @@ class ScheduleRepository(
     val isHalloweenTheme: StateFlow<Boolean> = storage.isHalloweenTheme
     /** Хэллоуин сейчас активен: сезон без отказа или ручное включение. */
     val isHalloweenActive: StateFlow<Boolean> = storage.isHalloweenActive
-    /** Строка Хэллоуина видна в списке тем: сезон идёт или тема включена. */
+    /** Строка Хэллоуина: сезон, текущее включение или хотя бы одно прошлое. */
     val isHalloweenRowVisible: StateFlow<Boolean> = storage.isHalloweenRowVisible
     val isNewYearTheme: StateFlow<Boolean> = storage.isNewYearTheme
     /** Новый год сейчас активен: сезон без отказа или ручное включение. */
@@ -183,6 +183,7 @@ class ScheduleRepository(
     val isCoffeeTheme: StateFlow<Boolean> = storage.isCoffeeTheme
     val coffeeNotificationPending: StateFlow<Boolean> = storage.coffeeNotificationPending
     val unlockedThemes: StateFlow<Set<ThemeOverlay>> = storage.unlockedThemes
+    val revokedThemes: StateFlow<Set<ThemeOverlay>> = storage.revokedThemes
     /** Пользовательские цвета типов занятий (только переопределённые). */
     val lessonTypeColors: StateFlow<Map<LessonType, LessonColor>> = storage.lessonTypeColors
     /** Вариант палитры «Киберпанка»: новая (жёлтый/циан) или старая (маджента). */
@@ -399,7 +400,7 @@ class ScheduleRepository(
         storage.setCyberpunkTheme(enabled)
     }
 
-    /** Матрица потеряна: выключить и убрать из списка найденных тем. */
+    /** Матрица потеряна: выключить и заблокировать в списке тем. */
     fun revokeMatrixUnlock() {
         storage.revokeMatrixUnlock()
     }
