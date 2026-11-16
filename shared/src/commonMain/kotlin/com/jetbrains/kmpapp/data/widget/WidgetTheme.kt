@@ -5,6 +5,8 @@ import androidx.compose.ui.graphics.toArgb
 import com.jetbrains.kmpapp.DarkColors
 import com.jetbrains.kmpapp.LightColors
 import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.theme.CoffeeDarkColors
+import com.jetbrains.kmpapp.theme.CoffeeLightColors
 import com.jetbrains.kmpapp.theme.HalloweenDarkColors
 import com.jetbrains.kmpapp.theme.KawaiiDarkColors
 import com.jetbrains.kmpapp.theme.KawaiiLightColors
@@ -73,6 +75,7 @@ object WidgetThemeResolver {
                 ThemeOverlay.MATRIX -> if (isDark) MatrixDarkColors else MatrixLightColors
                 ThemeOverlay.HALLOWEEN -> HalloweenDarkColors
                 ThemeOverlay.NEW_YEAR -> if (isDark) NewYearDarkColors else NewYearLightColors
+                ThemeOverlay.COFFEE -> if (isDark) CoffeeDarkColors else CoffeeLightColors
                 ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
             }
         }

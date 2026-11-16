@@ -7,5 +7,6 @@ enum class ThemeOverlay {
     CYBERPUNK,
     MATRIX,
     HALLOWEEN,
-    NEW_YEAR
+    NEW_YEAR,
+    COFFEE
 }

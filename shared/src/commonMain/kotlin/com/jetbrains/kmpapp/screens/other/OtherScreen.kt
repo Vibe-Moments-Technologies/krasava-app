@@ -174,7 +174,10 @@ fun OtherScreen(
                     )
                 }
                 OtherSubScreen.TEAM -> {
-                    TeamScreen(onBack = back)
+                    TeamScreen(
+                        onBack = back,
+                        onGitHubClick = viewModel::recordDeveloperRepositoryVisit
+                    )
                 }
                 OtherSubScreen.LICENSES -> {
                     LicensesScreen(onBack = back)

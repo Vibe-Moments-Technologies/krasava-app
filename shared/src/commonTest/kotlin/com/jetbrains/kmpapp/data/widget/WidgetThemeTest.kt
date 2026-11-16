@@ -2,6 +2,8 @@ package com.jetbrains.kmpapp.data.widget
 
 import androidx.compose.ui.graphics.toArgb
 import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.theme.CoffeeDarkColors
+import com.jetbrains.kmpapp.theme.CoffeeLightColors
 import com.jetbrains.kmpapp.theme.CyberpunkDarkColors
 import com.jetbrains.kmpapp.theme.CyberpunkLightColors
 import com.jetbrains.kmpapp.theme.CyberpunkClassicLightColors
@@ -72,6 +74,26 @@ class WidgetThemeTest {
         assertEquals(SakuraLightColors.primary.toArgb(), sakura.accent)
         assertEquals(CyberpunkLightColors.primary.toArgb(), cyberpunk.accent)
         assertNotEquals(sakura.background, cyberpunk.background)
+    }
+
+    @Test
+    fun coffeeOverlayUsesCoffeePalette() {
+        val light = WidgetThemeResolver.resolve(
+            themeMode = ThemeMode.LIGHT,
+            overlay = ThemeOverlay.COFFEE,
+            systemDark = true,
+            halloweenActive = false
+        )
+        val dark = WidgetThemeResolver.resolve(
+            themeMode = ThemeMode.DARK,
+            overlay = ThemeOverlay.COFFEE,
+            systemDark = false,
+            halloweenActive = false
+        )
+        assertEquals(CoffeeLightColors.background.toArgb(), light.background)
+        assertEquals(CoffeeLightColors.primary.toArgb(), light.accent)
+        assertEquals(CoffeeDarkColors.background.toArgb(), dark.background)
+        assertEquals(CoffeeDarkColors.primary.toArgb(), dark.accent)
     }
 
     @Test

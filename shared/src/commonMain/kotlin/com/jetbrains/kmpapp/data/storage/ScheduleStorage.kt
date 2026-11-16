@@ -16,6 +16,9 @@ import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
+import com.jetbrains.kmpapp.theme.addCoffeeRepositoryVisit
+import com.jetbrains.kmpapp.theme.isCoffeeQuestComplete
+import com.jetbrains.kmpapp.theme.normalizeCoffeeRepositoryUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -137,6 +140,12 @@ class ScheduleStorage(
     /** Новогодняя тема включена вручную или автоматически. */
     val isNewYearTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.NEW_YEAR }
         .stateIn(scope, SharingStarted.Eagerly, false)
+    val isCoffeeTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.COFFEE }
+        .stateIn(scope, SharingStarted.Eagerly, false)
+
+    private val _coffeeVisitedRepositories = MutableStateFlow<Set<String>>(emptySet())
+    private val _coffeeNotificationPending = MutableStateFlow(false)
+    val coffeeNotificationPending: StateFlow<Boolean> = _coffeeNotificationPending.asStateFlow()
 
     /**
      * Темы, доступные в списке «Тематические темы»: найденные квестовые
@@ -351,6 +360,9 @@ class ScheduleStorage(
             platformStorage.getString(KEY_HALLOWEEN_DISMISSED_YEAR)?.toIntOrNull()
         _newYearDismissedYear.value =
             platformStorage.getString(KEY_NEW_YEAR_DISMISSED_YEAR)?.toIntOrNull()
+        _coffeeVisitedRepositories.value = loadCoffeeRepositoryVisits()
+        _coffeeNotificationPending.value =
+            loadBooleanFlag(KEY_COFFEE_NOTIFICATION_PENDING, false)
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
         _diagnosticsEnabled.value = loadBooleanFlag(KEY_DIAGNOSTICS_ENABLED, false)
@@ -670,6 +682,7 @@ class ScheduleStorage(
                 platformStorage.saveString(KEY_MATRIX_THEME, (overlay == ThemeOverlay.MATRIX).toString())
                 platformStorage.saveString(KEY_HALLOWEEN_THEME, (overlay == ThemeOverlay.HALLOWEEN).toString())
                 platformStorage.saveString(KEY_NEW_YEAR_THEME, (overlay == ThemeOverlay.NEW_YEAR).toString())
+                platformStorage.saveString(KEY_COFFEE_THEME, (overlay == ThemeOverlay.COFFEE).toString())
             } catch (e: Exception) {
                 println("Failed to persist theme overlay: ${e.message}")
             }
@@ -686,6 +699,71 @@ class ScheduleStorage(
     fun setMatrixTheme(enabled: Boolean) {
         if (enabled) setThemeUnlocked(ThemeOverlay.MATRIX, true)
         setThemeOverlay(if (enabled) ThemeOverlay.MATRIX else ThemeOverlay.NONE)
+    }
+
+    fun setCoffeeTheme(enabled: Boolean) {
+        if (enabled) setThemeUnlocked(ThemeOverlay.COFFEE, true)
+        setThemeOverlay(if (enabled) ThemeOverlay.COFFEE else ThemeOverlay.NONE)
+    }
+
+    fun recordDeveloperRepositoryVisit(url: String) {
+        val updated = addCoffeeRepositoryVisit(_coffeeVisitedRepositories.value, url) ?: return
+        if (isCoffeeQuestComplete(updated)) {
+            _coffeeVisitedRepositories.value = emptySet()
+            persistCoffeeRepositoryVisits()
+            setThemeUnlocked(ThemeOverlay.COFFEE, true)
+            setCoffeeNotificationPending(true)
+        } else {
+            _coffeeVisitedRepositories.value = updated
+            persistCoffeeRepositoryVisits()
+        }
+    }
+
+    fun dismissCoffeeNotification() {
+        setCoffeeNotificationPending(false)
+    }
+
+    private fun setCoffeeNotificationPending(pending: Boolean) {
+        _coffeeNotificationPending.value = pending
+        scope.launch {
+            try {
+                if (pending) {
+                    platformStorage.saveString(KEY_COFFEE_NOTIFICATION_PENDING, "true")
+                } else {
+                    platformStorage.remove(KEY_COFFEE_NOTIFICATION_PENDING)
+                }
+            } catch (e: Exception) {
+                println("Failed to persist coffee notification: ${e.message}")
+            }
+        }
+    }
+
+    private fun persistCoffeeRepositoryVisits() {
+        val visited = _coffeeVisitedRepositories.value
+        scope.launch {
+            try {
+                if (visited.isEmpty()) {
+                    platformStorage.remove(KEY_COFFEE_VISITED_REPOSITORIES)
+                } else {
+                    platformStorage.saveString(
+                        KEY_COFFEE_VISITED_REPOSITORIES,
+                        visited.joinToString("\n")
+                    )
+                }
+            } catch (e: Exception) {
+                println("Failed to persist coffee repositories: ${e.message}")
+            }
+        }
+    }
+
+    private fun loadCoffeeRepositoryVisits(): Set<String> = try {
+        platformStorage.getString(KEY_COFFEE_VISITED_REPOSITORIES)
+            ?.lineSequence()
+            ?.mapNotNull { normalizeCoffeeRepositoryUrl(it) }
+            ?.toSet()
+            .orEmpty()
+    } catch (_: Throwable) {
+        emptySet()
     }
 
     /** Хэллоуинская тема: в сезон (28 октября — 3 ноября) включается сама,
@@ -884,6 +962,7 @@ class ScheduleStorage(
         ThemeOverlay.CYBERPUNK -> KEY_UNLOCKED_CYBERPUNK
         ThemeOverlay.MATRIX -> KEY_UNLOCKED_MATRIX
         ThemeOverlay.NEW_YEAR -> KEY_UNLOCKED_NEW_YEAR
+        ThemeOverlay.COFFEE -> KEY_UNLOCKED_COFFEE
         else -> null
     }
 
@@ -916,6 +995,11 @@ class ScheduleStorage(
             platformStorage.getString(KEY_NEW_YEAR_THEME)?.toBooleanStrictOrNull() == true
         ) {
             set += ThemeOverlay.NEW_YEAR
+        }
+        if (loadBooleanFlag(KEY_UNLOCKED_COFFEE, false) ||
+            platformStorage.getString(KEY_COFFEE_THEME)?.toBooleanStrictOrNull() == true
+        ) {
+            set += ThemeOverlay.COFFEE
         }
         return set
     }
@@ -1023,6 +1107,7 @@ class ScheduleStorage(
             platformStorage.getString(KEY_NEW_YEAR_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.NEW_YEAR
             platformStorage.getString(KEY_CYBERPUNK_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.CYBERPUNK
             platformStorage.getString(KEY_KAWAII_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.KAWAII
+            platformStorage.getString(KEY_COFFEE_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.COFFEE
             platformStorage.getString(KEY_SAKURA_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.SAKURA
             else -> null
         }
@@ -1476,12 +1561,16 @@ class ScheduleStorage(
         private const val KEY_HALLOWEEN_DISMISSED_YEAR = "krasava_halloween_dismissed_year"
         private const val KEY_NEW_YEAR_THEME = "krasava_new_year_theme_secret"
         private const val KEY_NEW_YEAR_DISMISSED_YEAR = "krasava_new_year_dismissed_year"
+        private const val KEY_COFFEE_THEME = "krasava_coffee_theme_secret"
+        private const val KEY_COFFEE_VISITED_REPOSITORIES = "krasava_coffee_visited_repositories"
+        private const val KEY_COFFEE_NOTIFICATION_PENDING = "krasava_coffee_notification_pending"
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
         // Разблокировки квестовых тем для списка «Тематические темы».
         private const val KEY_UNLOCKED_KAWAII = "krasava_unlocked_kawaii"
         private const val KEY_UNLOCKED_CYBERPUNK = "krasava_unlocked_cyberpunk"
         private const val KEY_UNLOCKED_MATRIX = "krasava_unlocked_matrix"
         private const val KEY_UNLOCKED_NEW_YEAR = "krasava_unlocked_new_year"
+        private const val KEY_UNLOCKED_COFFEE = "krasava_unlocked_coffee"
         // Пользовательские цвета типов занятий: "LECTURE=BLUE;LAB=ROSE".
         private const val KEY_LESSON_TYPE_COLORS = "krasava_lesson_type_colors"
         // Вариант палитры Киберпанка: NEON (новая) | CLASSIC (старая).

@@ -57,6 +57,7 @@ import org.jetbrains.compose.resources.painterResource
 @Composable
 fun TeamScreen(
     onBack: () -> Unit,
+    onGitHubClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -114,7 +115,11 @@ fun TeamScreen(
                     )
                 }
                 items(members, key = { it.name }) { member ->
-                    TeamMemberCard(member = member, newYearActive = newYearActive)
+                    TeamMemberCard(
+                        member = member,
+                        newYearActive = newYearActive,
+                        onGitHubClick = onGitHubClick
+                    )
                 }
             }
 
@@ -285,7 +290,11 @@ private fun DrawScope.drawSnegurochkaHat() {
 }
 
 @Composable
-private fun TeamMemberCard(member: TeamMember, newYearActive: Boolean) {
+private fun TeamMemberCard(
+    member: TeamMember,
+    newYearActive: Boolean,
+    onGitHubClick: (String) -> Unit
+) {
     val uriHandler = LocalUriHandler.current
     Card(
         shape = RoundedCornerShape(20.dp),
@@ -363,7 +372,12 @@ private fun TeamMemberCard(member: TeamMember, newYearActive: Boolean) {
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                                .clickable { uriHandler.openUri(link.url) }
+                                .clickable {
+                                    if (link.type == TeamLinkType.GITHUB) {
+                                        onGitHubClick(link.url)
+                                    }
+                                    uriHandler.openUri(link.url)
+                                }
                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {

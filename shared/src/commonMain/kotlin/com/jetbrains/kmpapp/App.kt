@@ -40,6 +40,7 @@ import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
 import com.jetbrains.kmpapp.screens.map.MapScreen
 import com.jetbrains.kmpapp.screens.notes.NotesScreen
 import com.jetbrains.kmpapp.screens.notes.NotesViewModel
+import com.jetbrains.kmpapp.screens.other.CoffeeThemeUnlockDialog
 import com.jetbrains.kmpapp.screens.other.OtherScreen
 import com.jetbrains.kmpapp.screens.other.OtherViewModel
 import com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen
@@ -54,6 +55,9 @@ import com.jetbrains.kmpapp.screens.other.isServiceScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksScreen
 import com.jetbrains.kmpapp.screens.tasks.TasksViewModel
 import com.jetbrains.kmpapp.theme.cyberpunkColors
+import com.jetbrains.kmpapp.theme.CoffeeDarkColors
+import com.jetbrains.kmpapp.theme.CoffeeGlow
+import com.jetbrains.kmpapp.theme.CoffeeLightColors
 import com.jetbrains.kmpapp.theme.ErrorColors
 import com.jetbrains.kmpapp.theme.ErrorScanlines
 import com.jetbrains.kmpapp.theme.ErrorTypography
@@ -162,6 +166,8 @@ fun App() {
     // Хэллоуин, в сезон она заменяет только базовую тему и не перебивает
     // явно выбранные тематические. Светлая и тёмная палитры следуют режиму.
     val newYearActive by repository.isNewYearActive.collectAsState()
+    val isCoffeeTheme by repository.isCoffeeTheme.collectAsState()
+    val coffeeNotificationPending by repository.coffeeNotificationPending.collectAsState()
 
     val colors = if (newYearActive) {
         if (isDark) NewYearDarkColors else NewYearLightColors
@@ -182,6 +188,7 @@ fun App() {
             // нужны для исчерпывающего when.
             ThemeOverlay.HALLOWEEN -> HalloweenDarkColors
             ThemeOverlay.NEW_YEAR -> if (isDark) NewYearDarkColors else NewYearLightColors
+            ThemeOverlay.COFFEE -> if (isDark) CoffeeDarkColors else CoffeeLightColors
             ThemeOverlay.NONE -> if (isDark) DarkColors else LightColors
         }
     }
@@ -361,6 +368,14 @@ fun App() {
                 )
             }
 
+            if (coffeeNotificationPending && !showUpdateDialog) {
+                CoffeeThemeUnlockDialog(
+                    themeEnabled = isCoffeeTheme,
+                    onThemeEnabledChange = otherViewModel::setCoffeeTheme,
+                    onDismiss = otherViewModel::dismissCoffeeNotification
+                )
+            }
+
             // Синхронизация чекбокса с фактом подавления при каждом открытии
             // диалога (репорт владельца: «при открытии галочка уже снята» —
             // должна стоять, если версия подавлена). LaunchedEffect, не
@@ -519,6 +534,8 @@ fun App() {
                 // те же «глюковатые полосы», что и поле «Сапёра»: скан-строка
                 // и полосы порчи проезжают по всему экрану поверх контента.
                 ErrorScanlines(enabled = errorActive && !newYearActive)
+
+                CoffeeGlow(enabled = isCoffeeTheme)
 
                 // Снегопад — самый верхний слой: он не ловит жесты и не
                 // мешает управлению, но заметен на любой поверхности темы.
