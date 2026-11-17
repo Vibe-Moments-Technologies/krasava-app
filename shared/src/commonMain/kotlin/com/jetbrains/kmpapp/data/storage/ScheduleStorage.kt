@@ -16,6 +16,7 @@ import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
+import com.jetbrains.kmpapp.theme.themeAfterDisable
 import com.jetbrains.kmpapp.theme.addCoffeeRepositoryVisit
 import com.jetbrains.kmpapp.theme.isCoffeeQuestComplete
 import com.jetbrains.kmpapp.theme.normalizeCoffeeRepositoryUrl
@@ -127,6 +128,16 @@ class ScheduleStorage(
     private val _themeOverlay = MutableStateFlow(ThemeOverlay.NONE)
     val themeOverlay: StateFlow<ThemeOverlay> = _themeOverlay.asStateFlow()
 
+    /**
+     * Последняя явно выбранная тема (решение владельца о «возврате на
+     * предыдущую»): сюда пишется каждый осознанный выбор тумблером, кроме
+     * выключения. Выключение любой темы возвращает сюда, а не на дефолт;
+     * если до неё ничего не выбирали — NONE. Сезонная тема здесь не живёт:
+     * она включается правилом, а не выбором, и в конце сезона гаснет сама.
+     */
+    private val _previousTheme = MutableStateFlow(ThemeOverlay.NONE)
+    val previousTheme: StateFlow<ThemeOverlay> = _previousTheme.asStateFlow()
+
     val isSakuraTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.SAKURA }
         .stateIn(scope, SharingStarted.Eagerly, false)
     val isKawaiiTheme: StateFlow<Boolean> = themeOverlay.map { it == ThemeOverlay.KAWAII }
@@ -206,14 +217,6 @@ class ScheduleStorage(
     private val _newYearDismissedYear = MutableStateFlow<Int?>(null)
 
     /**
-     * Хэллоуин хотя бы раз включался: сезоном автоматически, вручную из
-     * списка тем или через «Отладку и эксперименты». После первого включения
-     * строка навсегда остаётся в «Тематических темах», чтобы её можно было
-     * включить повторно вне сезона.
-     */
-    private val _halloweenEverActivated = MutableStateFlow(false)
-
-    /**
      * Текущая дата как поток: сезонные правила должны переключаться сами,
      * даже если приложение не закрывали на ночь. Тик раз в 15 минут —
      * компромисс между точностью границы сезона и лишними пересчётами;
@@ -233,18 +236,17 @@ class ScheduleStorage(
     /**
      * Показывать/включать ли Хэллоуин прямо сейчас (оформление приложения).
      *
-     * Сезон (28 октября — 3 ноября) заменяет только базовую тему, когда
-     * тематические тумблеры выключены. Явно выбранная тема сильнее сезона:
-     * она остаётся до тех пор, пока пользователь не выключит её сам.
-     * Ручное включение Хэллоуина вне сезона работает как раньше.
+     * Сезон (28 октября — 3 ноября) СИЛЬНЕЕ явно выбранной темы (решение
+     * владельца): пока сезон идёт, праздник рисуется поверх любой темы, а
+     * выбор пользователя остаётся в [themeOverlay] и возвращается сам, как
+     * только сезон кончится. Ручное включение вне сезона работает как раньше;
+     * ручное выключение в сезон запоминается как отказ до конца сезона.
      */
     val isHalloweenActive: StateFlow<Boolean> =
         combine(themeOverlay, _halloweenDismissedYear, todayFlow) { overlay, dismissedYear, today ->
             when {
                 overlay == ThemeOverlay.HALLOWEEN -> true
-                overlay == ThemeOverlay.NONE &&
-                    DateUtils.isHalloweenSeason(today) &&
-                    dismissedYear != today.year -> true
+                DateUtils.isHalloweenSeason(today) && dismissedYear != today.year -> true
                 else -> false
             }
         }.stateIn(scope, SharingStarted.Eagerly, false)
@@ -252,41 +254,39 @@ class ScheduleStorage(
     /**
      * Есть ли строка Хэллоуина в «Тематических темах».
      *
-     * Шире [isHalloweenActive] намеренно: пока сезон идёт, строка остаётся,
-     * даже если тему уже выключили — иначе выключить было бы можно, а вернуть
-     * обратно нельзя. После первого включения строка остаётся навсегда:
-     * сезон, ручной тумблер или отладочное включение запоминаются флагом.
+     * Строка живёт, пока сезон идёт или тема включена вручную. Как только
+     * сезон кончился и тему выключили, строка исчезает целиком (решение
+     * владельца) — праздничные темы не «копятся» в списке навсегда.
      */
     val isHalloweenRowVisible: StateFlow<Boolean> =
-        combine(themeOverlay, todayFlow, _halloweenEverActivated) { overlay, today, ever ->
-            overlay == ThemeOverlay.HALLOWEEN ||
-                DateUtils.isHalloweenSeason(today) ||
-                ever
+        combine(themeOverlay, todayFlow) { overlay, today ->
+            overlay == ThemeOverlay.HALLOWEEN || DateUtils.isHalloweenSeason(today)
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     /**
      * Новогодняя тема действует прямо сейчас: 30 декабря — 11 января без
-     * отказа от сезона либо включена вручную. Как и Хэллоуин, сезон заменяет
-     * только базовую тему и не перебивает явно выбранную тематическую.
+     * отказа от сезона либо включена вручную. Как и Хэллоуин, сезон СИЛЬНЕЕ
+     * явно выбранной темы: он рисуется поверх неё, а выбор пользователя
+     * возвращается, когда сезон кончается.
      */
     val isNewYearActive: StateFlow<Boolean> =
         combine(themeOverlay, _newYearDismissedYear, todayFlow) { overlay, dismissedYear, today ->
             when {
                 overlay == ThemeOverlay.NEW_YEAR -> true
-                overlay == ThemeOverlay.NONE &&
-                    DateUtils.isNewYearSeason(today) &&
+                DateUtils.isNewYearSeason(today) &&
                     dismissedYear != DateUtils.newYearSeasonYear(today) -> true
                 else -> false
             }
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     /**
-     * Строка Нового года в «Тематических темах»: появляется после первой
-     * активации и остаётся там навсегда, как найденная квестовая тема.
+     * Строка Нового года в «Тематических темах»: живёт, пока сезон идёт или
+     * тема включена вручную. После окончания сезона строка исчезает целиком
+     * (решение владельца) — раньше она оставалась навсегда из-за разблокировки.
      */
     val isNewYearRowVisible: StateFlow<Boolean> =
-        combine(themeOverlay, _unlockedThemes) { overlay, unlocked ->
-            overlay == ThemeOverlay.NEW_YEAR || ThemeOverlay.NEW_YEAR in unlocked
+        combine(themeOverlay, todayFlow) { overlay, today ->
+            overlay == ThemeOverlay.NEW_YEAR || DateUtils.isNewYearSeason(today)
         }.stateIn(scope, SharingStarted.Eagerly, false)
 
     private val _cheatsAgreed = MutableStateFlow<Boolean?>(null)
@@ -332,34 +332,10 @@ class ScheduleStorage(
 
     init {
         loadPersistedState()
-        // Первая автоматическая активация в сезон тоже считается знакомством
-        // с темой: после неё строка Нового года остаётся в «Тематических темах».
-        scope.launch {
-            isNewYearActive.collect { active ->
-                if (active && ThemeOverlay.NEW_YEAR !in _unlockedThemes.value) {
-                    setThemeUnlocked(ThemeOverlay.NEW_YEAR, true)
-                }
-            }
-        }
-        // Запоминаем первое включение Хэллоуина: сезон может начаться, пока
-        // приложение открыто, а тумблер в отладке использует тот же путь.
-        scope.launch {
-            isHalloweenActive.collect { active ->
-                if (active) markHalloweenEverActivated()
-            }
-        }
-    }
-
-    private fun markHalloweenEverActivated() {
-        if (_halloweenEverActivated.value) return
-        _halloweenEverActivated.value = true
-        scope.launch {
-            try {
-                platformStorage.saveString(KEY_HALLOWEEN_EVER_ACTIVATED, true.toString())
-            } catch (e: Exception) {
-                println("Failed to persist halloween ever activated: ${e.message}")
-            }
-        }
+        // Новогодняя «разблокировка» больше не нужна: строка видна только в
+        // сезон или при ручном включении (см. [isNewYearRowVisible]), поэтому
+        // авто-коллектор, писавший NEW_YEAR в unlocked, убран вместе с этим
+        // правилом — праздничные темы не копятся в списке навсегда.
     }
 
     private fun loadPersistedState() {
@@ -401,15 +377,11 @@ class ScheduleStorage(
         _coffeeVisitedRepositories.value = loadCoffeeRepositoryVisits()
         _coffeeNotificationPending.value =
             loadBooleanFlag(KEY_COFFEE_NOTIFICATION_PENDING, false)
-        _halloweenEverActivated.value =
-            loadBooleanFlag(KEY_HALLOWEEN_EVER_ACTIVATED, false)
-        // Миграция и сезонный дефолт: если тема уже была активна, когда
-        // появился этот флаг, считаем её найденной.
-        if (_themeOverlay.value == ThemeOverlay.HALLOWEEN ||
-            DateUtils.isHalloweenSeason(DateUtils.today())
-        ) {
-            markHalloweenEverActivated()
-        }
+        // Миграция: ключ «halloween ever activated» больше не используется
+        // (строка Хэллоуина живёт только по сезону/ручному включению) —
+        // дочищаем, чтобы не тянулся в бэкапах.
+        platformStorage.remove(KEY_HALLOWEEN_EVER_ACTIVATED)
+        _previousTheme.value = loadPreviousTheme()
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
         _diagnosticsEnabled.value = loadBooleanFlag(KEY_DIAGNOSTICS_ENABLED, false)
@@ -713,12 +685,24 @@ class ScheduleStorage(
     }
 
     /**
-     * Явно выбранная тема не отменяет сезонную: сезонная тема — это база,
-     * которая вернётся, когда все тематические тумблеры снова выключат.
-     * Отказ от сезона пишется только при выключении самой сезонной темы
-     * (см. [setHalloweenTheme] и [setNewYearTheme]).
+     * Смена активной темы.
+     *
+     * Новая семантика (решение владельца о «возврате на предыдущую»):
+     * - [overlay] != NONE — это осознанный выбор: он пишется и в активную
+     *   тему, и в «последнюю выбранную» ([_previousTheme]);
+     * - [overlay] == NONE — выключение: вместо дефолта возвращается
+     *   [_previousTheme] (если она не совпадает с выключаемой темой),
+     *   иначе NONE.
+     *
+     * Сезонные темы (Хэллоуин/Новый год) сюда НЕ пишутся: они рисуются
+     * поверх через [isHalloweenActive]/[isNewYearActive], поэтому выбор
+     * пользователя остаётся целым и возвращается сам, когда сезон кончится.
      */
-    private fun applyThemeOverlay(overlay: ThemeOverlay) {
+    private fun applyThemeOverlay(overlay: ThemeOverlay, rememberAsPrevious: Boolean = true) {
+        if (overlay != ThemeOverlay.NONE && rememberAsPrevious) {
+            _previousTheme.value = overlay
+            persistPreviousTheme(overlay)
+        }
         _themeOverlay.value = overlay
         scope.launch {
             try {
@@ -736,21 +720,37 @@ class ScheduleStorage(
         }
     }
 
+    /**
+     * Включение/выключение произвольной темы тумблером.
+     *
+     * Включение — прямой выбор: тема становится активной и запоминается как
+     * «последняя выбранная». Выключение — возврат на предыдущую (решение
+     * владельца): если до этого была другая тема — она возвращается, если не
+     * было — NONE.
+     */
+    fun toggleTheme(overlay: ThemeOverlay, enabled: Boolean) {
+        if (enabled) {
+            applyThemeOverlay(overlay)
+        } else {
+            applyThemeOverlay(themeAfterDisable(overlay, _previousTheme.value))
+        }
+    }
+
     fun setCyberpunkTheme(enabled: Boolean) {
         // Активация = разблокировка: тема появляется в списке «Тематические
         // темы», чтобы квест не приходилось проходить повторно.
         if (enabled) setThemeUnlocked(ThemeOverlay.CYBERPUNK, true)
-        setThemeOverlay(if (enabled) ThemeOverlay.CYBERPUNK else ThemeOverlay.NONE)
+        toggleTheme(ThemeOverlay.CYBERPUNK, enabled)
     }
 
     fun setMatrixTheme(enabled: Boolean) {
         if (enabled) setThemeUnlocked(ThemeOverlay.MATRIX, true)
-        setThemeOverlay(if (enabled) ThemeOverlay.MATRIX else ThemeOverlay.NONE)
+        toggleTheme(ThemeOverlay.MATRIX, enabled)
     }
 
     fun setCoffeeTheme(enabled: Boolean) {
         if (enabled) setThemeUnlocked(ThemeOverlay.COFFEE, true)
-        setThemeOverlay(if (enabled) ThemeOverlay.COFFEE else ThemeOverlay.NONE)
+        toggleTheme(ThemeOverlay.COFFEE, enabled)
     }
 
     fun recordDeveloperRepositoryVisit(url: String) {
@@ -814,19 +814,24 @@ class ScheduleStorage(
     }
 
     /** Хэллоуинская тема: в сезон (28 октября — 3 ноября) включается сама,
-     *  тумблер — для проверки вне сезона.
+     *  тумблер — для проверки вне сезона и ручного управления.
+     *
+     *  Сезон теперь СИЛЬНЕЕ выбранной темы (решение владельца): пока идёт
+     *  сезон, праздник рисуется поверх любой темы, а выбор пользователя
+     *  остаётся в [setThemeOverlay]/[_previousTheme]. Поэтому ручное
+     *  включение здесь — просто явный выбор оверлея.
      *
      *  Выключение внутри сезона запоминается как отказ от сезона: иначе
-     *  автоматическое правило включило бы тему обратно на следующей
+     *  автоматическое правило снова «покрыло» бы всё на следующей
      *  рекомпозиции. Вне сезона отказ не пишется — иначе выключенный летом
-     *  «на пробу» тумблер тихо отменил бы осенний показ. */
+     *  «на пробу» тумблер тихо отменил бы осенний показ. Сама активная
+     *  тема при выключении возвращается на предыдущую ([toggleTheme]). */
     fun setHalloweenTheme(enabled: Boolean) {
         if (enabled) {
-            markHalloweenEverActivated()
             clearHalloweenSeasonDismissal()
             applyThemeOverlay(ThemeOverlay.HALLOWEEN)
         } else {
-            applyThemeOverlay(ThemeOverlay.NONE)
+            toggleTheme(ThemeOverlay.HALLOWEEN, enabled = false)
             if (DateUtils.isHalloweenSeason(DateUtils.today())) dismissHalloweenSeason()
         }
     }
@@ -858,16 +863,22 @@ class ScheduleStorage(
 
     /**
      * Новогодняя тема: 30 декабря — 11 января включается сама, тумблер нужен
-     * для проверки вне сезона. Выключение внутри сезона запоминается как
-     * отказ до его конца, иначе автоматика включила бы тему снова.
-     */
+     * для проверки вне сезона и ручного управления.
+     *
+     * Сезон СИЛЬНЕЕ выбранной темы (решение владельца): пока идёт сезон,
+     * праздник рисуется поверх любой темы. Первая активация (автоматическая
+     * или ручная) добавляет Новый год в разблокированные темы.
+     *
+     * Выключение внутри сезона запоминается как отказ до его конца —
+     * иначе автоматика включила бы тему снова. При выключении также
+     * возвращаемся на предыдущую тему ([toggleTheme]). */
     fun setNewYearTheme(enabled: Boolean) {
         if (enabled) {
             clearNewYearSeasonDismissal()
             setThemeUnlocked(ThemeOverlay.NEW_YEAR, true)
             applyThemeOverlay(ThemeOverlay.NEW_YEAR)
         } else {
-            applyThemeOverlay(ThemeOverlay.NONE)
+            toggleTheme(ThemeOverlay.NEW_YEAR, enabled = false)
             if (DateUtils.isNewYearSeason(DateUtils.today())) dismissNewYearSeason()
         }
     }
@@ -898,12 +909,12 @@ class ScheduleStorage(
     }
 
     fun setSakuraThemeExclusive(enabled: Boolean) {
-        setThemeOverlay(if (enabled) ThemeOverlay.SAKURA else ThemeOverlay.NONE)
+        toggleTheme(ThemeOverlay.SAKURA, enabled)
     }
 
     fun setKawaiiThemeExclusive(enabled: Boolean) {
         if (enabled) setThemeUnlocked(ThemeOverlay.KAWAII, true)
-        setThemeOverlay(if (enabled) ThemeOverlay.KAWAII else ThemeOverlay.NONE)
+        toggleTheme(ThemeOverlay.KAWAII, enabled)
     }
 
     /** Назначает цвет типу занятия; одинаковые цвета для разных типов разрешены. */
@@ -1034,6 +1045,24 @@ class ScheduleStorage(
         ThemeOverlay.NEW_YEAR -> KEY_UNLOCKED_NEW_YEAR
         ThemeOverlay.COFFEE -> KEY_UNLOCKED_COFFEE
         else -> null
+    }
+
+    private fun persistPreviousTheme(overlay: ThemeOverlay) {
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_PREVIOUS_THEME, overlay.name)
+            } catch (e: Exception) {
+                println("Failed to persist previous theme: ${e.message}")
+            }
+        }
+    }
+
+    private fun loadPreviousTheme(): ThemeOverlay = try {
+        platformStorage.getString(KEY_PREVIOUS_THEME)
+            ?.let { runCatching { ThemeOverlay.valueOf(it) }.getOrNull() }
+            ?: ThemeOverlay.NONE
+    } catch (_: Throwable) {
+        ThemeOverlay.NONE
     }
 
     /**
@@ -1580,10 +1609,13 @@ class ScheduleStorage(
         // Дефолт после сброса — розовая тема включена (решение владельца).
         // Отказ от сезона тоже стирается: сброс возвращает заводское
         // поведение, а не фиксирует прошлое решение пользователя.
-        applyThemeOverlay(ThemeOverlay.SAKURA)
+        // rememberAsPrevious=false: сброс НЕ создаёт историю выбора — иначе
+        // «выключи Сакуру» возвращал бы на неё же.
+        applyThemeOverlay(ThemeOverlay.SAKURA, rememberAsPrevious = false)
+        _previousTheme.value = ThemeOverlay.NONE
+        persistPreviousTheme(ThemeOverlay.NONE)
         _halloweenDismissedYear.value = null
         _newYearDismissedYear.value = null
-        _halloweenEverActivated.value = false
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
         _diagnosticsEnabled.value = diagnosticsEnabledBefore
@@ -1713,6 +1745,7 @@ class ScheduleStorage(
         private const val KEY_COFFEE_VISITED_REPOSITORIES = "krasava_coffee_visited_repositories"
         private const val KEY_COFFEE_NOTIFICATION_PENDING = "krasava_coffee_notification_pending"
         private const val KEY_HALLOWEEN_EVER_ACTIVATED = "krasava_halloween_ever_activated"
+        private const val KEY_PREVIOUS_THEME = "krasava_previous_theme"
         private const val KEY_THEME_OVERLAY = "krasava_theme_overlay"
         // Разблокировки квестовых тем для списка «Тематические темы».
         private const val KEY_UNLOCKED_KAWAII = "krasava_unlocked_kawaii"
