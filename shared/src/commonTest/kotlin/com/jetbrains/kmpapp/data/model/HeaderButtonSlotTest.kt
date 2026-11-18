@@ -145,4 +145,39 @@ class HeaderButtonSlotTest {
             )
         )
     }
+
+    // --- содержимое пузырька ---
+
+    @Test
+    fun bubbleExcludesButtonAlreadyInSlot() {
+        // Владелец: меню содержит ДРУГИЕ кнопки. «Плюс» в слоте — значит
+        // в пузырьке его нет (иначе дублирование в двух местах).
+        val all = availableHeaderButtons(
+            hasTarget = true, userLessonsEnabled = true,
+            qrAvailable = true, calendarCollapsed = true
+        )
+        val slot = resolveHeaderSlot(
+            HeaderButton.ADD, hasTarget = true, userLessonsEnabled = true,
+            qrAvailable = true, calendarCollapsed = true
+        )
+        val bubble = all.filter { it != slot }
+        assertEquals(3, bubble.size)
+        assertTrue(HeaderButton.ADD !in bubble)
+        assertTrue(HeaderButton.USER_LESSON in bubble)
+    }
+
+    @Test
+    fun bubbleHoldsEverythingWhenSlotIsEmpty() {
+        // Слот пуст (выбранная кнопка стала недоступна) — в пузырьке всё.
+        val all = availableHeaderButtons(
+            hasTarget = true, userLessonsEnabled = true,
+            qrAvailable = false, calendarCollapsed = false
+        )
+        val slot = resolveHeaderSlot(
+            HeaderButton.QR, hasTarget = true, userLessonsEnabled = true,
+            qrAvailable = false, calendarCollapsed = false
+        )
+        assertNull(slot)
+        assertEquals(all, all.filter { it != slot })
+    }
 }

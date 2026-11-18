@@ -285,11 +285,12 @@ private fun ScheduleMainContent(
                 // областью «Ноябрь 2026 • 12 неделя» (решение владельца).
                 // Рисуется здесь, а не в шапке: у шапки нет места, а тут
                 // пузырёк честно «вырастает» из кнопки меню вниз.
-                val bubbleButtons = rememberAvailableHeaderButtons(
+                val bubbleButtons = rememberBubbleHeaderButtons(
                     hasTarget = selectedTarget != null,
                     userLessonsEnabled = userLessonsEnabled,
                     qrAvailable = qrButtonEnabled,
-                    calendarCollapsed = calendarCollapsed
+                    calendarCollapsed = calendarCollapsed,
+                    slotButton = headerSlotButton
                 )
                 HeaderButtonBubble(
                     buttons = bubbleButtons,

@@ -404,20 +404,26 @@ fun HeaderButtonBubble(
 }
 
 /**
- * Доступные сейчас кнопки — для пузырька меню.
+ * Кнопки для пузырька меню: доступные сейчас, КРОМЕ той, что уже стоит в слоте.
  *
- * Контекстные кнопки не появляются, когда действие недоступно: «Своя пара»
- * требует выбранного расписания и включённой настройки, QR — своей настройки,
- * кружок дня — свёрнутой ленты.
+ * Владелец: «кнопка меню с ДРУГИМИ такими кнопками» — та, что видна в шапке,
+ * в пузырёк не попадает (иначе «плюс» дублировался бы в двух местах).
  */
 @Composable
-internal fun rememberAvailableHeaderButtons(
+internal fun rememberBubbleHeaderButtons(
     hasTarget: Boolean,
     userLessonsEnabled: Boolean,
     qrAvailable: Boolean,
-    calendarCollapsed: Boolean
+    calendarCollapsed: Boolean,
+    slotButton: HeaderButton
 ): List<HeaderButton> = remember(
-    hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed
+    hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed, slotButton
 ) {
-    availableHeaderButtons(hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed)
+    val available = availableHeaderButtons(
+        hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed
+    )
+    val slot = resolveHeaderSlot(
+        slotButton, hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed
+    )
+    available.filter { it != slot }
 }
