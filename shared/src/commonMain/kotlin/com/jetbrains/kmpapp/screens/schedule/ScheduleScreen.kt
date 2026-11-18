@@ -169,6 +169,19 @@ private fun ScheduleMainContent(
     val userLessonSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val scope = rememberCoroutineScope()
+    // Пузырёк не должен висеть поверх шторок и месячного календаря: любое
+    // из этих окон закрывает его. Иначе пузырёк оставался бы «сиротой» над
+    // открытой шторкой и ловил бы тапы, предназначенные ей.
+    LaunchedEffect(showAddSheet, showDiffSheet, showUserLessonSheet, showMonthPicker) {
+        if (showAddSheet || showDiffSheet || showUserLessonSheet || showMonthPicker) {
+            headerMenuOpen = false
+        }
+    }
+    // Смена дня/расписания тоже закрывает пузырёк: он привязан к шапке
+    // текущего экрана, а не к содержимому дня.
+    LaunchedEffect(selectedTarget?.id, selectedDate) {
+        headerMenuOpen = false
+    }
     val isToday = selectedDate == com.jetbrains.kmpapp.data.model.DateUtils.today()
     val basePage = 1000
     val today = com.jetbrains.kmpapp.data.model.DateUtils.today()
@@ -281,38 +294,6 @@ private fun ScheduleMainContent(
                     }
                 }
             } else {
-                // Пузырёк меню кнопок шапки — НАД лентой календаря, ровно над
-                // областью «Ноябрь 2026 • 12 неделя» (решение владельца).
-                // Рисуется здесь, а не в шапке: у шапки нет места, а тут
-                // пузырёк честно «вырастает» из кнопки меню вниз.
-                val bubbleButtons = rememberBubbleHeaderButtons(
-                    hasTarget = selectedTarget != null,
-                    userLessonsEnabled = userLessonsEnabled,
-                    qrAvailable = qrButtonEnabled,
-                    calendarCollapsed = calendarCollapsed,
-                    slotButton = headerSlotButton
-                )
-                HeaderButtonBubble(
-                    buttons = bubbleButtons,
-                    visible = headerMenuOpen,
-                    calendarBadgeDay = if (calendarCollapsed) selectedDate.day else null,
-                    onButtonClick = { button ->
-                        headerMenuOpen = false
-                        when (button) {
-                            HeaderButton.ADD -> showAddSheet = true
-                            HeaderButton.USER_LESSON -> {
-                                userLessonForm = UserLessonForm(date = selectedDate)
-                                showUserLessonSheet = true
-                            }
-                            HeaderButton.QR -> onOpenQrScanner?.invoke()
-                            HeaderButton.DAY_BADGE -> viewModel.setCalendarCollapsed(false)
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
-                )
-
                 // Week calendar strip with navigation bar
                 androidx.compose.animation.AnimatedVisibility(
                     visible = !calendarCollapsed,
@@ -438,6 +419,41 @@ private fun ScheduleMainContent(
                 }
             }
         }
+
+        // Пузырёк меню кнопок шапки — НАД областью «Ноябрь 2026 • 12 неделя».
+        //
+        // Оверлей, а не элемент Column (как бейдж обновления ниже): пузырёк
+        // НАКРЫВАЕТ заголовок календаря и ничего не сдвигает. Если бы он лежал
+        // в Column, лента и весь список прыгали бы вниз при каждом открытии.
+        // Показан и без выбранного расписания: кнопка меню есть всегда,
+        // значит до неё должно быть можно добраться в любом состоянии.
+        val bubbleButtons = rememberBubbleHeaderButtons(
+            hasTarget = selectedTarget != null,
+            userLessonsEnabled = userLessonsEnabled,
+            qrAvailable = qrButtonEnabled,
+            calendarCollapsed = calendarCollapsed,
+            slotButton = headerSlotButton
+        )
+        HeaderButtonBubble(
+            buttons = bubbleButtons,
+            visible = headerMenuOpen,
+            calendarBadgeDay = if (calendarCollapsed) selectedDate.day else null,
+            onButtonClick = { button ->
+                headerMenuOpen = false
+                when (button) {
+                    HeaderButton.ADD -> showAddSheet = true
+                    HeaderButton.USER_LESSON -> {
+                        userLessonForm = UserLessonForm(date = selectedDate)
+                        showUserLessonSheet = true
+                    }
+                    HeaderButton.QR -> onOpenQrScanner?.invoke()
+                    HeaderButton.DAY_BADGE -> viewModel.setCalendarCollapsed(false)
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 6.dp, start = 16.dp, end = 16.dp)
+        )
 
         // Floating update badge overlay (appears OVER the calendar and cards without shifting anything)
         androidx.compose.animation.AnimatedVisibility(
