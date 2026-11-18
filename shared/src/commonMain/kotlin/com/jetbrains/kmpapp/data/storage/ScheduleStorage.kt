@@ -7,6 +7,7 @@ import com.jetbrains.kmpapp.data.notifications.NotificationsManager
 import com.jetbrains.kmpapp.data.model.DateUtils
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.CalendarExpandState
+import com.jetbrains.kmpapp.data.model.HeaderButton
 import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
@@ -317,6 +318,15 @@ class ScheduleStorage(
     private val _qrButtonEnabled = MutableStateFlow(false)
     val qrButtonEnabled: StateFlow<Boolean> = _qrButtonEnabled.asStateFlow()
 
+    /**
+     * Какая дополнительная кнопка стоит в шапке расписания рядом с кнопкой
+     * меню. Слот один (решение владельца): включение другой кнопки
+     * автоматически выключает предыдущую. Кнопка меню в этот слот не входит —
+     * она показывается всегда.
+     */
+    private val _headerSlotButton = MutableStateFlow(HeaderButton.DEFAULT)
+    val headerSlotButton: StateFlow<HeaderButton> = _headerSlotButton.asStateFlow()
+
     private val _notifyMinutesBefore = MutableStateFlow(15)
     val notifyMinutesBefore: StateFlow<Int> = _notifyMinutesBefore.asStateFlow()
 
@@ -398,6 +408,8 @@ class ScheduleStorage(
         _notificationsTargetId.value = platformStorage.getString(KEY_NOTIFICATIONS_TARGET_ID)?.toIntOrNull()
         _vpnWarningEnabled.value = loadBooleanFlag(KEY_VPN_WARNING_ENABLED, true)
         _qrButtonEnabled.value = loadBooleanFlag(KEY_QR_BUTTON_ENABLED, false)
+        _headerSlotButton.value =
+            HeaderButton.fromId(platformStorage.getString(KEY_HEADER_SLOT_BUTTON))
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
@@ -1193,6 +1205,21 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_QR_BUTTON_ENABLED, enabled.toString()) }
     }
 
+    /**
+     * Поставить кнопку в слот шапки. Слот один: предыдущая кнопка при этом
+     * просто перестаёт быть выбранной — отдельного выключения не нужно.
+     */
+    fun setHeaderSlotButton(button: HeaderButton) {
+        _headerSlotButton.value = button
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_HEADER_SLOT_BUTTON, button.id)
+            } catch (e: Exception) {
+                println("Failed to persist header slot button: ${e.message}")
+            }
+        }
+    }
+
     private fun persistNotificationsTargetId(targetId: Int?) {
         scope.launch {
             if (targetId == null) platformStorage.remove(KEY_NOTIFICATIONS_TARGET_ID)
@@ -1766,6 +1793,7 @@ class ScheduleStorage(
         private const val KEY_NOTIFICATIONS_TARGET_ID = "krasava_notifications_target_id"
         private const val KEY_VPN_WARNING_ENABLED = "krasava_vpn_warning_enabled"
         private const val KEY_QR_BUTTON_ENABLED = "krasava_qr_button_enabled"
+        private const val KEY_HEADER_SLOT_BUTTON = "krasava_header_slot_button"
         private const val KEY_NOTIFY_MINUTES_BEFORE = "krasava_notify_minutes_before"
         private const val KEY_ASK_BEFORE_NOTE_DELETE = "krasava_ask_before_note_delete"
         private const val KEY_NOTES = "krasava_notes_pages"

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +41,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jetbrains.kmpapp.data.model.HeaderButton
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import com.jetbrains.kmpapp.screens.schedule.icon
 
 // ── Расписание: отображение ──────────────────────────────────
 
@@ -157,6 +160,151 @@ fun ScheduleCalendarSettingsScreen(
             onCheckedChange = { viewModel.setCalendarSwipeCollapse(it) }
         )
     }
+}
+
+// ── Расписание: кнопки шапки ─────────────────────────────────
+
+/**
+ * Какая кнопка стоит в шапке расписания рядом с меню.
+ *
+ * Владелец: в шапке стабильно помещаются только две кнопки справа, поэтому
+ * слот ОДИН. Включение другой кнопки автоматически выключает предыдущую —
+ * свитчеры здесь работают как радио-группа, хотя выглядят как вкл/выкл.
+ * Кнопка меню («⋮») в список не входит: она показывается всегда.
+ */
+@Composable
+fun HeaderButtonsSettingsScreen(
+    viewModel: OtherViewModel,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    PlatformBackHandler(onBack = onBack)
+    val slotButton by viewModel.headerSlotButton.collectAsState()
+    val userLessonsEnabled by viewModel.userLessonsEnabled.collectAsState()
+    val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
+    val savedTargets by viewModel.savedTargets.collectAsState()
+    val hasTarget = savedTargets.isNotEmpty()
+
+    SettingsSubScreen(
+        title = "Кнопки шапки",
+        onBack = onBack,
+        modifier = modifier
+    ) {
+        HeaderButton.entries.forEach { button ->
+            val available = button.availableInSettings(
+                hasTarget = hasTarget,
+                userLessonsEnabled = userLessonsEnabled,
+                qrButtonEnabled = qrButtonEnabled
+            )
+            HeaderButtonToggleRow(
+                button = button,
+                checked = slotButton == button && available,
+                enabled = available,
+                subtitle = button.settingsSubtitle(available),
+                onCheckedChange = { checked ->
+                    // Слот один: включить можно только что-то одно, поэтому
+                    // «выключение» переводит слот на дефолтную кнопку «плюс».
+                    viewModel.setHeaderSlotButton(
+                        if (checked) button else HeaderButton.DEFAULT
+                    )
+                }
+            )
+        }
+    }
+}
+
+/** Доступна ли кнопка в настройках (контекстные требуют условий). */
+private fun HeaderButton.availableInSettings(
+    hasTarget: Boolean,
+    userLessonsEnabled: Boolean,
+    qrButtonEnabled: Boolean
+): Boolean = when (this) {
+    HeaderButton.ADD -> true
+    HeaderButton.USER_LESSON -> hasTarget && userLessonsEnabled
+    HeaderButton.QR -> qrButtonEnabled
+    // Кружок дня виден только при свёрнутой ленте, но поставить его в слот
+    // можно заранее — когда лента свернётся, число появится в шапке.
+    HeaderButton.DAY_BADGE -> hasTarget
+}
+
+private fun HeaderButton.settingsSubtitle(available: Boolean): String = when (this) {
+    HeaderButton.ADD -> "Плюс: добавить группу, преподавателя или аудиторию"
+    HeaderButton.USER_LESSON -> if (available) {
+        "Календарик: добавить свою пару в расписание"
+    } else {
+        "Нужно выбранное расписание и включённое «Редактирование расписания»"
+    }
+    HeaderButton.QR -> if (available) {
+        "Отметка посещаемости на «Пульсе»"
+    } else {
+        "Включите «Кнопку сканера QR» в разделе «Дополнительный функционал»"
+    }
+    HeaderButton.DAY_BADGE -> if (available) {
+        "Число дня: видно, когда лента календаря свёрнута"
+    } else {
+        "Нужно выбранное расписание"
+    }
+}
+
+/** Строка-свитчер одной кнопки шапки. */
+@Composable
+private fun HeaderButtonToggleRow(
+    button: HeaderButton,
+    checked: Boolean,
+    enabled: Boolean,
+    subtitle: String,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val alpha = if (enabled) 1f else 0.45f
+    val buttonIcon = button.icon()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (buttonIcon != null) {
+                    Icon(
+                        imageVector = buttonIcon,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = alpha)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                GlitchText(
+                    text = button.settingsTitle(),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha)
+                )
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            GlitchText(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = if (enabled) onCheckedChange else null
+        )
+    }
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 12.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    )
+}
+
+/** Полное название кнопки для настроек (в шапке места мало — там короткое). */
+private fun HeaderButton.settingsTitle(): String = when (this) {
+    HeaderButton.ADD -> "Добавить расписание"
+    HeaderButton.USER_LESSON -> "Своя пара"
+    HeaderButton.QR -> "Сканер QR"
+    HeaderButton.DAY_BADGE -> "Кружок дня"
 }
 
 // ── Параметры сервисов: Конспекты ────────────────────────────

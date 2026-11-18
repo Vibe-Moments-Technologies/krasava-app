@@ -1,14 +1,12 @@
 package com.jetbrains.kmpapp.screens.schedule
 import com.jetbrains.kmpapp.theme.GlitchText
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -17,27 +15,30 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.EditCalendar
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,18 +47,85 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jetbrains.kmpapp.data.model.HeaderButton
 import com.jetbrains.kmpapp.data.model.ScheduleDiff
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
+import com.jetbrains.kmpapp.data.model.availableHeaderButtons
 import com.jetbrains.kmpapp.data.model.badgeLabel
+import com.jetbrains.kmpapp.data.model.resolveHeaderSlot
+
+/** Подпись кнопки шапки — общая для слота, меню и настроек. */
+internal fun HeaderButton.title(): String = when (this) {
+    HeaderButton.ADD -> "Добавить"
+    HeaderButton.USER_LESSON -> "Своя пара"
+    HeaderButton.QR -> "Сканер QR"
+    HeaderButton.DAY_BADGE -> "День"
+}
+
+/** Иконка кнопки; у кружка дня иконки нет — там число. */
+internal fun HeaderButton.icon(): ImageVector? = when (this) {
+    HeaderButton.ADD -> Icons.Default.Add
+    HeaderButton.USER_LESSON -> Icons.Default.EditCalendar
+    HeaderButton.QR -> Icons.Default.QrCodeScanner
+    HeaderButton.DAY_BADGE -> null
+}
+
+/**
+ * Кнопка шапки: иконка либо (для кружка дня) число в кружке.
+ *
+ * Одним композаблом пользуются и слот, и пузырёк — вид кнопки не разъезжается
+ * между местами.
+ */
+@Composable
+internal fun HeaderActionButton(
+    button: HeaderButton,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    dayNumber: Int? = null,
+    onLongClick: (() -> Unit)? = null
+) {
+    val boxModifier = modifier.size(40.dp)
+    if (button == HeaderButton.DAY_BADGE) {
+        val gestures = if (onLongClick != null) {
+            Modifier.pointerInput(button) {
+                detectTapGestures(onTap = { onClick() }, onLongPress = { onLongClick() })
+            }
+        } else {
+            Modifier.clickable(onClick = onClick)
+        }
+        Box(
+            modifier = boxModifier
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary)
+                .then(gestures),
+            contentAlignment = Alignment.Center
+        ) {
+            GlitchText(
+                text = dayNumber?.toString() ?: "•",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onPrimary
+            )
+        }
+    } else {
+        FilledTonalIconButton(onClick = onClick, modifier = boxModifier) {
+            Icon(
+                imageVector = button.icon() ?: Icons.Default.CalendarMonth,
+                contentDescription = button.title(),
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
 
 @Composable
 fun ScheduleTopBar(
@@ -68,19 +136,25 @@ fun ScheduleTopBar(
     onSelectTarget: (ScheduleTarget) -> Unit,
     onDiffClick: () -> Unit,
     onAddClick: () -> Unit,
-    // Не null — рядом с плюсом появляется кнопка «Своя пара».
     onAddUserLessonClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
-    // Видна, когда лента календаря свёрнута: число текущего дня расписания.
-    // Тап — развернуть ленту, долгое нажатие — месячный календарь.
     calendarBadgeDay: Int? = null,
     onCalendarBadgeClick: () -> Unit = {},
     onCalendarBadgeLongClick: () -> Unit = {},
-    // Кнопка сканера QR (настройка «Дополнительный функционал»): быстрый
-    // доступ к отметке на «Пульсе» прямо с экрана расписания.
-    onQrScannerClick: (() -> Unit)? = null
+    onQrScannerClick: (() -> Unit)? = null,
+    slotButton: HeaderButton = HeaderButton.DEFAULT,
+    menuOpen: Boolean = false,
+    onMenuToggle: () -> Unit = {}
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
+
+    val slot = resolveHeaderSlot(
+        chosen = slotButton,
+        hasTarget = selectedTarget != null,
+        userLessonsEnabled = onAddUserLessonClick != null,
+        qrAvailable = onQrScannerClick != null,
+        calendarCollapsed = calendarBadgeDay != null
+    )
 
     Row(
         modifier = modifier
@@ -90,18 +164,14 @@ fun ScheduleTopBar(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Left: Wide dropdown selector and Diff button
         Row(
             modifier = Modifier.weight(1f, fill = false),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Капсула группы — единственное СЖИМАЕМОЕ звено левой половины:
-            // при нехватке места её название уходит в многоточие, а бейдж
-            // изменений сохраняет свою ширину и не переносится на две строки.
+            // при нехватке места название уходит в многоточие, а бейдж
+            // изменений сохраняет ширину и не переносится на две строки.
             Box(modifier = Modifier.weight(1f, fill = false)) {
-                // Ширина капсулы группы измеряется живьём (onSizeChanged):
-                // список выбора открывается РОВНО по ширине блока группы
-                // (репорт владельца: «список теперь больше самого блока»).
                 var capsuleWidth by remember { mutableStateOf(IntSize.Zero) }
                 Row(
                     modifier = Modifier
@@ -131,24 +201,18 @@ fun ScheduleTopBar(
                 DropdownMenu(
                     expanded = dropdownExpanded,
                     onDismissRequest = { dropdownExpanded = false },
-                    // Репорт владельца: «уголочки вылезающие от квадрата» —
-                    // modifier-clip/background рисуются ПОВЕРХ внутренней
-                    // Surface меню: её квадратные углы торчали из-под
-                    // скруглённой подложки. Скругляем сам попап — параметры
-                    // shape/containerColor достаются внутренней Surface.
-                    // Ширина — ровно ширина капсулы (меряется живьём).
-                    // Страховочный widthIn(200dp) убран: он ПОБЕЖДАЛ width
-                    // при коротком названии и раздувал список шире блока —
-                    // «большой пробел между группой и галочкой».
+                    // Скруглённый попап: modifier-clip рисовался поверх
+                    // внутренней Surface, и её углы торчали наружу.
+                    // Ширина — ровно ширина капсулы, без страховочного widthIn
+                    // (он побеждал width и раздувал список).
                     shape = RoundedCornerShape(16.dp),
                     containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 0.dp,
-                    modifier = Modifier
-                        .then(
-                            if (capsuleWidth.width > 0) {
-                                Modifier.width(with(LocalDensity.current) { capsuleWidth.width.toDp() })
-                            } else Modifier
-                        )
+                    modifier = Modifier.then(
+                        if (capsuleWidth.width > 0) {
+                            Modifier.width(with(LocalDensity.current) { capsuleWidth.width.toDp() })
+                        } else Modifier
+                    )
                 ) {
                     if (savedTargets.isEmpty()) {
                         DropdownMenuItem(
@@ -201,14 +265,8 @@ fun ScheduleTopBar(
 
             if (activeDiff != null && activeDiff.items.isNotEmpty()) {
                 Spacer(modifier = Modifier.width(8.dp))
-                // Бейдж изменений: «±N» вместо «Diff (N)» (решение владельца).
-                // Знак плюс-минус читается как «изменения» без латинского слова
-                // и занимает вдвое меньше места. Число ограничено разрядностью
-                // (см. badgeLabel) — ширина бейджа перестала плавать вместе с
-                // количеством правок, поэтому он не вытесняет капсулу группы.
-                // maxLines=1 + softWrap=false — прямая защита от «корёжится»:
-                // у прежнего текста не было ограничения строк, и трёхзначное
-                // «Diff (147)» переносилось, растягивая шапку по высоте.
+                // «±N» вместо «Diff (N)»: короче вдвое, ширина не плавает
+                // (число ограничено в badgeLabel), перенос запрещён.
                 Box(
                     modifier = Modifier
                         .widthIn(min = 40.dp)
@@ -233,74 +291,133 @@ fun ScheduleTopBar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Правая группа кнопок. Плюс «Добавить расписание» прижат к ПРАВОМУ
-        // краю (требование владельца) и стоит последним: все остальные
-        // кнопки идут левее него, а новые добавляются в том же направлении.
-        // Выборщик группы при этом остаётся слева, как и был.
+        // ПРАВАЯ группа: ровно две кнопки — слот и меню.
+        //
+        // Владелец: «стабильно вмещается только 2 кнопки справа» — поэтому
+        // в шапке максимум одна доп. кнопка, остальные уходят в пузырёк под
+        // лентой календаря. Меню крайнее правое и показывается ВСЕГДА.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (calendarBadgeDay != null) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                        .pointerInput(Unit) {
-                            detectTapGestures(
-                                onTap = { onCalendarBadgeClick() },
-                                onLongPress = { onCalendarBadgeLongClick() }
-                            )
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    GlitchText(
-                        text = calendarBadgeDay.toString(),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                }
+            if (slot != null) {
+                HeaderActionButton(
+                    button = slot,
+                    dayNumber = calendarBadgeDay,
+                    onLongClick = if (slot == HeaderButton.DAY_BADGE) onCalendarBadgeLongClick else null,
+                    onClick = {
+                        when (slot) {
+                            HeaderButton.ADD -> onAddClick()
+                            HeaderButton.USER_LESSON -> onAddUserLessonClick?.invoke()
+                            HeaderButton.QR -> onQrScannerClick?.invoke()
+                            HeaderButton.DAY_BADGE -> onCalendarBadgeClick()
+                        }
+                    }
+                )
                 Spacer(modifier = Modifier.width(8.dp))
             }
 
-            if (onAddUserLessonClick != null) {
-                FilledTonalIconButton(
-                    onClick = onAddUserLessonClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.EditCalendar,
-                        contentDescription = "Своя пара",
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-
-            if (onQrScannerClick != null) {
-                FilledIconButton(
-                    onClick = onQrScannerClick,
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.QrCodeScanner,
-                        contentDescription = "Сканер QR",
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-
-            // Крайняя правая кнопка — «плюс».
             FilledIconButton(
-                onClick = onAddClick,
+                onClick = onMenuToggle,
                 modifier = Modifier.size(40.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = "Добавить расписание",
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = if (menuOpen) "Скрыть меню кнопок" else "Меню кнопок",
                     modifier = Modifier.size(22.dp)
                 )
             }
         }
     }
+}
+
+/** Носик пузырька: перевёрнутый треугольник, смотрит вниз к кнопке меню. */
+private val BubbleTailShape = GenericShape { size, _ ->
+    moveTo(0f, 0f)
+    lineTo(size.width, 0f)
+    lineTo(size.width / 2f, size.height)
+    close()
+}
+
+/**
+ * Пузырёк с кнопками — рисуется НАД лентой календаря (решение владельца:
+ * «строкой в виде пузырька сообщения над областью где Ноябрь 2026 12 неделя»).
+ *
+ * Носик пузырька направлен вниз-вправо: под ним кнопка меню, из которой он
+ * раскрылся. Пустые списки не рисуются вовсе (не остаётся пустой плашки).
+ */
+@Composable
+fun HeaderButtonBubble(
+    buttons: List<HeaderButton>,
+    onButtonClick: (HeaderButton) -> Unit,
+    modifier: Modifier = Modifier,
+    visible: Boolean = true,
+    calendarBadgeDay: Int? = null
+) {
+    AnimatedVisibility(
+        visible = visible && buttons.isNotEmpty(),
+        enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
+        exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top),
+        modifier = modifier
+    ) {
+        Column(horizontalAlignment = Alignment.End) {
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                shadowElevation = 6.dp,
+                tonalElevation = 4.dp
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    buttons.forEach { button ->
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.width(58.dp)
+                        ) {
+                            HeaderActionButton(
+                                button = button,
+                                dayNumber = calendarBadgeDay,
+                                onClick = { onButtonClick(button) }
+                            )
+                            Spacer(modifier = Modifier.height(3.dp))
+                            GlitchText(
+                                text = button.title(),
+                                fontSize = 9.sp,
+                                maxLines = 2,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            // Носик: тот же цвет, что и пузырёк, сдвинут к правому краю
+            // (под кнопку меню, из которой пузырёк раскрылся).
+            Box(
+                modifier = Modifier
+                    .padding(end = 20.dp)
+                    .size(width = 16.dp, height = 7.dp)
+                    .clip(BubbleTailShape)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            )
+        }
+    }
+}
+
+/**
+ * Доступные сейчас кнопки — для пузырька меню.
+ *
+ * Контекстные кнопки не появляются, когда действие недоступно: «Своя пара»
+ * требует выбранного расписания и включённой настройки, QR — своей настройки,
+ * кружок дня — свёрнутой ленты.
+ */
+@Composable
+internal fun rememberAvailableHeaderButtons(
+    hasTarget: Boolean,
+    userLessonsEnabled: Boolean,
+    qrAvailable: Boolean,
+    calendarCollapsed: Boolean
+): List<HeaderButton> = remember(
+    hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed
+) {
+    availableHeaderButtons(hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed)
 }

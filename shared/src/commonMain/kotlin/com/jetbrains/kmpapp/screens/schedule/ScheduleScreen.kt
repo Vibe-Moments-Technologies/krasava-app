@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Surface
 import com.jetbrains.kmpapp.data.model.CalendarExpandState
+import com.jetbrains.kmpapp.data.model.HeaderButton
 import com.jetbrains.kmpapp.data.model.Lesson
 import com.jetbrains.kmpapp.data.model.RefreshStatus
 import androidx.compose.material3.MaterialTheme
@@ -144,6 +145,12 @@ private fun ScheduleMainContent(
     // Редактирование расписания (свои пары): настройка выключает и кнопку
     // в шапке, и подмешивание правил в список (см. currentLessons).
     val userLessonsEnabled by viewModel.userLessonsEnabled.collectAsState()
+    // Слот доп. кнопки в шапке (одна кнопка + меню): выбор живёт в настройках
+    // («Кнопки шапки расписания»), здесь только читаем и рисуем.
+    val headerSlotButton by viewModel.headerSlotButton.collectAsState()
+    // Пузырёк меню кнопок открыт. Состояние экрана (не хранилища): закрылся
+    // переходом по табу — и ладно, это не настройка пользователя.
+    var headerMenuOpen by remember { mutableStateOf(false) }
     var isVpnBannerDismissed by remember(isVpnActive, vpnWarningEnabled) { mutableStateOf(false) }
 
     var showAddSheet by remember { mutableStateOf(false) }
@@ -214,7 +221,10 @@ private fun ScheduleMainContent(
                 // — когда колбэк передан и настройка включена.
                 onQrScannerClick = if (qrButtonEnabled) {
                     onOpenQrScanner
-                } else null
+                } else null,
+                slotButton = headerSlotButton,
+                menuOpen = headerMenuOpen,
+                onMenuToggle = { headerMenuOpen = !headerMenuOpen }
             )
         },
         modifier = modifier.fillMaxSize()
@@ -271,6 +281,37 @@ private fun ScheduleMainContent(
                     }
                 }
             } else {
+                // Пузырёк меню кнопок шапки — НАД лентой календаря, ровно над
+                // областью «Ноябрь 2026 • 12 неделя» (решение владельца).
+                // Рисуется здесь, а не в шапке: у шапки нет места, а тут
+                // пузырёк честно «вырастает» из кнопки меню вниз.
+                val bubbleButtons = rememberAvailableHeaderButtons(
+                    hasTarget = selectedTarget != null,
+                    userLessonsEnabled = userLessonsEnabled,
+                    qrAvailable = qrButtonEnabled,
+                    calendarCollapsed = calendarCollapsed
+                )
+                HeaderButtonBubble(
+                    buttons = bubbleButtons,
+                    visible = headerMenuOpen,
+                    calendarBadgeDay = if (calendarCollapsed) selectedDate.day else null,
+                    onButtonClick = { button ->
+                        headerMenuOpen = false
+                        when (button) {
+                            HeaderButton.ADD -> showAddSheet = true
+                            HeaderButton.USER_LESSON -> {
+                                userLessonForm = UserLessonForm(date = selectedDate)
+                                showUserLessonSheet = true
+                            }
+                            HeaderButton.QR -> onOpenQrScanner?.invoke()
+                            HeaderButton.DAY_BADGE -> viewModel.setCalendarCollapsed(false)
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
+                )
+
                 // Week calendar strip with navigation bar
                 androidx.compose.animation.AnimatedVisibility(
                     visible = !calendarCollapsed,

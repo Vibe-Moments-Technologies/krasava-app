@@ -197,6 +197,9 @@ class ScheduleRepository(
     val notificationsTargetId: StateFlow<Int?> = storage.notificationsTargetId
     val vpnWarningEnabled: StateFlow<Boolean> = storage.vpnWarningEnabled
     val qrButtonEnabled: StateFlow<Boolean> = storage.qrButtonEnabled
+    /** Слот доп. кнопки в шапке расписания (рядом с всегда видимым меню). */
+    val headerSlotButton: StateFlow<com.jetbrains.kmpapp.data.model.HeaderButton> =
+        storage.headerSlotButton
     val askBeforeNoteDelete: StateFlow<Boolean> = storage.askBeforeNoteDelete
 
     val hiddenLessonIds: StateFlow<Set<String>> = combine(
@@ -382,6 +385,8 @@ class ScheduleRepository(
     fun setNotificationsTargetId(targetId: Int?) = storage.setNotificationsTargetId(targetId)
     fun setVpnWarningEnabled(enabled: Boolean) = storage.setVpnWarningEnabled(enabled)
     fun setQrButtonEnabled(enabled: Boolean) = storage.setQrButtonEnabled(enabled)
+    fun setHeaderSlotButton(button: com.jetbrains.kmpapp.data.model.HeaderButton) =
+        storage.setHeaderSlotButton(button)
     fun setAskBeforeNoteDelete(ask: Boolean) = storage.setAskBeforeNoteDelete(ask)
     fun setLessonTypeColor(type: LessonType, color: LessonColor) =
         storage.setLessonTypeColor(type, color)

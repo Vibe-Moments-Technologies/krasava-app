@@ -47,6 +47,8 @@ enum class OtherSubScreen(val depth: Int) {
     SCHEDULE_DISPLAY(2),
     SCHEDULE_PROGRESS(2),
     SCHEDULE_CALENDAR(2),
+    // Кнопки шапки расписания: слот один + всегда видимое меню
+    HEADER_BUTTONS(2),
     // Тематические темы: найденные квестами надстройки тем
     THEMED_THEMES(2),
     // Пользовательские цвета типов занятий
@@ -83,6 +85,7 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.SCHEDULE_DISPLAY to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_PROGRESS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SCHEDULE_CALENDAR to OtherSubScreen.SETTINGS,
+    OtherSubScreen.HEADER_BUTTONS to OtherSubScreen.SETTINGS,
     OtherSubScreen.THEMED_THEMES to OtherSubScreen.SETTINGS,
     OtherSubScreen.LESSON_COLORS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
@@ -210,6 +213,13 @@ class OtherViewModel(
     val notificationsTargetId: StateFlow<Int?> = repository.notificationsTargetId
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
     val qrButtonEnabled: StateFlow<Boolean> = repository.qrButtonEnabled
+    /** Слот доп. кнопки в шапке расписания (меню всегда рисуется отдельно). */
+    val headerSlotButton: StateFlow<com.jetbrains.kmpapp.data.model.HeaderButton> =
+        repository.headerSlotButton
+
+    fun setHeaderSlotButton(button: com.jetbrains.kmpapp.data.model.HeaderButton) {
+        repository.setHeaderSlotButton(button)
+    }
     val askBeforeNoteDelete: StateFlow<Boolean> = repository.askBeforeNoteDelete
 
     fun setShowLessonProgress(enabled: Boolean) {

@@ -99,6 +99,7 @@ fun SettingsScreen(
     onOpenScheduleDisplay: () -> Unit = {},
     onOpenScheduleProgress: () -> Unit = {},
     onOpenScheduleCalendar: () -> Unit = {},
+    onOpenHeaderButtons: () -> Unit = {},
     onOpenServiceSettings: () -> Unit = {},
     onOpenSaperSettings: () -> Unit = {},
     onOpenThemedThemes: () -> Unit = {},
@@ -404,6 +405,15 @@ fun SettingsScreen(
                     title = "Календарь",
                     subtitle = "Сворачивание свайпом",
                     onClick = onOpenScheduleCalendar
+                )
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+                SettingsNavigationRow(
+                    title = "Кнопки шапки",
+                    subtitle = "Одна кнопка рядом с меню; остальные — в пузырьке",
+                    onClick = onOpenHeaderButtons
                 )
             }
 

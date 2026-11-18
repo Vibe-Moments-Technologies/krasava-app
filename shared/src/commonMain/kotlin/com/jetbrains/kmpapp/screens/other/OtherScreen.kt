@@ -119,6 +119,7 @@ fun OtherScreen(
                         onOpenScheduleDisplay = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_DISPLAY) },
                         onOpenScheduleProgress = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_PROGRESS) },
                         onOpenScheduleCalendar = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_CALENDAR) },
+                        onOpenHeaderButtons = { viewModel.navigateToSubScreen(OtherSubScreen.HEADER_BUTTONS) },
                         onOpenServiceSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_NOTES_SETTINGS) },
                         onOpenSaperSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SAPER_SETTINGS) },
                         onOpenThemedThemes = { viewModel.navigateToSubScreen(OtherSubScreen.THEMED_THEMES) },
@@ -146,6 +147,9 @@ fun OtherScreen(
                 }
                 OtherSubScreen.SCHEDULE_CALENDAR -> {
                     ScheduleCalendarSettingsScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.HEADER_BUTTONS -> {
+                    HeaderButtonsSettingsScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.THEMED_THEMES -> {
                     ThemedThemesScreen(viewModel = viewModel, onBack = back)
