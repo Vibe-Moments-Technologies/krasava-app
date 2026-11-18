@@ -42,6 +42,8 @@ import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import kmp_app_template.shared.generated.resources.Res
 import kmp_app_template.shared.generated.resources.appicon_alt_dark
 import kmp_app_template.shared.generated.resources.appicon_alt_light
+import kmp_app_template.shared.generated.resources.appicon_elephant_dark
+import kmp_app_template.shared.generated.resources.appicon_elephant_light
 import kmp_app_template.shared.generated.resources.appicon_new_dark
 import kmp_app_template.shared.generated.resources.appicon_new_light
 import org.jetbrains.compose.resources.DrawableResource
@@ -82,6 +84,12 @@ fun IconPickerScreen(
             title = "Грифон",
             subtitle = "Грифон одобряет",
             preview = if (isDarkTheme) Res.drawable.appicon_alt_dark else Res.drawable.appicon_alt_light
+        ),
+        IconOption(
+            key = AppIconManager.ICON_ELEPHANT,
+            title = "Слон",
+            subtitle = "Наш слон",
+            preview = if (isDarkTheme) Res.drawable.appicon_elephant_dark else Res.drawable.appicon_elephant_light
         )
     )
 

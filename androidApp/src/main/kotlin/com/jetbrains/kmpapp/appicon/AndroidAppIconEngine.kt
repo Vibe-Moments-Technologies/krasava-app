@@ -23,7 +23,9 @@ class AndroidAppIconEngine(context: Context) : AppIconManager.IconEngine {
         KEY_DEFAULT_LIGHT to ComponentName(appContext, "com.jetbrains.kmpapp.DefaultLightAlias"),
         KEY_DEFAULT_DARK to ComponentName(appContext, "com.jetbrains.kmpapp.DefaultDarkAlias"),
         KEY_GRIFFON_LIGHT to ComponentName(appContext, "com.jetbrains.kmpapp.GriffonLightAlias"),
-        KEY_GRIFFON_DARK to ComponentName(appContext, "com.jetbrains.kmpapp.GriffonDarkAlias")
+        KEY_GRIFFON_DARK to ComponentName(appContext, "com.jetbrains.kmpapp.GriffonDarkAlias"),
+        KEY_ELEPHANT_LIGHT to ComponentName(appContext, "com.jetbrains.kmpapp.ElephantLightAlias"),
+        KEY_ELEPHANT_DARK to ComponentName(appContext, "com.jetbrains.kmpapp.ElephantDarkAlias")
     )
 
     /** Только запоминаем желаемое; реальное переключение — в [applyPending]. */
@@ -58,10 +60,10 @@ class AndroidAppIconEngine(context: Context) : AppIconManager.IconEngine {
     private fun wantedKey(): String? {
         val name = prefs.getString(KEY_WANTED_NAME, null) ?: return null
         val dark = prefs.getBoolean(KEY_WANTED_DARK, false)
-        return if (name == AppIconManager.ICON_ALT) {
-            if (dark) KEY_GRIFFON_DARK else KEY_GRIFFON_LIGHT
-        } else {
-            if (dark) KEY_DEFAULT_DARK else KEY_DEFAULT_LIGHT
+        return when (name) {
+            AppIconManager.ICON_ALT -> if (dark) KEY_GRIFFON_DARK else KEY_GRIFFON_LIGHT
+            AppIconManager.ICON_ELEPHANT -> if (dark) KEY_ELEPHANT_DARK else KEY_ELEPHANT_LIGHT
+            else -> if (dark) KEY_DEFAULT_DARK else KEY_DEFAULT_LIGHT
         }
     }
 
@@ -96,5 +98,7 @@ class AndroidAppIconEngine(context: Context) : AppIconManager.IconEngine {
         const val KEY_DEFAULT_DARK = "default_dark"
         const val KEY_GRIFFON_LIGHT = "griffon_light"
         const val KEY_GRIFFON_DARK = "griffon_dark"
+        const val KEY_ELEPHANT_LIGHT = "elephant_light"
+        const val KEY_ELEPHANT_DARK = "elephant_dark"
     }
 }

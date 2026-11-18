@@ -115,6 +115,34 @@
             </intent-filter>
         </activity-alias>
 
+        <activity-alias
+            android:name=".ElephantLightAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_elephant_light"
+            android:roundIcon="@drawable/ic_launcher_elephant_light"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".ElephantDarkAlias"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@drawable/ic_launcher_elephant_dark"
+            android:roundIcon="@drawable/ic_launcher_elephant_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <receiver
             android:name=".notifications.LessonAlarmReceiver"
             android:exported="false"/>

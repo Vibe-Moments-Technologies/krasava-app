@@ -1,10 +1,10 @@
 package com.jetbrains.kmpapp.data.appicon
 
 /**
- * Выбор иконки приложения. На Android выбор реализуется четырьмя activity-alias
- * (основная/Грифон × светлая/тёмная): движок включает alias, совпадающий с
- * иконкой и эффективной темой, и отключает остальные. На iOS — setAlternateIconName
- * (asset catalog сам подставляет светлый/тёмный вариант).
+ * Выбор иконки приложения. На Android выбор реализуется activity-alias
+ * (основная/Грифон/Слон × светлая/тёмная): движок включает alias, совпадающий
+ * с иконкой и эффективной темой, и отключает остальные. На iOS —
+ * setAlternateIconName (asset catalog сам подставляет светлый/тёмный вариант).
  *
  * «Тема иконки» — режим, выбранный пользователем (SYSTEM/LIGHT/DARK), а не
  * системная тема: режим «По умолчанию» + тёмная тема ОС => тёмная иконка.
@@ -14,6 +14,8 @@ object AppIconManager {
     const val ICON_DEFAULT = "default"
     /** Альтернативная иконка «Грифон». */
     const val ICON_ALT = "AppIconAlt"
+    /** Альтернативная иконка «Слон». */
+    const val ICON_ELEPHANT = "AppIconElephant"
 
     interface IconEngine {
         fun applyIcon(name: String, dark: Boolean)

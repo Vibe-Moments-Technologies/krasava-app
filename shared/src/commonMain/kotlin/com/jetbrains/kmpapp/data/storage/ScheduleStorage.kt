@@ -391,7 +391,8 @@ class ScheduleStorage(
         _appIcon.value = when (val saved = platformStorage.getString(KEY_APP_ICON)) {
             null -> AppIconManager.ICON_DEFAULT
             "AppIconNewLight", "AppIconNewDark", "AppIconClassic" -> AppIconManager.ICON_DEFAULT
-            AppIconManager.ICON_DEFAULT, AppIconManager.ICON_ALT -> saved
+            AppIconManager.ICON_DEFAULT, AppIconManager.ICON_ALT,
+            AppIconManager.ICON_ELEPHANT -> saved
             else -> AppIconManager.ICON_DEFAULT
         }
         _notificationsEnabled.value = loadBooleanFlag(KEY_NOTIFICATIONS_ENABLED, false)
