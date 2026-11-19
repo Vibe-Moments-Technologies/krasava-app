@@ -385,9 +385,16 @@ fun App() {
             }
 
             // Просьба о звезде/отзыве. Не мешаем более важным диалогам:
-            // обновление и разблокировка темы идут первыми, а просьба ждёт
-            // следующего запуска (счётчик уже вырос, условие сохранится).
-            if (reviewPromptVisible && !showUpdateDialog && !coffeeNotificationPending) {
+            // обновление, разблокировка темы и импорт расписания по ссылке
+            // идут первыми — просьба ждёт следующего запуска (счётчик уже
+            // вырос, условие сохранится). Особенно важен импорт: человек
+            // только что открыл чужую ссылку, и просьба об отзыве поверх
+            // подтверждения выглядела бы неуместно.
+            if (reviewPromptVisible &&
+                !showUpdateDialog &&
+                !coffeeNotificationPending &&
+                shareRequest == null
+            ) {
                 com.jetbrains.kmpapp.screens.other.ReviewPromptDialog(
                     installSource = installSource,
                     onStarClicked = { repository.resolveReviewPrompt() },
