@@ -25,10 +25,26 @@ enum class HeaderButton(val id: String) {
 
     companion object {
         /** Дефолт владельца: в слоте стоит «Добавить расписание». */
-        val DEFAULT = ADD
+        val DEFAULT: HeaderButton = ADD
 
-        fun fromId(id: String?): HeaderButton =
-            entries.firstOrNull { it.id == id } ?: DEFAULT
+        /** Значение хранилища для пустого слота: все допы выключены, в шапке только меню. */
+        const val EMPTY_ID = "none"
+
+        /**
+         * Разбор сохранённого значения слота.
+         *
+         * null — слот пуст (владелец выключил все допы) либо значение битое:
+         * неизвестный id не должен молча превращаться в «плюс». Отсутствие
+         * ключа — свежая установка, там дефолт.
+         */
+        fun fromStoredId(id: String?): HeaderButton? = when {
+            id.isNullOrBlank() -> DEFAULT
+            id == EMPTY_ID -> null
+            else -> entries.firstOrNull { it.id == id }
+        }
+
+        /** Что писать в хранилище: id кнопки или [EMPTY_ID] для пустого слота. */
+        fun toStoredId(button: HeaderButton?): String = button?.id ?: EMPTY_ID
     }
 }
 
@@ -55,13 +71,17 @@ internal fun availableHeaderButtons(
 /**
  * Что реально рисуется в слоте шапки: выбранная кнопка, если она сейчас
  * применима, иначе пусто (в шапке остаётся только кнопка меню).
+ *
+ * [chosen] == null — владелец выключил ВСЕ допы: в шапке только меню, а все
+ * кнопки живут в пузырьке. Это отдельное осознанное состояние, а не «дефолт»:
+ * раньше выключение последней кнопки молча возвращало «плюс».
  */
 internal fun resolveHeaderSlot(
-    chosen: HeaderButton,
+    chosen: HeaderButton?,
     hasTarget: Boolean,
     userLessonsEnabled: Boolean,
     qrAvailable: Boolean,
     calendarCollapsed: Boolean
-): HeaderButton? = chosen.takeIf {
+): HeaderButton? = chosen?.takeIf {
     it in availableHeaderButtons(hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed)
 }

@@ -172,6 +172,11 @@ fun App() {
     val isCoffeeTheme by repository.isCoffeeTheme.collectAsState()
     val coffeeNotificationPending by repository.coffeeNotificationPending.collectAsState()
 
+    // Просьба о звезде на GitHub / отзыве в магазине: на 8-м запуске.
+    // Источник установки читаем один раз — он не меняется в рантайме.
+    val reviewPromptVisible by repository.reviewPromptVisible.collectAsState()
+    val installSource = remember { com.jetbrains.kmpapp.data.review.detectInstallSource() }
+
     val colors = if (newYearActive) {
         if (isDark) NewYearDarkColors else NewYearLightColors
     } else if (halloweenActive) {
@@ -378,6 +383,19 @@ fun App() {
                     onDismiss = otherViewModel::dismissCoffeeNotification
                 )
             }
+
+            // Просьба о звезде/отзыве. Не мешаем более важным диалогам:
+            // обновление и разблокировка темы идут первыми, а просьба ждёт
+            // следующего запуска (счётчик уже вырос, условие сохранится).
+            if (reviewPromptVisible && !showUpdateDialog && !coffeeNotificationPending) {
+                com.jetbrains.kmpapp.screens.other.ReviewPromptDialog(
+                    installSource = installSource,
+                    onStarClicked = { repository.resolveReviewPrompt() },
+                    onReviewClicked = { repository.resolveReviewPrompt() },
+                    onLater = { repository.snoozeReviewPrompt() },
+                    onNeverAsk = { repository.resolveReviewPrompt() }
+                )
+            }
             when (val request = shareRequest) {
                 is ScheduleShareRequest.Confirm -> {
                     androidx.compose.material3.AlertDialog(
@@ -460,6 +478,9 @@ fun App() {
             LaunchedEffect(Unit) {
                 // Мост для виджетов: платформенный код забирает снапшот через него.
                 com.jetbrains.kmpapp.data.widget.WidgetBridge.attach(repository)
+                // Запуск приложения: счётчик для просьбы о звезде/отзыве
+                // (показывается на 8-м запуске, см. ReviewPromptPolicy).
+                repository.registerAppLaunch()
                 kotlinx.coroutines.delay(2000)
                 try {
                     if (!repository.isLowPowerMode.value) {

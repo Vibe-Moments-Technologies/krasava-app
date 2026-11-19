@@ -17,17 +17,34 @@ class HeaderButtonSlotTest {
     }
 
     @Test
-    fun unknownIdFallsBackToDefault() {
-        assertEquals(HeaderButton.ADD, HeaderButton.fromId(null))
-        assertEquals(HeaderButton.ADD, HeaderButton.fromId("не-кнопка"))
-        assertEquals(HeaderButton.ADD, HeaderButton.fromId(""))
+    fun missingKeyMeansFreshInstallDefault() {
+        // Ключа нет — свежая установка: в слоте «плюс» (дефолт владельца).
+        assertEquals(HeaderButton.ADD, HeaderButton.fromStoredId(null))
+        assertEquals(HeaderButton.ADD, HeaderButton.fromStoredId(""))
+        assertEquals(HeaderButton.ADD, HeaderButton.fromStoredId("   "))
     }
 
     @Test
-    fun idRoundTripWorks() {
+    fun storedEmptyIdMeansAllExtrasOff() {
+        // Владелец выключил все допы: слот пуст, в шапке только меню.
+        assertNull(HeaderButton.fromStoredId(HeaderButton.EMPTY_ID))
+    }
+
+    @Test
+    fun corruptedIdDoesNotSilentlyBecomePlus() {
+        // Битое значение — не «плюс»: слот пуст, пользователь увидит меню
+        // и выберет сам. Молчаливый возврат дефолта прятал бы ошибку.
+        assertNull(HeaderButton.fromStoredId("не-кнопка"))
+    }
+
+    @Test
+    fun storedIdRoundTripWorks() {
         HeaderButton.entries.forEach { button ->
-            assertEquals(button, HeaderButton.fromId(button.id))
+            assertEquals(button, HeaderButton.fromStoredId(HeaderButton.toStoredId(button)))
         }
+        // Пустой слот тоже переживает перезапуск.
+        assertNull(HeaderButton.fromStoredId(HeaderButton.toStoredId(null)))
+        assertEquals(HeaderButton.EMPTY_ID, HeaderButton.toStoredId(null))
     }
 
     // --- доступные кнопки (пузырёк меню) ---
@@ -179,5 +196,34 @@ class HeaderButtonSlotTest {
         )
         assertNull(slot)
         assertEquals(all, all.filter { it != slot })
+    }
+
+    @Test
+    fun ownerCanTurnOffAllExtras() {
+        // Запрос владельца: «нет возможности выключить вообще все допы».
+        // chosen = null — осознанный пустой слот: в шапке только меню,
+        // даже когда все кнопки доступны.
+        assertNull(
+            resolveHeaderSlot(
+                chosen = null,
+                hasTarget = true, userLessonsEnabled = true,
+                qrAvailable = true, calendarCollapsed = true
+            )
+        )
+    }
+
+    @Test
+    fun emptySlotPutsEveryAvailableButtonInBubble() {
+        val all = availableHeaderButtons(
+            hasTarget = true, userLessonsEnabled = true,
+            qrAvailable = true, calendarCollapsed = true
+        )
+        val slot = resolveHeaderSlot(
+            chosen = null,
+            hasTarget = true, userLessonsEnabled = true,
+            qrAvailable = true, calendarCollapsed = true
+        )
+        assertEquals(all, all.filter { it != slot })
+        assertEquals(4, all.filter { it != slot }.size)
     }
 }

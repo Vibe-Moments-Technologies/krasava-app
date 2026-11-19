@@ -142,7 +142,7 @@ fun ScheduleTopBar(
     onCalendarBadgeClick: () -> Unit = {},
     onCalendarBadgeLongClick: () -> Unit = {},
     onQrScannerClick: (() -> Unit)? = null,
-    slotButton: HeaderButton = HeaderButton.DEFAULT,
+    slotButton: HeaderButton? = HeaderButton.DEFAULT,
     menuOpen: Boolean = false,
     onMenuToggle: () -> Unit = {}
 ) {
@@ -422,6 +422,7 @@ fun HeaderButtonBubble(
  *
  * Владелец: «кнопка меню с ДРУГИМИ такими кнопками» — та, что видна в шапке,
  * в пузырёк не попадает (иначе «плюс» дублировался бы в двух местах).
+ * Слот пуст (все допы выключены) — в пузырьке все доступные кнопки.
  */
 @Composable
 internal fun rememberBubbleHeaderButtons(
@@ -429,7 +430,7 @@ internal fun rememberBubbleHeaderButtons(
     userLessonsEnabled: Boolean,
     qrAvailable: Boolean,
     calendarCollapsed: Boolean,
-    slotButton: HeaderButton
+    slotButton: HeaderButton?
 ): List<HeaderButton> = remember(
     hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed, slotButton
 ) {

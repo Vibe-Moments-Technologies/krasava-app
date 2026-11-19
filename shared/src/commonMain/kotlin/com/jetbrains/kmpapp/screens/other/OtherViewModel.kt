@@ -214,10 +214,10 @@ class OtherViewModel(
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
     val qrButtonEnabled: StateFlow<Boolean> = repository.qrButtonEnabled
     /** Слот доп. кнопки в шапке расписания (меню всегда рисуется отдельно). */
-    val headerSlotButton: StateFlow<com.jetbrains.kmpapp.data.model.HeaderButton> =
+    val headerSlotButton: StateFlow<com.jetbrains.kmpapp.data.model.HeaderButton?> =
         repository.headerSlotButton
 
-    fun setHeaderSlotButton(button: com.jetbrains.kmpapp.data.model.HeaderButton) {
+    fun setHeaderSlotButton(button: com.jetbrains.kmpapp.data.model.HeaderButton?) {
         repository.setHeaderSlotButton(button)
     }
     val askBeforeNoteDelete: StateFlow<Boolean> = repository.askBeforeNoteDelete

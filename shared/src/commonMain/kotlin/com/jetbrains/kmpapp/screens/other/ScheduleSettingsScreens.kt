@@ -171,6 +171,10 @@ fun ScheduleCalendarSettingsScreen(
  * слот ОДИН. Включение другой кнопки автоматически выключает предыдущую —
  * свитчеры здесь работают как радио-группа, хотя выглядят как вкл/выкл.
  * Кнопка меню («⋮») в список не входит: она показывается всегда.
+ *
+ * Выключение последней включённой кнопки ОСТАВЛЯЕТ слот пустым (запрос
+ * владельца): в шапке только меню, все кнопки живут в пузырьке. Раньше
+ * выключение молча возвращало «плюс», и убрать все допы было нельзя.
  */
 @Composable
 fun HeaderButtonsSettingsScreen(
@@ -190,6 +194,14 @@ fun HeaderButtonsSettingsScreen(
         onBack = onBack,
         modifier = modifier
     ) {
+        if (slotButton == null) {
+            GlitchText(
+                text = "Все кнопки убраны в меню: в шапке только «⋮».",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
         HeaderButton.entries.forEach { button ->
             val available = button.availableInSettings(
                 hasTarget = hasTarget,
@@ -202,11 +214,10 @@ fun HeaderButtonsSettingsScreen(
                 enabled = available,
                 subtitle = button.settingsSubtitle(available),
                 onCheckedChange = { checked ->
-                    // Слот один: включить можно только что-то одно, поэтому
-                    // «выключение» переводит слот на дефолтную кнопку «плюс».
-                    viewModel.setHeaderSlotButton(
-                        if (checked) button else HeaderButton.DEFAULT
-                    )
+                    // Слот один: включение другой кнопки выключает предыдущую.
+                    // Выключение последней оставляет слот ПУСТЫМ — все допы
+                    // уходят в меню (запрос владельца).
+                    viewModel.setHeaderSlotButton(if (checked) button else null)
                 }
             )
         }

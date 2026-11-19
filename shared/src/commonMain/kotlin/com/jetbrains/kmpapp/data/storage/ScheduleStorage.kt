@@ -14,6 +14,7 @@ import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.model.UserLesson
 import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
+import com.jetbrains.kmpapp.data.review.ReviewPromptPolicy
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -323,12 +324,40 @@ class ScheduleStorage(
      * меню. Слот один (решение владельца): включение другой кнопки
      * автоматически выключает предыдущую. Кнопка меню в этот слот не входит —
      * она показывается всегда.
+     *
+     * null — все допы выключены: в шапке только меню, все кнопки в пузырьке.
      */
-    private val _headerSlotButton = MutableStateFlow(HeaderButton.DEFAULT)
-    val headerSlotButton: StateFlow<HeaderButton> = _headerSlotButton.asStateFlow()
+    private val _headerSlotButton = MutableStateFlow<HeaderButton?>(HeaderButton.DEFAULT)
+    val headerSlotButton: StateFlow<HeaderButton?> = _headerSlotButton.asStateFlow()
 
     private val _notifyMinutesBefore = MutableStateFlow(15)
     val notifyMinutesBefore: StateFlow<Int> = _notifyMinutesBefore.asStateFlow()
+
+    // ── Просьба о звезде на GitHub и отзыве в магазине ──────────────
+    //
+    // Запрос владельца: «если человек заходит 7 раз, то на 8-й откроется
+    // предложение». Счётчик запусков живёт в хранилище и переживает
+    // перезапуски; политика показа — в ReviewPromptPolicy (чистая, с тестами).
+
+    private val _launchCount = MutableStateFlow(0)
+    val launchCount: StateFlow<Int> = _launchCount.asStateFlow()
+
+    /** Пользователь ответил на просьбу (звезда/отзыв/«не надо») — больше не показываем. */
+    private val _reviewPromptResolved = MutableStateFlow(false)
+    val reviewPromptResolved: StateFlow<Boolean> = _reviewPromptResolved.asStateFlow()
+
+    /** Запуск, начиная с которого просьбу можно показать после «позже». */
+    private val _reviewSnoozeUntilLaunch = MutableStateFlow<Int?>(null)
+
+    /** Сколько раз уже откладывали просьбу. */
+    private val _reviewSnoozeCount = MutableStateFlow(0)
+
+    /**
+     * Просьбу пора показать. Пересчитывается при загрузке и после каждого
+     * ответа; UI только читает и рисует диалог.
+     */
+    private val _reviewPromptVisible = MutableStateFlow(false)
+    val reviewPromptVisible: StateFlow<Boolean> = _reviewPromptVisible.asStateFlow()
 
     private val _askBeforeNoteDelete = MutableStateFlow(true)
     val askBeforeNoteDelete: StateFlow<Boolean> = _askBeforeNoteDelete.asStateFlow()
@@ -409,10 +438,17 @@ class ScheduleStorage(
         _vpnWarningEnabled.value = loadBooleanFlag(KEY_VPN_WARNING_ENABLED, true)
         _qrButtonEnabled.value = loadBooleanFlag(KEY_QR_BUTTON_ENABLED, false)
         _headerSlotButton.value =
-            HeaderButton.fromId(platformStorage.getString(KEY_HEADER_SLOT_BUTTON))
+            HeaderButton.fromStoredId(platformStorage.getString(KEY_HEADER_SLOT_BUTTON))
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
+        // Просьба о звезде/отзыве: счётчик запусков и ответы пользователя.
+        _launchCount.value = platformStorage.getString(KEY_LAUNCH_COUNT)?.toIntOrNull() ?: 0
+        _reviewPromptResolved.value = loadBooleanFlag(KEY_REVIEW_PROMPT_RESOLVED, false)
+        _reviewSnoozeUntilLaunch.value =
+            platformStorage.getString(KEY_REVIEW_SNOOZE_UNTIL)?.toIntOrNull()
+        _reviewSnoozeCount.value = platformStorage.getString(KEY_REVIEW_SNOOZE_COUNT)?.toIntOrNull() ?: 0
+        recalcReviewPromptVisible()
         // Миграция: раньше панель навигации можно было скрыть, и «Другое»
         // открывалось шестерёнкой. Функцию убрали — дочищаем оставшийся
         // ключ, чтобы он не тянулся в бэкапах и статистике.
@@ -1190,6 +1226,79 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, _notifyMinutesBefore.value.toString()) }
     }
 
+    /**
+     * Зарегистрировать запуск приложения и пересчитать, пора ли просить
+     * звезду/отзыв. Вызывается один раз на старте (см. App.kt).
+     *
+     * Счётчик растёт монотонно и переживает перезапуски; политика показа
+     * (8-й запуск, откладывания, «больше не показывать») — в ReviewPromptPolicy.
+     */
+    fun registerAppLaunch() {
+        val next = _launchCount.value + 1
+        _launchCount.value = next
+        recalcReviewPromptVisible()
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_LAUNCH_COUNT, next.toString())
+            } catch (e: Exception) {
+                println("Failed to persist launch count: ${e.message}")
+            }
+        }
+    }
+
+    private fun recalcReviewPromptVisible() {
+        _reviewPromptVisible.value = ReviewPromptPolicy.shouldShow(
+            launchCount = _launchCount.value,
+            resolved = _reviewPromptResolved.value,
+            snoozeUntilLaunch = _reviewSnoozeUntilLaunch.value,
+            snoozeCount = _reviewSnoozeCount.value
+        )
+    }
+
+    /**
+     * Пользователь ответил на просьбу (поставил звезду, оставил отзыв или
+     * нажал «не надо»): просьба закрывается навсегда.
+     */
+    fun resolveReviewPrompt() {
+        _reviewPromptResolved.value = true
+        _reviewPromptVisible.value = false
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_REVIEW_PROMPT_RESOLVED, true.toString())
+            } catch (e: Exception) {
+                println("Failed to persist review prompt resolution: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * «Позже»: просьба вернётся через N запусков, но не больше MAX_SNOOZES раз.
+     * После исчерпания откладываний просьба уходит навсегда — иначе «позже»
+     * превращается в вечный показ.
+     */
+    fun snoozeReviewPrompt() {
+        val count = _reviewSnoozeCount.value + 1
+        val until = ReviewPromptPolicy.snoozeUntil(_launchCount.value)
+        _reviewSnoozeCount.value = count
+        _reviewSnoozeUntilLaunch.value = until
+        _reviewPromptVisible.value = false
+        // Откладывания исчерпаны — закрываем просьбу окончательно.
+        if (count >= ReviewPromptPolicy.MAX_SNOOZES) {
+            _reviewPromptResolved.value = true
+        }
+        scope.launch {
+            try {
+                platformStorage.saveString(KEY_REVIEW_SNOOZE_COUNT, count.toString())
+                platformStorage.saveString(KEY_REVIEW_SNOOZE_UNTIL, until.toString())
+                if (_reviewPromptResolved.value) {
+                    platformStorage.saveString(KEY_REVIEW_PROMPT_RESOLVED, true.toString())
+                }
+            } catch (e: Exception) {
+                println("Failed to persist review prompt snooze: ${e.message}")
+            }
+        }
+    }
+
     fun setNotificationsTargetId(targetId: Int?) {
         _notificationsTargetId.value = targetId
         persistNotificationsTargetId(targetId)
@@ -1208,12 +1317,15 @@ class ScheduleStorage(
     /**
      * Поставить кнопку в слот шапки. Слот один: предыдущая кнопка при этом
      * просто перестаёт быть выбранной — отдельного выключения не нужно.
+     *
+     * null — выключить все допы: в шапке останется только кнопка меню, а все
+     * кнопки переедут в пузырёк (запрос владельца).
      */
-    fun setHeaderSlotButton(button: HeaderButton) {
+    fun setHeaderSlotButton(button: HeaderButton?) {
         _headerSlotButton.value = button
         scope.launch {
             try {
-                platformStorage.saveString(KEY_HEADER_SLOT_BUTTON, button.id)
+                platformStorage.saveString(KEY_HEADER_SLOT_BUTTON, HeaderButton.toStoredId(button))
             } catch (e: Exception) {
                 println("Failed to persist header slot button: ${e.message}")
             }
@@ -1652,6 +1764,13 @@ class ScheduleStorage(
         _qrButtonEnabled.value = false
         _notifyMinutesBefore.value = notifyMinutesBeforeBefore
         _askBeforeNoteDelete.value = askBeforeNoteDeleteBefore
+        // Счётчик запусков и просьба об отзыве — тоже сбрасываются: сброс
+        // данных возвращает заводское поведение, а не «восьмой запуск» сразу.
+        _launchCount.value = 0
+        _reviewPromptResolved.value = false
+        _reviewSnoozeUntilLaunch.value = null
+        _reviewSnoozeCount.value = 0
+        _reviewPromptVisible.value = false
         _notePages.value = com.jetbrains.kmpapp.data.model.defaultNotePages()
         lastSyncTimes.clear()
         com.jetbrains.kmpapp.data.model.SemesterWeeks.set(emptyList())
@@ -1668,6 +1787,10 @@ class ScheduleStorage(
             platformStorage.saveString(KEY_NOTIFY_MINUTES_BEFORE, notifyMinutesBeforeBefore.toString())
             platformStorage.saveString(KEY_ASK_BEFORE_NOTE_DELETE, askBeforeNoteDeleteBefore.toString())
             platformStorage.remove(KEY_DOCK_HIDDEN)
+            platformStorage.remove(KEY_LAUNCH_COUNT)
+            platformStorage.remove(KEY_REVIEW_PROMPT_RESOLVED)
+            platformStorage.remove(KEY_REVIEW_SNOOZE_UNTIL)
+            platformStorage.remove(KEY_REVIEW_SNOOZE_COUNT)
             platformStorage.saveString(KEY_USER_LESSONS_ENABLED, true.toString())
             platformStorage.saveString(KEY_NOTES, json.encodeToString(_notePages.value))
             if (revokedThemesBefore.isNotEmpty()) {
@@ -1796,6 +1919,11 @@ class ScheduleStorage(
         private const val KEY_HEADER_SLOT_BUTTON = "krasava_header_slot_button"
         private const val KEY_NOTIFY_MINUTES_BEFORE = "krasava_notify_minutes_before"
         private const val KEY_ASK_BEFORE_NOTE_DELETE = "krasava_ask_before_note_delete"
+        // Просьба о звезде на GitHub и отзыве в магазине.
+        private const val KEY_LAUNCH_COUNT = "krasava_launch_count"
+        private const val KEY_REVIEW_PROMPT_RESOLVED = "krasava_review_prompt_resolved"
+        private const val KEY_REVIEW_SNOOZE_UNTIL = "krasava_review_snooze_until"
+        private const val KEY_REVIEW_SNOOZE_COUNT = "krasava_review_snooze_count"
         private const val KEY_NOTES = "krasava_notes_pages"
         // Дефолт дока для НОВЫХ установок (решение владельца): Существующие
         // пользователи не затрагиваются — их сохранённый док доверяется.
