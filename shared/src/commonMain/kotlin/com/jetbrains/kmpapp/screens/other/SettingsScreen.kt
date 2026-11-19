@@ -669,7 +669,11 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         GlitchText(
-                            text = "Значок сканера в шапке расписания",
+                            // Раньше этот тумблер сам ставил значок в шапку.
+                            // Теперь шапка = слот + меню, поэтому тумблер лишь
+                            // РАЗРЕШАЕТ кнопку: где она стоит, решает раздел
+                            // «Расписание → Кнопки шапки».
+                            text = "Разрешает кнопку сканера; место в шапке — в «Кнопках шапки»",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
