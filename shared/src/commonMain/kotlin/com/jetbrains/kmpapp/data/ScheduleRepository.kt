@@ -203,6 +203,8 @@ class ScheduleRepository(
     val askBeforeNoteDelete: StateFlow<Boolean> = storage.askBeforeNoteDelete
     /** Пора показать просьбу о звезде на GitHub / отзыве в магазине. */
     val reviewPromptVisible: StateFlow<Boolean> = storage.reviewPromptVisible
+    val launchCount: StateFlow<Int> = storage.launchCount
+    val reviewPromptResolved: StateFlow<Boolean> = storage.reviewPromptResolved
 
     val hiddenLessonIds: StateFlow<Set<String>> = combine(
         storage.selectedTarget,
@@ -394,6 +396,7 @@ class ScheduleRepository(
     fun registerAppLaunch() = storage.registerAppLaunch()
     fun resolveReviewPrompt() = storage.resolveReviewPrompt()
     fun snoozeReviewPrompt() = storage.snoozeReviewPrompt()
+    fun forceReviewPromptForDebug() = storage.forceReviewPromptForDebug()
     fun setLessonTypeColor(type: LessonType, color: LessonColor) =
         storage.setLessonTypeColor(type, color)
     fun resetLessonTypeColors() = storage.resetLessonTypeColors()

@@ -76,6 +76,19 @@ fun DebugSettingsScreen(
     // иначе в сезон тумблер выглядел бы выключенным при включённой теме.
     val isNewYearTheme by viewModel.isNewYearActive.collectAsState()
 
+    // Просьба о звезде/отзыве: счётчик запусков и источник установки —
+    // чтобы проверить диалог, не перезапуская приложение восемь раз.
+    val launchCount by viewModel.launchCount.collectAsState()
+    val reviewResolved by viewModel.reviewPromptResolved.collectAsState()
+    val installSourceLabel = remember {
+        when (com.jetbrains.kmpapp.data.review.detectInstallSource()) {
+            com.jetbrains.kmpapp.data.review.InstallSource.RU_STORE -> "RuStore (отзыв доступен)"
+            com.jetbrains.kmpapp.data.review.InstallSource.GOOGLE_PLAY -> "Google Play (листинга нет)"
+            com.jetbrains.kmpapp.data.review.InstallSource.APP_STORE -> "App Store (листинга нет)"
+            com.jetbrains.kmpapp.data.review.InstallSource.SIDELOAD -> "вручную/APK (магазина нет)"
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.refreshStorageStats()
     }
@@ -217,6 +230,36 @@ fun DebugSettingsScreen(
                 ) {
                     GlitchText(if (testEventSent) "Отправлено ✓" else "Отправить тестовое событие")
                 }
+            }
+
+            // Просьба о звезде/отзыве: без этой карточки её пришлось бы
+            // проверять восемью перезапусками приложения.
+            SectionTitle("Просьба об отзыве")
+            DebugCard {
+                GlitchText(
+                    "Запусков: $launchCount · просьба на ${com.jetbrains.kmpapp.data.review.ReviewPromptPolicy.SHOW_ON_LAUNCH}-м" +
+                        if (reviewResolved) " · закрыта ответом" else "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                GlitchText(
+                    "Источник установки: $installSourceLabel. Отзыв в магазине просим " +
+                        "только при установке из RuStore — иначе оставить его негде.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedButton(
+                    onClick = viewModel::forceReviewPrompt,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    GlitchText("Показать просьбу сейчас")
+                }
+                GlitchText(
+                    "Только флаг в памяти: счётчик и ответы не меняются, после " +
+                        "перезапуска всё как было.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             SectionTitle("Хранилище")

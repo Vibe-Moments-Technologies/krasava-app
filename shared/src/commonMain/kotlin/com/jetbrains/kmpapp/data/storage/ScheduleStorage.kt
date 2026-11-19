@@ -1299,6 +1299,15 @@ class ScheduleStorage(
         }
     }
 
+    /**
+     * Отладка: показать просьбу немедленно, не дожидаясь 8-го запуска.
+     * Меняет только флаг видимости в памяти — счётчик, ответы и откладывания
+     * в хранилище не трогает, поэтому после перезапуска всё как было.
+     */
+    fun forceReviewPromptForDebug() {
+        _reviewPromptVisible.value = true
+    }
+
     fun setNotificationsTargetId(targetId: Int?) {
         _notificationsTargetId.value = targetId
         persistNotificationsTargetId(targetId)

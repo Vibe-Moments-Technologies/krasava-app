@@ -316,6 +316,12 @@ class OtherViewModel(
     private val _storageStats = MutableStateFlow(repository.getStorageStats())
     val storageStats: StateFlow<StorageStats> = _storageStats.asStateFlow()
 
+    /** Счётчик запусков — для отладки просьбы о звезде/отзыве. */
+    val launchCount: StateFlow<Int> = repository.launchCount
+    val reviewPromptResolved: StateFlow<Boolean> = repository.reviewPromptResolved
+    /** Показать просьбу принудительно (отладка): не ждём 8 запусков. */
+    fun forceReviewPrompt() = repository.forceReviewPromptForDebug()
+
     fun refreshStorageStats() {
         _storageStats.value = repository.getStorageStats()
     }

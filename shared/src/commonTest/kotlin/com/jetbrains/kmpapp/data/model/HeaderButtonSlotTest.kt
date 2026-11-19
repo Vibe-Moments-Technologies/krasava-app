@@ -194,8 +194,12 @@ class HeaderButtonSlotTest {
             HeaderButton.QR, hasTarget = true, userLessonsEnabled = true,
             qrAvailable = false, calendarCollapsed = false
         )
+        // Фильтруем ДО assertNull: у того контракт, после которого slot
+        // сужается до null и сравнение превращается в тавтологию.
+        val bubble = all.filter { it != slot }
+        assertEquals(listOf(HeaderButton.ADD, HeaderButton.USER_LESSON), all)
+        assertEquals(all, bubble)
         assertNull(slot)
-        assertEquals(all, all.filter { it != slot })
     }
 
     @Test
@@ -223,7 +227,9 @@ class HeaderButtonSlotTest {
             hasTarget = true, userLessonsEnabled = true,
             qrAvailable = true, calendarCollapsed = true
         )
-        assertEquals(all, all.filter { it != slot })
-        assertEquals(4, all.filter { it != slot }.size)
+        val bubble = all.filter { it != slot }
+        assertEquals(4, bubble.size)
+        assertEquals(all, bubble)
+        assertNull(slot)
     }
 }
