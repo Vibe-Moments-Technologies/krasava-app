@@ -167,7 +167,7 @@ fun OtherScreen(
                     TetrisSettingsScreen(viewModel = gamesViewModel, onBack = back)
                 }
                 OtherSubScreen.RESOURCES -> {
-                    ResourcesScreen(onBack = back)
+                    ResourcesScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.ABOUT -> {
                     AboutScreen(

@@ -53,6 +53,7 @@ fun ExperimentalSettingsScreen(
     val cheatsAgreed by viewModel.cheatsAgreed.collectAsState()
     val cheatsBlocked by viewModel.cheatsBlocked.collectAsState()
     val themeOverlay by viewModel.themeOverlay.collectAsState()
+    val fullResourcesEnabled by viewModel.fullResourcesEnabled.collectAsState()
 
     var showDisclaimer by remember { mutableStateOf(false) }
     var showReward by remember { mutableStateOf(false) }
@@ -90,6 +91,8 @@ fun ExperimentalSettingsScreen(
             scrollState = viewModel.scrollState("experimental"),
             showMatrix = cheatsAgreed == true && !cheatsBlocked,
             isMatrixTheme = themeOverlay == ThemeOverlay.MATRIX,
+            isFullResources = fullResourcesEnabled,
+            onFullResourcesChanged = viewModel::setFullResourcesEnabled,
             onCheatsClick = { turnOn ->
                 if (turnOn) {
                     when (cheatsAgreed) {
@@ -144,6 +147,8 @@ fun ExperimentalSettingsScreen(
 private fun ExperimentalSettingsContent(
     showMatrix: Boolean,
     isMatrixTheme: Boolean,
+    isFullResources: Boolean,
+    onFullResourcesChanged: (Boolean) -> Unit,
     onCheatsClick: (Boolean) -> Unit,
     onMatrixChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -163,6 +168,14 @@ private fun ExperimentalSettingsContent(
         ) {
             Column(modifier = Modifier.padding(18.dp)) {
                 CheatsRow(onCheckedChange = onCheatsClick)
+                HorizontalDivider(
+                    modifier = Modifier.padding(vertical = 12.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
+                FullResourcesRow(
+                    checked = isFullResources,
+                    onCheckedChange = onFullResourcesChanged
+                )
                 if (showMatrix) {
                     HorizontalDivider(
                         modifier = Modifier.padding(vertical = 12.dp),
@@ -196,6 +209,27 @@ private fun CheatsRow(onCheckedChange: (Boolean) -> Unit) {
         }
         Spacer(modifier = Modifier.width(12.dp))
         Switch(checked = false, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun FullResourcesRow(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            GlitchText("Полные ресурсы", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Spacer(modifier = Modifier.height(2.dp))
+            GlitchText(
+                "показывает содержимое студенческих организаций",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
