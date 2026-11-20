@@ -199,6 +199,7 @@ class OtherViewModel(
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = repository.diagnosticsEnabled
+    val fullResourcesEnabled: StateFlow<Boolean> = repository.fullResourcesEnabled
 
     // Скролл подэкранов «Другое» живёт в VM: LayeredNavHost пересоздаёт экран
     // в другом слое при переходе родитель↔дочка, remember-состояния гибнут.
@@ -280,6 +281,7 @@ class OtherViewModel(
     fun setCheatsAgreed(agreed: Boolean?) = repository.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = repository.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = repository.setDiagnosticsEnabled(enabled)
+    fun setFullResourcesEnabled(enabled: Boolean) = repository.setFullResourcesEnabled(enabled)
     fun setAppIcon(name: String) = repository.setAppIcon(name)
     fun setNotificationsEnabled(enabled: Boolean) = repository.setNotificationsEnabled(enabled)
     fun setNotifyMinutesBefore(minutes: Int) = repository.setNotifyMinutesBefore(minutes)
