@@ -45,6 +45,7 @@ import com.jetbrains.kmpapp.screens.compare.CompareScheduleViewModel
 import com.jetbrains.kmpapp.screens.map.MapScreen
 import com.jetbrains.kmpapp.screens.notes.NotesScreen
 import com.jetbrains.kmpapp.screens.notes.NotesViewModel
+import com.jetbrains.kmpapp.screens.other.OtherViewModel
 import com.jetbrains.kmpapp.screens.games.GamesScreen
 import com.jetbrains.kmpapp.screens.games.GamesViewModel
 import com.jetbrains.kmpapp.screens.rooms.FreeRoomsScreen
@@ -99,6 +100,7 @@ fun ServicesScreen(
     compareViewModel: CompareScheduleViewModel = org.koin.compose.viewmodel.koinViewModel(),
     notesViewModel: NotesViewModel = org.koin.compose.viewmodel.koinViewModel(),
     gamesViewModel: GamesViewModel = org.koin.compose.viewmodel.koinViewModel(),
+    otherViewModel: OtherViewModel = org.koin.compose.viewmodel.koinViewModel(),
     modifier: Modifier = Modifier
 ) {
     val activeService by viewModel.activeService.collectAsState()
@@ -172,7 +174,10 @@ fun ServicesScreen(
                 }
                 AppTab.GAMES -> {
                     PlatformBackHandler(onBack = back)
-                    GamesScreen(viewModel = gamesViewModel)
+                    GamesScreen(
+                        viewModel = gamesViewModel,
+                        otherViewModel = otherViewModel
+                    )
                 }
                 AppTab.QR_SCANNER -> {
                     // Сканер без свайпа-назад: жесты не нужны, но

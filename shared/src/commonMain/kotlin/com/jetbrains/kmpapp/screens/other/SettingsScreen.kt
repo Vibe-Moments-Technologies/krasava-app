@@ -23,7 +23,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
@@ -101,10 +100,8 @@ fun SettingsScreen(
     onOpenScheduleCalendar: () -> Unit = {},
     onOpenHeaderButtons: () -> Unit = {},
     onOpenServiceSettings: () -> Unit = {},
-    onOpenSaperSettings: () -> Unit = {},
     onOpenThemedThemes: () -> Unit = {},
     onOpenLessonColors: () -> Unit = {},
-    onOpenTetrisSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -446,27 +443,6 @@ fun SettingsScreen(
                     title = "Конспекты",
                     subtitle = "Настройки блокнота и заметок",
                     onClick = onOpenServiceSettings
-                )
-            }
-
-            // Section: Games — настройки «Сапера» и «Тетриса»
-            SettingsSectionCard(
-                title = "Игры",
-                icon = Icons.Default.Bolt
-            ) {
-                SettingsNavigationRow(
-                    title = "Сапер",
-                    subtitle = "Ориентация доски, мелкие клетки и «Бой с тенью»",
-                    onClick = onOpenSaperSettings
-                )
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-                SettingsNavigationRow(
-                    title = "Тетрис",
-                    subtitle = "Вариант управления, сложность и скорость падения",
-                    onClick = onOpenTetrisSettings
                 )
             }
 

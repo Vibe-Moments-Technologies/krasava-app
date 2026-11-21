@@ -55,9 +55,6 @@ enum class OtherSubScreen(val depth: Int) {
     LESSON_COLORS(2),
     // Параметры сервисов
     SERVICE_NOTES_SETTINGS(2),
-    // Настройки игр: «Сапер» и «Тетрис»
-    SAPER_SETTINGS(2),
-    TETRIS_SETTINGS(2),
     RESOURCES(1),
     ABOUT(1),
     TEAM(2),
@@ -89,8 +86,6 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.THEMED_THEMES to OtherSubScreen.SETTINGS,
     OtherSubScreen.LESSON_COLORS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SAPER_SETTINGS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.TETRIS_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.TEAM to OtherSubScreen.ABOUT,

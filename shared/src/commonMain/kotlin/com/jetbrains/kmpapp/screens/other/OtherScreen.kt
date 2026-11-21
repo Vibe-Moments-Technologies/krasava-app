@@ -121,10 +121,8 @@ fun OtherScreen(
                         onOpenScheduleCalendar = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_CALENDAR) },
                         onOpenHeaderButtons = { viewModel.navigateToSubScreen(OtherSubScreen.HEADER_BUTTONS) },
                         onOpenServiceSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_NOTES_SETTINGS) },
-                        onOpenSaperSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SAPER_SETTINGS) },
                         onOpenThemedThemes = { viewModel.navigateToSubScreen(OtherSubScreen.THEMED_THEMES) },
-                        onOpenLessonColors = { viewModel.navigateToSubScreen(OtherSubScreen.LESSON_COLORS) },
-                        onOpenTetrisSettings = { viewModel.navigateToSubScreen(OtherSubScreen.TETRIS_SETTINGS) }
+                        onOpenLessonColors = { viewModel.navigateToSubScreen(OtherSubScreen.LESSON_COLORS) }
                     )
                 }
                 OtherSubScreen.DATA_AND_CACHE -> {
@@ -159,12 +157,6 @@ fun OtherScreen(
                 }
                 OtherSubScreen.SERVICE_NOTES_SETTINGS -> {
                     ServiceNotesSettingsScreen(viewModel = viewModel, onBack = back)
-                }
-                OtherSubScreen.SAPER_SETTINGS -> {
-                    SaperSettingsScreen(viewModel = gamesViewModel, onBack = back)
-                }
-                OtherSubScreen.TETRIS_SETTINGS -> {
-                    TetrisSettingsScreen(viewModel = gamesViewModel, onBack = back)
                 }
                 OtherSubScreen.RESOURCES -> {
                     ResourcesScreen(viewModel = viewModel, onBack = back)
@@ -221,7 +213,10 @@ fun OtherScreen(
                 }
                 OtherSubScreen.SERVICE_GAMES -> {
                     PlatformBackHandler(onBack = back)
-                    GamesScreen(viewModel = gamesViewModel)
+                    GamesScreen(
+                        viewModel = gamesViewModel,
+                        otherViewModel = viewModel
+                    )
                 }
                 OtherSubScreen.SERVICE_QR_SCANNER -> {
                     com.jetbrains.kmpapp.screens.qr.QrScannerScreen(onBack = back)
