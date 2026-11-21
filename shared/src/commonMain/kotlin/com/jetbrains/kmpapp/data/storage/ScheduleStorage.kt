@@ -1143,9 +1143,7 @@ class ScheduleStorage(
         ) {
             set += ThemeOverlay.NEW_YEAR
         }
-        if (loadBooleanFlag(KEY_UNLOCKED_COFFEE, false) ||
-            platformStorage.getString(KEY_COFFEE_THEME)?.toBooleanStrictOrNull() == true
-        ) {
+        if (loadBooleanFlag(KEY_UNLOCKED_COFFEE, false)) {
             set += ThemeOverlay.COFFEE
         }
         return set
@@ -1356,14 +1354,19 @@ class ScheduleStorage(
     private fun loadThemeOverlay(): ThemeOverlay {
         val stored = platformStorage.getString(KEY_THEME_OVERLAY)
             ?.let { runCatching { ThemeOverlay.valueOf(it) }.getOrNull() }
-        if (stored != null) return stored
+        if (stored != null) {
+            return if (stored == ThemeOverlay.COFFEE && !loadBooleanFlag(KEY_UNLOCKED_COFFEE, false)) {
+                ThemeOverlay.SAKURA
+            } else {
+                stored
+            }
+        }
         val legacy = when {
             platformStorage.getString(KEY_MATRIX_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.MATRIX
             platformStorage.getString(KEY_HALLOWEEN_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.HALLOWEEN
             platformStorage.getString(KEY_NEW_YEAR_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.NEW_YEAR
             platformStorage.getString(KEY_CYBERPUNK_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.CYBERPUNK
             platformStorage.getString(KEY_KAWAII_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.KAWAII
-            platformStorage.getString(KEY_COFFEE_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.COFFEE
             platformStorage.getString(KEY_SAKURA_THEME)?.toBooleanStrictOrNull() == true -> ThemeOverlay.SAKURA
             else -> null
         }
