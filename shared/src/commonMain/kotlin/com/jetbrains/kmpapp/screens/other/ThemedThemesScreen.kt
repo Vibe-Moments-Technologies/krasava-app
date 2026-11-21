@@ -72,6 +72,7 @@ import com.jetbrains.kmpapp.theme.ThemeOverlay
 fun ThemedThemesScreen(
     viewModel: OtherViewModel,
     onBack: () -> Unit,
+    errorThemeSeen: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     PlatformBackHandler(onBack = onBack)
@@ -191,8 +192,9 @@ fun ThemedThemesScreen(
                             onLockedClick = {
                                 val isRevoked = row.overlay in revoked
                                 lockDialog = ThemeLockDialog(
-                                    title = if (isRevoked) "Тема недоступна" else "Тема не найдена",
-                                    message = if (isRevoked) THEME_REVOKED_MESSAGE
+                                    message = if (isRevoked) THEME_REVOKED_TITLE
+                                    else THEME_NOT_FOUND_TITLE,
+                                    description = if (isRevoked) THEME_REVOKED_MESSAGE
                                     else THEME_NOT_FOUND_MESSAGE
                                 )
                             }
@@ -208,6 +210,27 @@ fun ThemedThemesScreen(
                             )
                         }
                     }
+
+                    ThemeRowDivider()
+                    ThemeRow(
+                        title = "Error",
+                        checked = false,
+                        onCheckedChange = {},
+                        locked = true,
+                        onLockedClick = {
+                            lockDialog = if (errorThemeSeen) {
+                                ThemeLockDialog(
+                                    message = ERROR_THEME_MESSAGE,
+                                    description = ERROR_THEME_DESCRIPTION
+                                )
+                            } else {
+                                ThemeLockDialog(
+                                    message = THEME_NOT_FOUND_TITLE,
+                                    description = THEME_NOT_FOUND_MESSAGE
+                                )
+                            }
+                        }
+                    )
 
                     // Сезонная строка живёт по правилу темы, а не по
                     // разблокировке: пока сезон идёт, её видно и можно гасить;
@@ -248,8 +271,8 @@ fun ThemedThemesScreen(
     lockDialog?.let { dialog ->
         AlertDialog(
             onDismissRequest = { lockDialog = null },
-            title = { GlitchText(dialog.title) },
-            text = { GlitchText(dialog.message) },
+            title = { GlitchText(dialog.message) },
+            text = { GlitchText(dialog.description) },
             confirmButton = {
                 TextButton(onClick = { lockDialog = null }) {
                     GlitchText("Понятно")
@@ -259,13 +282,17 @@ fun ThemedThemesScreen(
     }
 }
 
+private const val THEME_NOT_FOUND_TITLE = "Тема не найдена"
 private const val THEME_NOT_FOUND_MESSAGE = "Вы еще не нашли тему"
+private const val THEME_REVOKED_TITLE = "Тема недоступна"
 private const val THEME_REVOKED_MESSAGE =
     "Вам нельзя активировать эту тему за нарушение правил"
+private const val ERROR_THEME_MESSAGE = "Произошла какая-то ошибка"
+private const val ERROR_THEME_DESCRIPTION = "попробуйте разблокировать позже"
 
 private data class ThemeLockDialog(
-    val title: String,
-    val message: String
+    val message: String,
+    val description: String
 )
 
 private class ThemeRowData(
