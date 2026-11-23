@@ -1098,6 +1098,12 @@ class ScheduleStorage(
         _revokedThemes.value = _revokedThemes.value + overlay
         setThemeUnlocked(overlay, false)
         persistRevokedThemes()
+        // Тот же риск, что и с кофе: отозванная тема могла остаться «последней
+        // выбранной», и возврат на неё привёл бы к недоступной теме. Гасим.
+        if (_previousTheme.value == overlay) {
+            _previousTheme.value = ThemeOverlay.NONE
+            persistPreviousTheme(ThemeOverlay.NONE)
+        }
     }
 
     private fun persistRevokedThemes() {
