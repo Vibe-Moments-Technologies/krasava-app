@@ -51,8 +51,15 @@ import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.screens.components.AppTab
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 
+/**
+ * Страница «Интерфейс и навигация».
+ *
+ * Настройка нижней панели — единственное содержимое раздела, поэтому
+ * отдельной подстраницы «Настройка панели страниц» больше нет: этот экран
+ * и есть страница раздела (переработка настроек: максимум 2 уровня).
+ */
 @Composable
-fun DockSettingsScreen(
+fun InterfaceSettingsScreen(
     viewModel: OtherViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -87,7 +94,7 @@ fun DockSettingsScreen(
                 }
                 Spacer(modifier = Modifier.width(4.dp))
                 GlitchText(
-                    text = "Настройка панели страниц",
+                    text = "Интерфейс и навигация",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -104,6 +111,15 @@ fun DockSettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Группа «Нижняя панель» — заголовок раздела настроек.
+            GlitchText(
+                text = "НИЖНЯЯ ПАНЕЛЬ",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 4.dp)
+            )
+
             // Explanatory note
             Card(
                 shape = RoundedCornerShape(16.dp),

@@ -40,21 +40,19 @@ enum class OtherSubScreen(val depth: Int) {
     MANAGE_SCHEDULES(1),
     SETTINGS(1),
     DATA_AND_CACHE(2),
-    DOCK_SETTINGS(2),
     TASK_SETTINGS(2),
     ICON_PICKER(2),
-    // Подстраницы настроек расписания
-    SCHEDULE_DISPLAY(2),
-    SCHEDULE_PROGRESS(2),
-    SCHEDULE_CALENDAR(2),
-    // Кнопки шапки расписания: слот один + всегда видимое меню
-    HEADER_BUTTONS(2),
-    // Тематические темы: найденные квестами надстройки тем
+    // ── Страницы-разделы настроек (переработка: максимум 2 уровня) ──
+    // Внутри каждой — группы настроек, а не ссылки на подстраницы.
+    SCHEDULE_SETTINGS(2),
+    NOTIFICATION_SETTINGS(2),
+    INTERFACE_SETTINGS(2),
+    SERVICES_SETTINGS(2),
+    ADVANCED_SETTINGS(2),
+    // Единственное исключение из «без подстраниц»: палитра типов занятий
+    // слишком крупная, чтобы жить инлайн (решение владельца).
+    LESSON_COLORS(3),
     THEMED_THEMES(2),
-    // Пользовательские цвета типов занятий
-    LESSON_COLORS(2),
-    // Параметры сервисов
-    SERVICE_NOTES_SETTINGS(2),
     RESOURCES(1),
     ABOUT(1),
     TEAM(2),
@@ -76,16 +74,19 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.MANAGE_SCHEDULES to OtherSubScreen.ROOT,
     OtherSubScreen.SETTINGS to OtherSubScreen.ROOT,
     OtherSubScreen.DATA_AND_CACHE to OtherSubScreen.SETTINGS,
-    OtherSubScreen.DOCK_SETTINGS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.TASK_SETTINGS to OtherSubScreen.SETTINGS,
+    // Заглушка задач открывается из «Сервисов».
+    OtherSubScreen.TASK_SETTINGS to OtherSubScreen.SERVICES_SETTINGS,
     OtherSubScreen.ICON_PICKER to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SCHEDULE_DISPLAY to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SCHEDULE_PROGRESS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SCHEDULE_CALENDAR to OtherSubScreen.SETTINGS,
-    OtherSubScreen.HEADER_BUTTONS to OtherSubScreen.SETTINGS,
+    // Страницы-разделы: все прямые дети «Настроек».
+    OtherSubScreen.SCHEDULE_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.NOTIFICATION_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.INTERFACE_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.SERVICES_SETTINGS to OtherSubScreen.SETTINGS,
+    OtherSubScreen.ADVANCED_SETTINGS to OtherSubScreen.SETTINGS,
+    // «Внешний вид» остаётся инлайн в корне: его подстраницы — дети корня.
     OtherSubScreen.THEMED_THEMES to OtherSubScreen.SETTINGS,
-    OtherSubScreen.LESSON_COLORS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
+    // Цвета занятий — единственная вложенная подстраница (внутри расписания).
+    OtherSubScreen.LESSON_COLORS to OtherSubScreen.SCHEDULE_SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.TEAM to OtherSubScreen.ABOUT,

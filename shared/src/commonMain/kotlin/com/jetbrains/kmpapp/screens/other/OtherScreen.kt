@@ -113,42 +113,49 @@ fun OtherScreen(
                     SettingsScreen(
                         viewModel = viewModel,
                         onBack = back,
+                        onOpenScheduleSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_SETTINGS) },
+                        onOpenNotificationSettings = { viewModel.navigateToSubScreen(OtherSubScreen.NOTIFICATION_SETTINGS) },
+                        onOpenInterfaceSettings = { viewModel.navigateToSubScreen(OtherSubScreen.INTERFACE_SETTINGS) },
+                        onOpenServicesSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICES_SETTINGS) },
                         onOpenDataAndCache = { viewModel.navigateToSubScreen(OtherSubScreen.DATA_AND_CACHE) },
-                        onOpenDockSettings = { viewModel.navigateToSubScreen(OtherSubScreen.DOCK_SETTINGS) },
-                        onOpenTaskSettings = { viewModel.navigateToSubScreen(OtherSubScreen.TASK_SETTINGS) },
+                        onOpenAdvancedSettings = { viewModel.navigateToSubScreen(OtherSubScreen.ADVANCED_SETTINGS) },
                         onOpenIconPicker = { viewModel.navigateToSubScreen(OtherSubScreen.ICON_PICKER) },
-                        onOpenScheduleDisplay = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_DISPLAY) },
-                        onOpenScheduleProgress = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_PROGRESS) },
-                        onOpenScheduleCalendar = { viewModel.navigateToSubScreen(OtherSubScreen.SCHEDULE_CALENDAR) },
-                        onOpenHeaderButtons = { viewModel.navigateToSubScreen(OtherSubScreen.HEADER_BUTTONS) },
-                        onOpenServiceSettings = { viewModel.navigateToSubScreen(OtherSubScreen.SERVICE_NOTES_SETTINGS) },
-                        onOpenThemedThemes = { viewModel.navigateToSubScreen(OtherSubScreen.THEMED_THEMES) },
-                        onOpenLessonColors = { viewModel.navigateToSubScreen(OtherSubScreen.LESSON_COLORS) }
+                        onOpenThemedThemes = { viewModel.navigateToSubScreen(OtherSubScreen.THEMED_THEMES) }
                     )
                 }
                 OtherSubScreen.DATA_AND_CACHE -> {
                     DataAndCacheScreen(viewModel = viewModel, onBack = back)
                 }
-                OtherSubScreen.DOCK_SETTINGS -> {
-                    DockSettingsScreen(viewModel = viewModel, onBack = back)
+                OtherSubScreen.INTERFACE_SETTINGS -> {
+                    InterfaceSettingsScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.ICON_PICKER -> {
                     IconPickerScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.TASK_SETTINGS -> {
-                    TaskSettingsScreen(tasksViewModel = tasksViewModel, onBack = back)
+                    // Заглушка (решение владельца): раздел возвращён в
+                    // навигацию, но настройки ещё в разработке.
+                    TasksSettingsStubScreen(onBack = back)
                 }
-                OtherSubScreen.SCHEDULE_DISPLAY -> {
-                    ScheduleDisplaySettingsScreen(viewModel = viewModel, onBack = back)
+                OtherSubScreen.SCHEDULE_SETTINGS -> {
+                    ScheduleSettingsPage(
+                        viewModel = viewModel,
+                        onBack = back,
+                        onOpenLessonColors = { viewModel.navigateToSubScreen(OtherSubScreen.LESSON_COLORS) }
+                    )
                 }
-                OtherSubScreen.SCHEDULE_PROGRESS -> {
-                    ScheduleProgressSettingsScreen(viewModel = viewModel, onBack = back)
+                OtherSubScreen.NOTIFICATION_SETTINGS -> {
+                    NotificationSettingsPage(viewModel = viewModel, onBack = back)
                 }
-                OtherSubScreen.SCHEDULE_CALENDAR -> {
-                    ScheduleCalendarSettingsScreen(viewModel = viewModel, onBack = back)
+                OtherSubScreen.SERVICES_SETTINGS -> {
+                    ServicesSettingsPage(
+                        viewModel = viewModel,
+                        onBack = back,
+                        onOpenTasks = { viewModel.navigateToSubScreen(OtherSubScreen.TASK_SETTINGS) }
+                    )
                 }
-                OtherSubScreen.HEADER_BUTTONS -> {
-                    HeaderButtonsSettingsScreen(viewModel = viewModel, onBack = back)
+                OtherSubScreen.ADVANCED_SETTINGS -> {
+                    AdvancedSettingsPage(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.THEMED_THEMES -> {
                     ThemedThemesScreen(
@@ -159,9 +166,6 @@ fun OtherScreen(
                 }
                 OtherSubScreen.LESSON_COLORS -> {
                     LessonColorSettingsScreen(viewModel = viewModel, onBack = back)
-                }
-                OtherSubScreen.SERVICE_NOTES_SETTINGS -> {
-                    ServiceNotesSettingsScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.RESOURCES -> {
                     ResourcesScreen(viewModel = viewModel, onBack = back)
