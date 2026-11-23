@@ -75,6 +75,7 @@ fun OtherScreen(
 ) {
     val activeSubScreen by viewModel.activeSubScreen.collectAsState()
     val updateResult by viewModel.updateResult.collectAsState()
+    val errorThemeSeen by gamesViewModel.errorThemeSeen.collectAsState()
     val uriHandler = LocalUriHandler.current
 
     if (onBack != null) {
@@ -152,7 +153,11 @@ fun OtherScreen(
                     HeaderButtonsSettingsScreen(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.THEMED_THEMES -> {
-                    ThemedThemesScreen(viewModel = viewModel, onBack = back)
+                    ThemedThemesScreen(
+                        viewModel = viewModel,
+                        errorThemeSeen = errorThemeSeen,
+                        onBack = back
+                    )
                 }
                 OtherSubScreen.LESSON_COLORS -> {
                     LessonColorSettingsScreen(viewModel = viewModel, onBack = back)

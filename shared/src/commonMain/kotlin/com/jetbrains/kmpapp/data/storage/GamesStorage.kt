@@ -78,6 +78,9 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     private val _tetrisDifficulty = MutableStateFlow(TetrisDifficulty.EASY)
     val tetrisDifficulty: StateFlow<TetrisDifficulty> = _tetrisDifficulty.asStateFlow()
 
+    private val _errorThemeSeen = MutableStateFlow(readBool(ERROR_THEME_SEEN_KEY) == true)
+    val errorThemeSeen: StateFlow<Boolean> = _errorThemeSeen.asStateFlow()
+
     init {
         _boardVertical.value = readBool(BOARD_VERTICAL_KEY) ?: true
         _smallCellHintEnabled.value = readBool(SMALL_CELL_HINT_KEY) ?: false
@@ -133,6 +136,7 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         _records.value[key]?.let { return it }
         val loaded = readRecord(key) ?: return null
         _records.value = _records.value + (key to loaded)
+        if (loaded.seconds == 0) markErrorThemeSeen()
         return loaded
     }
 
@@ -148,6 +152,7 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         if (current != null && current.seconds <= seconds) return false
         val updated = GameRecord(seconds, achievedAtMillis)
         _records.value = _records.value + (key to updated)
+        if (seconds == 0) markErrorThemeSeen()
         scope.launch {
             try {
                 platformStorage.saveString(storageKey(key), encode(updated))
@@ -256,6 +261,12 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
     }
 
     private fun storageKey(key: String) = "games_record_$key"
+
+    private fun markErrorThemeSeen() {
+        if (_errorThemeSeen.value) return
+        _errorThemeSeen.value = true
+        persistBool(ERROR_THEME_SEEN_KEY, true)
+    }
 
     private fun persistBool(key: String, value: Boolean) {
         scope.launch {
@@ -400,6 +411,7 @@ class GamesStorage(private val platformStorage: PlatformStorage) {
         private const val SAVED_GAME_FORMAT = "mine-saved-1"
 
         private const val TETRIS_RECORD_KEY = "games_record_tetris_best"
+        private const val ERROR_THEME_SEEN_KEY = "games_error_theme_seen"
 
         /** Верхняя граница размера поля: 64×48 «Для пенсионеров». */
         private const val MAX_BOARD_CELLS = 64 * 48

@@ -105,6 +105,8 @@ class GamesViewModel(private val gamesStorage: GamesStorage) : ViewModel() {
         .map { records -> records.values.any { it.seconds == 0 } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
+    val errorThemeSeen: StateFlow<Boolean> = gamesStorage.errorThemeSeen
+
     /** Клетка, на которой подорвались: для каскадной анимации вскрытия мин. */
     private val _boomIndex = MutableStateFlow<Int?>(null)
     val boomIndex: StateFlow<Int?> = _boomIndex.asStateFlow()
