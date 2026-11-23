@@ -64,6 +64,19 @@ fun NotificationSettingsPage(
     var customMinutesDraft by remember { mutableStateOf("") }
 
     SettingsPageScaffold(title = "Уведомления", onBack = onBack, modifier = modifier) {
+        // Раньше блок целиком прятался при отсутствии платформенного движка.
+        // Теперь раздел виден всегда, поэтому объясняем, почему пусто —
+        // иначе страница выглядит сломанной.
+        if (!NotificationsManager.supportsNotifications) {
+            SettingsGroup(title = "Недоступно") {
+                GlitchText(
+                    text = "На этой платформе напоминания о занятиях не поддерживаются.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            return@SettingsPageScaffold
+        }
         SettingsGroup(title = "Напоминания") {
             Row(
                 modifier = Modifier.fillMaxWidth(),

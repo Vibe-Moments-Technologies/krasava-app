@@ -62,8 +62,12 @@ internal fun SettingsPageScaffold(
     content: @Composable () -> Unit
 ) {
     PlatformBackHandler(onBack = onBack)
+    // ViewModel берём БЕЗУСЛОВНО: koinViewModel внутри if менял бы порядок
+    // remember-хуков между композициями (scrollKey задаётся один раз, но
+    // полагаться на это нельзя). Выбор состояния — уже после получения VM.
+    val pageViewModel = org.koin.compose.viewmodel.koinViewModel<OtherViewModel>()
     val scrollState = if (scrollKey != null) {
-        org.koin.compose.viewmodel.koinViewModel<OtherViewModel>().scrollState(scrollKey)
+        pageViewModel.scrollState(scrollKey)
     } else {
         rememberScrollState()
     }
