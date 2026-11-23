@@ -24,19 +24,8 @@ object MapRepository {
         val cacheKey = "$campusId-$floor" + if (campusId == "mp-1" && oldMp1) "-old" else ""
         svgCache[cacheKey]?.let { return@withContext it }
 
-        val path = when (campusId) {
-            "s-20" -> "files/maps/s-20/floor_$floor.svg"
-            "v-78" -> "files/maps/v-78/floor_$floor.svg"
-            "v-86" -> "files/maps/v-86/floor_$floor.svg"
-            "mp-1" -> if (oldMp1) {
-                if (floor == -1) "files/maps/mp-1/floor_m1.svg" else "files/maps/mp-1/floor_$floor.svg"
-            } else {
-                // Новая съёмка (по умолчанию): этажи 0..5; «Этаж 0» — слот -1.
-                if (floor == -1) "files/maps/mp-1-new/floor_0.svg"
-                else "files/maps/mp-1-new/floor_$floor.svg"
-            }
-            else -> return@withContext null
-        }
+        val path = floorPath(campusId, floor, oldMp1)
+        if (path.isEmpty()) return@withContext null
 
         try {
             val bytes = Res.readBytes(path)
@@ -84,6 +73,49 @@ object MapRepository {
                     floor = floor
                 )
             }
+    }
+
+    /**
+     * Реальный объём векторных карт в байтах.
+     *
+     * Экран «Данные и память» показывал «~2.2 МБ» — константу из вёрстки.
+     * Здесь считаем фактические размеры SVG-ресурсов: те же пути, что
+     * использует [loadFloorSvg], плюс индекс аудиторий objects.json.
+     * Результат кэшируется: файлы в ресурсах не меняются в рантайме.
+     */
+    suspend fun mapsSizeBytes(): Long = withContext(Dispatchers.IO) {
+        cachedMapsSize?.let { return@withContext it }
+        var total = 0L
+        // Обе съёмки МП-1 лежат в приложении, поэтому обе и учитываем.
+        val paths = buildList {
+            add("files/maps/objects.json")
+            CAMPUSES.forEach { campus ->
+                campus.floors.forEach { floor ->
+                    add(floorPath(campus.id, floor, oldMp1 = false))
+                    if (campus.id == "mp-1") add(floorPath(campus.id, floor, oldMp1 = true))
+                }
+            }
+        }
+        paths.forEach { path ->
+            total += runCatching { Res.readBytes(path).size.toLong() }.getOrDefault(0L)
+        }
+        total.also { cachedMapsSize = it }
+    }
+
+    private var cachedMapsSize: Long? = null
+
+    /** Путь к SVG этажа — общий для загрузки и подсчёта объёма. */
+    private fun floorPath(campusId: String, floor: Int, oldMp1: Boolean): String = when (campusId) {
+        "s-20" -> "files/maps/s-20/floor_$floor.svg"
+        "v-78" -> "files/maps/v-78/floor_$floor.svg"
+        "v-86" -> "files/maps/v-86/floor_$floor.svg"
+        "mp-1" -> if (oldMp1) {
+            if (floor == -1) "files/maps/mp-1/floor_m1.svg" else "files/maps/mp-1/floor_$floor.svg"
+        } else {
+            if (floor == -1) "files/maps/mp-1-new/floor_0.svg"
+            else "files/maps/mp-1-new/floor_$floor.svg"
+        }
+        else -> ""
     }
 
     private fun guessCampusAndFloor(name: String): Triple<String, String, Int> {
