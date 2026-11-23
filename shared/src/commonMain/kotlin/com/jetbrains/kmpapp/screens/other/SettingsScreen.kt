@@ -25,6 +25,8 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.ViewAgenda
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -216,7 +218,7 @@ fun SettingsScreen(
                     title = "Интерфейс и навигация",
                     subtitle = "Состав и порядок нижней панели",
                     onClick = onOpenInterfaceSettings,
-                    icon = Icons.Default.Tune
+                    icon = Icons.Default.ViewAgenda
                 )
                 SettingsSectionDivider()
                 SettingsNavigationRow(
@@ -237,7 +239,7 @@ fun SettingsScreen(
                     title = "Дополнительно",
                     subtitle = "Предупреждения о VPN, виджет на главный экран",
                     onClick = onOpenAdvancedSettings,
-                    icon = Icons.Default.Tune
+                    icon = Icons.Default.Widgets
                 )
             }
 
