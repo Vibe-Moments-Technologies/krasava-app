@@ -301,6 +301,9 @@ class ScheduleStorage(
     private val _diagnosticsEnabled = MutableStateFlow(false)
     val diagnosticsEnabled: StateFlow<Boolean> = _diagnosticsEnabled.asStateFlow()
 
+    private val _fullResourcesEnabled = MutableStateFlow(false)
+    val fullResourcesEnabled: StateFlow<Boolean> = _fullResourcesEnabled.asStateFlow()
+
     private val _appIcon = MutableStateFlow(AppIconManager.ICON_DEFAULT)
     val appIcon: StateFlow<String> = _appIcon.asStateFlow()
 
@@ -435,6 +438,7 @@ class ScheduleStorage(
         _cheatsAgreed.value = nullableFlag(KEY_CHEATS_AGREED)
         _cheatsBlocked.value = loadBooleanFlag(KEY_CHEATS_BLOCKED, false)
         _diagnosticsEnabled.value = loadBooleanFlag(KEY_DIAGNOSTICS_ENABLED, false)
+        _fullResourcesEnabled.value = loadBooleanFlag(KEY_FULL_RESOURCES_ENABLED, false)
         AppDiagnostics.setEnabled(_diagnosticsEnabled.value)
         // Миграция иконки: прошлые «Новая светлая/тёмная» и «Старая»
         // (AppIconClassic) слились в дефолт; неизвестные значения → дефолт.
@@ -1200,6 +1204,11 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_DIAGNOSTICS_ENABLED, enabled.toString()) }
     }
 
+    fun setFullResourcesEnabled(enabled: Boolean) {
+        _fullResourcesEnabled.value = enabled
+        scope.launch { platformStorage.saveString(KEY_FULL_RESOURCES_ENABLED, enabled.toString()) }
+    }
+
     /** Выбор иконки приложения; применяется немедленно (iOS), хранится для UI. */
     fun setAppIcon(name: String) {
         val changed = _appIcon.value != name
@@ -1745,6 +1754,7 @@ class ScheduleStorage(
         val cheatsBlockedBefore = _cheatsBlocked.value
         val revokedThemesBefore = _revokedThemes.value
         val diagnosticsEnabledBefore = _diagnosticsEnabled.value
+        val fullResourcesEnabledBefore = _fullResourcesEnabled.value
         val notificationsEnabledBefore = _notificationsEnabled.value
         val notifyMinutesBeforeBefore = _notifyMinutesBefore.value
         val askBeforeNoteDeleteBefore = _askBeforeNoteDelete.value
@@ -1792,6 +1802,7 @@ class ScheduleStorage(
         _cheatsAgreed.value = cheatsAgreedBefore
         _cheatsBlocked.value = cheatsBlockedBefore
         _diagnosticsEnabled.value = diagnosticsEnabledBefore
+        _fullResourcesEnabled.value = fullResourcesEnabledBefore
         _notificationsEnabled.value = notificationsEnabledBefore
         _notificationsTargetId.value = null
         _vpnWarningEnabled.value = true
@@ -1813,6 +1824,7 @@ class ScheduleStorage(
             else platformStorage.saveString(KEY_CHEATS_AGREED, cheatsAgreedBefore.toString())
             platformStorage.saveString(KEY_CHEATS_BLOCKED, cheatsBlockedBefore.toString())
             platformStorage.saveString(KEY_DIAGNOSTICS_ENABLED, diagnosticsEnabledBefore.toString())
+            platformStorage.saveString(KEY_FULL_RESOURCES_ENABLED, fullResourcesEnabledBefore.toString())
             platformStorage.saveString(KEY_NOTIFICATIONS_ENABLED, notificationsEnabledBefore.toString())
             platformStorage.remove(KEY_NOTIFICATIONS_TARGET_ID)
             platformStorage.remove(KEY_LESSON_TYPE_COLORS)
@@ -1945,6 +1957,7 @@ class ScheduleStorage(
         private const val KEY_CHEATS_AGREED = "krasava_cheats_agreed"
         private const val KEY_CHEATS_BLOCKED = "krasava_cheats_blocked"
         private const val KEY_DIAGNOSTICS_ENABLED = "krasava_diagnostics_enabled"
+        private const val KEY_FULL_RESOURCES_ENABLED = "krasava_full_resources_enabled"
         private const val KEY_APP_ICON = "krasava_app_icon"
         private const val KEY_NOTIFICATIONS_ENABLED = "krasava_notifications_enabled"
         private const val KEY_NOTIFICATIONS_TARGET_ID = "krasava_notifications_target_id"

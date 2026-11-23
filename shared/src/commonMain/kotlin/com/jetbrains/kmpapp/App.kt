@@ -526,7 +526,10 @@ fun App() {
                             CompareScheduleScreen(viewModel = compareViewModel)
                         }
                         AppTab.GAMES -> {
-                            GamesScreen(viewModel = gamesViewModel)
+                            GamesScreen(
+                                viewModel = gamesViewModel,
+                                otherViewModel = otherViewModel
+                            )
                         }
                         AppTab.QR_SCANNER -> {
                             com.jetbrains.kmpapp.screens.qr.QrScannerScreen(
@@ -544,6 +547,7 @@ fun App() {
                             ServicesScreen(
                                 viewModel = servicesViewModel,
                                 gamesViewModel = gamesViewModel,
+                                otherViewModel = otherViewModel,
                                 dockTabs = dockTabs
                             )
                         }

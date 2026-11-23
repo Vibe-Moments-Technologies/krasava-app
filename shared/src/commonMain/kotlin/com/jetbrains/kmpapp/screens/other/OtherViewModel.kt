@@ -55,9 +55,6 @@ enum class OtherSubScreen(val depth: Int) {
     LESSON_COLORS(2),
     // Параметры сервисов
     SERVICE_NOTES_SETTINGS(2),
-    // Настройки игр: «Сапер» и «Тетрис»
-    SAPER_SETTINGS(2),
-    TETRIS_SETTINGS(2),
     RESOURCES(1),
     ABOUT(1),
     TEAM(2),
@@ -89,8 +86,6 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.THEMED_THEMES to OtherSubScreen.SETTINGS,
     OtherSubScreen.LESSON_COLORS to OtherSubScreen.SETTINGS,
     OtherSubScreen.SERVICE_NOTES_SETTINGS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.SAPER_SETTINGS to OtherSubScreen.SETTINGS,
-    OtherSubScreen.TETRIS_SETTINGS to OtherSubScreen.SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.TEAM to OtherSubScreen.ABOUT,
@@ -199,6 +194,7 @@ class OtherViewModel(
     val cheatsAgreed: StateFlow<Boolean?> = repository.cheatsAgreed
     val cheatsBlocked: StateFlow<Boolean> = repository.cheatsBlocked
     val diagnosticsEnabled: StateFlow<Boolean> = repository.diagnosticsEnabled
+    val fullResourcesEnabled: StateFlow<Boolean> = repository.fullResourcesEnabled
 
     // Скролл подэкранов «Другое» живёт в VM: LayeredNavHost пересоздаёт экран
     // в другом слое при переходе родитель↔дочка, remember-состояния гибнут.
@@ -280,6 +276,7 @@ class OtherViewModel(
     fun setCheatsAgreed(agreed: Boolean?) = repository.setCheatsAgreed(agreed)
     fun setCheatsBlocked(blocked: Boolean) = repository.setCheatsBlocked(blocked)
     fun setDiagnosticsEnabled(enabled: Boolean) = repository.setDiagnosticsEnabled(enabled)
+    fun setFullResourcesEnabled(enabled: Boolean) = repository.setFullResourcesEnabled(enabled)
     fun setAppIcon(name: String) = repository.setAppIcon(name)
     fun setNotificationsEnabled(enabled: Boolean) = repository.setNotificationsEnabled(enabled)
     fun setNotifyMinutesBefore(minutes: Int) = repository.setNotifyMinutesBefore(minutes)

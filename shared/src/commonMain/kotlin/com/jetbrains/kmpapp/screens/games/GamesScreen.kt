@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Report
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,7 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +45,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jetbrains.kmpapp.screens.components.LayeredNavHost
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
+import com.jetbrains.kmpapp.screens.other.GamesSettingsScreen
+import com.jetbrains.kmpapp.screens.other.OtherViewModel
+import com.jetbrains.kmpapp.screens.other.SaperSettingsScreen
+import com.jetbrains.kmpapp.screens.other.TetrisSettingsScreen
 import com.jetbrains.kmpapp.theme.GlitchTitle
 import com.jetbrains.kmpapp.theme.MonoTitle
 
@@ -53,57 +60,93 @@ import com.jetbrains.kmpapp.theme.MonoTitle
 @Composable
 fun GamesScreen(
     viewModel: GamesViewModel,
+    otherViewModel: OtherViewModel,
     modifier: Modifier = Modifier
 ) {
     val activeGame by viewModel.activeGame.collectAsState()
+    var settingsDestination by remember { mutableStateOf<GameSettingsDestination?>(null) }
 
-    LayeredNavHost(
-        screen = activeGame,
-        parentScreen = activeGame?.parent,
-        onBackToParent = {
-            when (activeGame) {
-                GamesViewModel.Game.MINESWEEPER -> viewModel.backFromField()
-                GamesViewModel.Game.SAPER_MENU -> viewModel.closeGame()
-                GamesViewModel.Game.TETRIS -> viewModel.closeTetris()
-                null -> {}
-            }
-        },
-        initiallyRevealed = remember { activeGame != null },
-        swipeGestureEnabled = { true },
-        rootContent = {
-            GamesHome(viewModel = viewModel, modifier = modifier)
-        },
-        screenContent = { game, back ->
-            when (game) {
-                GamesViewModel.Game.SAPER_MENU -> {
-                    PlatformBackHandler(onBack = back)
-                    SaperMenu(viewModel = viewModel, onBack = back)
+    if (settingsDestination == null) {
+        LayeredNavHost(
+            screen = activeGame,
+            parentScreen = activeGame?.parent,
+            onBackToParent = {
+                when (activeGame) {
+                    GamesViewModel.Game.MINESWEEPER -> viewModel.backFromField()
+                    GamesViewModel.Game.SAPER_MENU -> viewModel.closeGame()
+                    GamesViewModel.Game.TETRIS -> viewModel.closeTetris()
+                    null -> {}
                 }
-                GamesViewModel.Game.MINESWEEPER -> {
-                    PlatformBackHandler(onBack = back)
-                    MinesweeperScreen(viewModel = viewModel, onBack = back)
+            },
+            initiallyRevealed = remember { activeGame != null },
+            swipeGestureEnabled = { true },
+            rootContent = {
+                GamesHome(
+                    viewModel = viewModel,
+                    onOpenSettings = { settingsDestination = GameSettingsDestination.MENU },
+                    modifier = modifier
+                )
+            },
+            screenContent = { game, back ->
+                when (game) {
+                    GamesViewModel.Game.SAPER_MENU -> {
+                        PlatformBackHandler(onBack = back)
+                        SaperMenu(viewModel = viewModel, onBack = back)
+                    }
+                    GamesViewModel.Game.MINESWEEPER -> {
+                        PlatformBackHandler(onBack = back)
+                        MinesweeperScreen(viewModel = viewModel, onBack = back)
+                    }
+                    GamesViewModel.Game.TETRIS -> {
+                        PlatformBackHandler(onBack = {
+                            viewModel.closeTetris()
+                            back()
+                        })
+                        TetrisScreen(viewModel = viewModel, onBack = {
+                            viewModel.closeTetris()
+                            back()
+                        })
+                    }
+                    null -> {}
                 }
-                GamesViewModel.Game.TETRIS -> {
-                    PlatformBackHandler(onBack = {
-                        viewModel.closeTetris()
-                        back()
-                    })
-                    TetrisScreen(viewModel = viewModel, onBack = {
-                        viewModel.closeTetris()
-                        back()
-                    })
-                }
-                null -> {}
-            }
-        },
-        modifier = modifier
-    )
+            },
+            modifier = modifier
+        )
+    } else {
+        when (settingsDestination) {
+            GameSettingsDestination.MENU -> GamesSettingsScreen(
+                viewModel = otherViewModel,
+                onOpenSaperSettings = { settingsDestination = GameSettingsDestination.SAPER },
+                onOpenTetrisSettings = { settingsDestination = GameSettingsDestination.TETRIS },
+                onBack = { settingsDestination = null },
+                modifier = modifier
+            )
+            GameSettingsDestination.SAPER -> SaperSettingsScreen(
+                viewModel = viewModel,
+                onBack = { settingsDestination = GameSettingsDestination.MENU },
+                modifier = modifier
+            )
+            GameSettingsDestination.TETRIS -> TetrisSettingsScreen(
+                viewModel = viewModel,
+                onBack = { settingsDestination = GameSettingsDestination.MENU },
+                modifier = modifier
+            )
+            null -> {}
+        }
+    }
+}
+
+private enum class GameSettingsDestination {
+    MENU,
+    SAPER,
+    TETRIS
 }
 
 /** Корневое меню игр: сюда добавляются новые игры, сейчас внутри — «Сапер». */
 @Composable
 private fun GamesHome(
     viewModel: GamesViewModel,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val errorActive by viewModel.errorActive.collectAsState()
@@ -118,13 +161,25 @@ private fun GamesHome(
             // Свободное место под плавающую панель страниц.
             .padding(bottom = 120.dp)
     ) {
-        MonoTitle(
-            text = "Игры",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            glitch = errorActive,
-            modifier = Modifier.padding(top = 8.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MonoTitle(
+                text = "Игры",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                glitch = errorActive,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            IconButton(onClick = onOpenSettings) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Настройки игр"
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(6.dp))
         GlitchText(

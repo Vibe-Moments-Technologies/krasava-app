@@ -67,6 +67,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -674,47 +675,6 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     children = emptyList()
                 ),
                 ResourceFolder(
-                    title = "Киберзона",
-                    icon = Icons.Default.SportsEsports,
-                    accentColor = Color(0xFF0B0B0F),
-                    children = listOf(
-                        ResourceLink(
-                            title = "Бронирование зон",
-                            description = "Бронирование VR-зон, компьютерных классов и настольных игр в киберпространстве РТУ МИРЭА.",
-                            symbol = "🐉",
-                            url = "https://esports.mirea.app/",
-                            accentColor = Color.White,
-                            icon = CyberzoneDragon,
-                            iconBackground = Color(0xFF0B0B0F)
-                        ),
-                        vkLink(
-                            title = "Сообщество",
-                            description = "Новости киберспорта, турниры, анонсы мероприятий и жизнь киберзоны РТУ МИРЭА.",
-                            symbol = "🎮",
-                            url = "https://vk.ru/esports.mirea",
-                            accent = Color(0xFF0077FF),
-                            logo = Res.drawable.res_social_esports,
-                            secondaryUrl = "https://t.me/mirea_esports"
-                        ),
-                        tgLink(
-                            title = "Настольные игры",
-                            description = "Telegram-канал клуба настольных игр киберзоны РТУ МИРЭА.",
-                            symbol = "🎲",
-                            url = "https://t.me/mirea_tablegames",
-                            accent = Color(0xFFFF9500),
-                            icon = Icons.Default.Casino
-                        ),
-                        ResourceLink(
-                            title = "Вакансии",
-                            description = "Вакансии и работа в киберзоне РТУ МИРЭА.",
-                            symbol = "💼",
-                            url = "https://job.cyberzone.dev",
-                            accentColor = Color(0xFF34C759),
-                            icon = Icons.Default.Work
-                        )
-                    )
-                ),
-                ResourceFolder(
                     title = "Стартап-клуб РТУ МИРЭА",
                     icon = Icons.Default.RocketLaunch,
                     accentColor = Color(0xFFFF9500),
@@ -762,15 +722,74 @@ val OTHER_RESOURCES_ROOT = ResourceFolder(
                     logo = Res.drawable.res_social_arctic
                 )
             )
+        ),
+        ResourceFolder(
+            title = "Киберзона",
+            icon = Icons.Default.SportsEsports,
+            accentColor = Color(0xFF0B0B0F),
+            children = listOf(
+                ResourceLink(
+                    title = "Бронирование зон",
+                    description = "Бронирование VR-зон, компьютерных классов и настольных игр в киберпространстве РТУ МИРЭА.",
+                    symbol = "🐉",
+                    url = "https://esports.mirea.app/",
+                    accentColor = Color.White,
+                    icon = CyberzoneDragon,
+                    iconBackground = Color(0xFF0B0B0F)
+                ),
+                vkLink(
+                    title = "Сообщество",
+                    description = "Новости киберспорта, турниры, анонсы мероприятий и жизнь киберзоны РТУ МИРЭА.",
+                    symbol = "🎮",
+                    url = "https://vk.ru/esports.mirea",
+                    accent = Color(0xFF0077FF),
+                    logo = Res.drawable.res_social_esports,
+                    secondaryUrl = "https://t.me/mirea_esports"
+                ),
+                tgLink(
+                    title = "Настольные игры",
+                    description = "Telegram-канал клуба настольных игр киберзоны РТУ МИРЭА.",
+                    symbol = "🎲",
+                    url = "https://t.me/mirea_tablegames",
+                    accent = Color(0xFFFF9500),
+                    icon = Icons.Default.Casino
+                ),
+                ResourceLink(
+                    title = "Вакансии",
+                    description = "Вакансии и работа в киберзоне РТУ МИРЭА.",
+                    symbol = "💼",
+                    url = "https://job.cyberzone.dev",
+                    accentColor = Color(0xFF34C759),
+                    icon = Icons.Default.Work
+                )
+            )
         )
     )
 )
 
+fun otherResourcesRoot(fullResources: Boolean): ResourceFolder =
+    if (fullResources) {
+        OTHER_RESOURCES_ROOT
+    } else {
+        OTHER_RESOURCES_ROOT.copy(
+            children = OTHER_RESOURCES_ROOT.children.map { child ->
+                if (child is ResourceFolder && child.title == "Студенческие организации") {
+                    child.copy(children = emptyList())
+                } else {
+                    child
+                }
+            }
+        )
+    }
+
 @Composable
 fun ResourcesScreen(
+    viewModel: OtherViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val fullResources by viewModel.fullResourcesEnabled.collectAsState()
+    val resourcesRoot = remember(fullResources) { otherResourcesRoot(fullResources) }
     val uriHandler = LocalUriHandler.current
     val avatarLoader: VkAvatarLoader = koinInject()
 
@@ -815,6 +834,7 @@ fun ResourcesScreen(
         },
         rootContent = {
             ResourcesRootContent(
+                resourcesRoot = resourcesRoot,
                 scrollState = rootScrollState,
                 uriHandler = uriHandler,
                 onBack = onBack,
@@ -841,6 +861,7 @@ fun ResourcesScreen(
 /** Корень раздела: официальные сервисы + папка «Другие ресурсы». */
 @Composable
 private fun ResourcesRootContent(
+    resourcesRoot: ResourceFolder,
     scrollState: androidx.compose.foundation.ScrollState,
     uriHandler: UriHandler,
     onBack: () -> Unit,
@@ -893,7 +914,7 @@ private fun ResourcesRootContent(
             }
 
             // «Другие ресурсы» — в самом низу раздела.
-            FolderCard(folder = OTHER_RESOURCES_ROOT) { onOpenFolder(OTHER_RESOURCES_ROOT) }
+            FolderCard(folder = resourcesRoot) { onOpenFolder(resourcesRoot) }
 
             Spacer(modifier = Modifier.height(80.dp))
         }
