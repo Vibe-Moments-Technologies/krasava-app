@@ -465,6 +465,10 @@ class OtherViewModel(
         repository.createEmptySchedule(name)
     }
 
+    fun createComboSchedule(name: String, sourceIds: List<Int>) {
+        repository.createComboSchedule(name, sourceIds)
+    }
+
     fun createShareLink(target: ScheduleTarget): String? =
         repository.createShareLink(target)
 }

@@ -13,6 +13,7 @@ import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.data.model.UserLesson
 import com.jetbrains.kmpapp.data.model.UserLessonDeleteScope
+import com.jetbrains.kmpapp.data.model.forComboSource
 import com.jetbrains.kmpapp.data.model.orderedForDisplay
 import com.jetbrains.kmpapp.data.network.detectVpnActive
 import com.jetbrains.kmpapp.data.share.ScheduleShareCodec
@@ -56,11 +57,28 @@ class ScheduleRepository(
     // Единая точка скрытия ДОП-пар: отсюда читают экран расписания,
     // сравнение расписаний и все производные StateFlow.
     val cachedLessons: StateFlow<Map<Int, List<Lesson>>> = combine(
+        storage.savedTargets,
         storage.cachedLessons,
-        storage.hideAdditionalLessons
-    ) { cache, hideAdditional ->
-        if (!hideAdditional) cache
-        else cache.mapValues { (_, lessons) -> lessons.filter { it.lessonType != LessonType.ADDITIONAL } }
+        storage.hideAdditionalLessons,
+        storage.userLessons,
+        storage.userLessonsEnabled
+    ) { targets, cache, hideAdditional, userLessons, userLessonsOn ->
+        val base = if (hideAdditional) {
+            cache.mapValues { (_, lessons) -> lessons.filter { it.lessonType != LessonType.ADDITIONAL } }
+        } else {
+            cache
+        }
+        val combos = targets.filter { it.isCombo }.associate { target ->
+            target.id to comboLessonsFor(
+                target = target,
+                targets = targets,
+                cache = cache,
+                hideAdditional = hideAdditional,
+                userLessons = userLessons,
+                userLessonsOn = userLessonsOn
+            )
+        }
+        base + combos
     }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
     val showEmptyLessons: StateFlow<Boolean> = storage.showEmptyLessons
     val themeMode: StateFlow<ThemeMode> = storage.themeMode
@@ -222,28 +240,25 @@ class ScheduleRepository(
     }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
     val currentLessons: StateFlow<List<Lesson>> = combine(
-        storage.selectedTarget,
+        combine(storage.selectedTarget, storage.savedTargets) { selected, targets -> selected to targets },
         storage.cachedLessons,
         storage.hideAdditionalLessons,
         storage.userLessons,
         storage.userLessonsEnabled
-    ) { selected, cache, hideAdditional, userLessons, userLessonsOn ->
-        val remote = if (selected == null) emptyList() else cache[selected.id] ?: emptyList()
-        // Пользовательские пары идут ПЕРВЫМИ: при совпадении звонка карточка
-        // «Своя пара» должна открываться раньше пары из фида. Если свои пары
-        // выключены настройкой, они не подмешиваются вовсе (правила при этом
-        // остаются в хранилище — вернул тумблер, они вернулись).
-        val userOccurrences = if (userLessonsOn) {
-            selected
-                ?.let { storage.userLessonsFor(it, userLessons) }
-                ?.let { expandUserLessons(it) }
-                .orEmpty()
-        } else {
+    ) { selectedWithTargets, cache, hideAdditional, userLessons, userLessonsOn ->
+        val (selected, targets) = selectedWithTargets
+        if (selected == null) {
             emptyList()
+        } else {
+            lessonsForTarget(
+                target = selected,
+                targets = targets,
+                cache = cache,
+                hideAdditional = hideAdditional,
+                userLessons = userLessons,
+                userLessonsOn = userLessonsOn
+            )
         }
-        val merged = userOccurrences + remote
-        if (hideAdditional) merged.filter { it.lessonType != LessonType.ADDITIONAL }
-        else merged
     }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     val displayLessonsByTarget: StateFlow<Map<Int, List<Lesson>>> = combine(
@@ -254,18 +269,14 @@ class ScheduleRepository(
         storage.userLessonsEnabled
     ) { targets, cache, hideAdditional, userLessons, userLessonsOn ->
         targets.associate { target ->
-            val remote = cache[target.id].orEmpty()
-            val userOccurrences = if (userLessonsOn) {
-                expandUserLessons(storage.userLessonsFor(target, userLessons))
-            } else {
-                emptyList()
-            }
-            val merged = userOccurrences + remote
-            target.id to if (hideAdditional) {
-                merged.filter { it.lessonType != LessonType.ADDITIONAL }
-            } else {
-                merged
-            }
+            target.id to lessonsForTarget(
+                target = target,
+                targets = targets,
+                cache = cache,
+                hideAdditional = hideAdditional,
+                userLessons = userLessons,
+                userLessonsOn = userLessonsOn
+            )
         }
     }.stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
@@ -435,6 +446,11 @@ class ScheduleRepository(
         scope.launch {
             storage.selectedTarget.collect { target ->
                 if (target != null) {
+                    if (target.isCombo) {
+                        refreshSchedule(target, silent = true)
+                        _errorMessage.value = null
+                        return@collect
+                    }
                     if (target.isLocal) {
                         _errorMessage.value = null
                         return@collect
@@ -474,6 +490,10 @@ class ScheduleRepository(
 
     fun addAndSelectTarget(target: ScheduleTarget) {
         storage.addTarget(target)
+        if (target.isCombo) {
+            scope.launch { refreshSchedule(target, silent = true) }
+            return
+        }
         if (target.isLocal) return
         scope.launch {
             refreshSchedule(target, silent = false)
@@ -482,8 +502,21 @@ class ScheduleRepository(
 
     fun createEmptySchedule(name: String): ScheduleTarget? = storage.createEmptyTarget(name)
 
+    fun createComboSchedule(name: String, sourceIds: List<Int>): ScheduleTarget? {
+        val target = storage.createComboTarget(name, sourceIds) ?: return null
+        val targets = storage.savedTargets.value
+        target.comboSourceIds.forEach { id ->
+            val source = targets.firstOrNull { it.id == id } ?: return@forEach
+            if (source.isLocal || source.isCombo) return@forEach
+            if (storage.getLessons(id).isNullOrEmpty()) {
+                scope.launch { refreshSchedule(source, silent = true) }
+            }
+        }
+        return target
+    }
+
     fun createShareLink(target: ScheduleTarget): String? {
-        if (!target.isLocal) return null
+        if (!target.isLocal || target.isCombo) return null
         return runCatching {
             ScheduleShareCodec.encode(
                 SharedSchedule(
@@ -531,6 +564,18 @@ class ScheduleRepository(
     }
 
     private suspend fun refreshSchedule(target: ScheduleTarget, silent: Boolean = false) {
+        if (target.isCombo) {
+            val targets = storage.savedTargets.value
+            target.comboSourceIds.forEach { id ->
+                val source = targets.firstOrNull { it.id == id } ?: return@forEach
+                if (source.isLocal || source.isCombo) return@forEach
+                refreshSchedule(source, silent = true)
+            }
+            if (!silent) {
+                _refreshStatus.value = com.jetbrains.kmpapp.data.model.RefreshStatus.Success()
+            }
+            return
+        }
         if (target.isLocal) return
         if (!silent) {
             _isLoading.value = true
@@ -581,6 +626,73 @@ class ScheduleRepository(
             if (!silent) {
                 _isLoading.value = false
             }
+        }
+    }
+
+    private fun lessonsForTarget(
+        target: ScheduleTarget,
+        targets: List<ScheduleTarget>,
+        cache: Map<Int, List<Lesson>>,
+        hideAdditional: Boolean,
+        userLessons: Map<String, List<UserLesson>>,
+        userLessonsOn: Boolean,
+        visiting: Set<Int> = emptySet()
+    ): List<Lesson> {
+        if (target.isCombo) {
+            return comboLessonsFor(
+                target = target,
+                targets = targets,
+                cache = cache,
+                hideAdditional = hideAdditional,
+                userLessons = userLessons,
+                userLessonsOn = userLessonsOn,
+                visiting = visiting
+            )
+        }
+        val remote = cache[target.id].orEmpty()
+        val userOccurrences = if (userLessonsOn) {
+            expandUserLessons(storage.userLessonsFor(target, userLessons))
+        } else {
+            emptyList()
+        }
+        val merged = userOccurrences + remote
+        return if (hideAdditional) {
+            merged.filter { it.lessonType != LessonType.ADDITIONAL }
+        } else {
+            merged
+        }
+    }
+
+    private fun comboLessonsFor(
+        target: ScheduleTarget,
+        targets: List<ScheduleTarget>,
+        cache: Map<Int, List<Lesson>>,
+        hideAdditional: Boolean,
+        userLessons: Map<String, List<UserLesson>>,
+        userLessonsOn: Boolean,
+        visiting: Set<Int> = emptySet()
+    ): List<Lesson> {
+        if (!target.isCombo || target.id in visiting) return emptyList()
+        val nextVisiting = visiting + target.id
+        val result = mutableListOf<Lesson>()
+        target.comboSourceIds.forEach { sourceId ->
+            val source = targets.firstOrNull { it.id == sourceId } ?: return@forEach
+            val lessons = lessonsForTarget(
+                target = source,
+                targets = targets,
+                cache = cache,
+                hideAdditional = hideAdditional,
+                userLessons = userLessons,
+                userLessonsOn = userLessonsOn,
+                visiting = nextVisiting
+            )
+            result += lessons.map { lesson -> lesson.forComboSource(sourceId) }
+        }
+        val distinct = result.distinctBy { it.id }
+        return if (hideAdditional) {
+            distinct.filter { it.lessonType != LessonType.ADDITIONAL }
+        } else {
+            distinct
         }
     }
 

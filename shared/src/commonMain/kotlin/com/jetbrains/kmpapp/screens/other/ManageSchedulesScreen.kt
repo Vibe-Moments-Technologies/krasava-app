@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterAlt
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.text.KeyboardActions
@@ -44,6 +46,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -101,8 +104,11 @@ fun ManageSchedulesScreen(
 
     var showAddSheet by remember { mutableStateOf(false) }
     var showEmptyDialog by remember { mutableStateOf(false) }
+    var showComboDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
     var emptyName by remember { mutableStateOf("") }
+    var comboName by remember { mutableStateOf("") }
+    var comboSelectedIds by remember { mutableStateOf(emptySet<Int>()) }
     var importLink by remember { mutableStateOf("") }
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var filterMenuExpanded by remember { mutableStateOf(false) }
@@ -116,6 +122,20 @@ fun ManageSchedulesScreen(
             viewModel.createEmptySchedule(name)
             showEmptyDialog = false
             emptyName = ""
+            focusManager.clearFocus()
+        }
+    }
+
+    val comboCandidates = savedTargets.filterNot { it.isCombo }
+
+    val submitComboSchedule = {
+        val name = comboName.trim()
+        val sourceIds = comboCandidates.filter { it.id in comboSelectedIds }.map { it.id }
+        if (name.isNotEmpty() && sourceIds.size >= 2) {
+            viewModel.createComboSchedule(name, sourceIds)
+            showComboDialog = false
+            comboName = ""
+            comboSelectedIds = emptySet()
             focusManager.clearFocus()
         }
     }
@@ -263,6 +283,11 @@ fun ManageSchedulesScreen(
                     emptyName = ""
                     showEmptyDialog = true
                 },
+                onCombine = {
+                    comboName = ""
+                    comboSelectedIds = emptySet()
+                    showComboDialog = true
+                },
                 onImportLink = {
                     importLink = ""
                     showImportDialog = true
@@ -384,7 +409,7 @@ fun ManageSchedulesScreen(
                                             }
                                         }
 
-                                        if (target.isLocal) {
+                                        if (target.isLocal && !target.isCombo) {
                                             IconButton(
                                                 onClick = {
                                                     val link = viewModel.createShareLink(target)
@@ -485,6 +510,98 @@ fun ManageSchedulesScreen(
         )
     }
 
+    if (showComboDialog) {
+        AlertDialog(
+            onDismissRequest = { showComboDialog = false },
+            icon = { Icon(Icons.Default.Layers, contentDescription = null) },
+            title = { GlitchText("Соединить расписания", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    GlitchText(
+                        "Введите название и выберите минимум два расписания.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = comboName,
+                        onValueChange = { comboName = it },
+                        label = { GlitchText("Название") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { submitComboSchedule() }),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    if (comboCandidates.isEmpty()) {
+                        GlitchText(
+                            "Нет расписаний, которые можно соединить.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 320.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(comboCandidates, key = { it.id }) { target ->
+                                val checked = target.id in comboSelectedIds
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            comboSelectedIds = if (checked) {
+                                                comboSelectedIds - target.id
+                                            } else {
+                                                comboSelectedIds + target.id
+                                            }
+                                        },
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = checked,
+                                        onCheckedChange = {
+                                            comboSelectedIds = if (checked) {
+                                                comboSelectedIds - target.id
+                                            } else {
+                                                comboSelectedIds + target.id
+                                            }
+                                        }
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        GlitchText(
+                                            text = target.targetTitle,
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        GlitchText(
+                                            text = target.displayTypeName,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = submitComboSchedule,
+                    enabled = comboName.isNotBlank() && comboSelectedIds.size >= 2
+                ) {
+                    GlitchText("Создать")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showComboDialog = false }) {
+                    GlitchText("Отмена")
+                }
+            }
+        )
+    }
+
     if (showImportDialog) {
         AlertDialog(
             onDismissRequest = { showImportDialog = false },
@@ -537,6 +654,7 @@ fun ManageSchedulesScreen(
 @Composable
 private fun ManageScheduleActions(
     onCreateEmpty: () -> Unit,
+    onCombine: () -> Unit,
     onImportLink: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -554,6 +672,14 @@ private fun ManageScheduleActions(
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             GlitchText("Создать пустое расписание")
+        }
+        OutlinedButton(
+            onClick = onCombine,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Icon(Icons.Default.Layers, contentDescription = null)
+            Spacer(modifier = Modifier.width(8.dp))
+            GlitchText("Соединить расписания")
         }
         OutlinedButton(
             onClick = onImportLink,

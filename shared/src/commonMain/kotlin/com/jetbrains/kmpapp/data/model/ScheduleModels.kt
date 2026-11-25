@@ -21,14 +21,25 @@ data class ScheduleTarget(
     val targetTitle: String,
     val fullTitle: String,
     val scheduleTarget: Int = 1,
-    val isLocal: Boolean = false
+    val isLocal: Boolean = false,
+    val isCombo: Boolean = false,
+    val comboSourceIds: List<Int> = emptyList()
 ) {
     val type: ScheduleTargetType
         get() = ScheduleTargetType.fromId(scheduleTarget)
 
     val displayTypeName: String
-        get() = if (isLocal) "Своё" else type.displayName
+        get() = when {
+            isCombo -> "Комбо"
+            isLocal -> "Своё"
+            else -> type.displayName
+        }
 }
+
+internal const val COMBO_LESSON_PREFIX = "combo:"
+
+internal fun Lesson.forComboSource(sourceId: Int): Lesson =
+    copy(id = "$COMBO_LESSON_PREFIX$sourceId:$id")
 
 @Serializable
 enum class LessonType(val displayName: String, val shortName: String) {

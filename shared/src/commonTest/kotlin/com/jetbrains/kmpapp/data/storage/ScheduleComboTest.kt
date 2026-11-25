@@ -1,0 +1,73 @@
+package com.jetbrains.kmpapp.data.storage
+
+import com.jetbrains.kmpapp.data.model.Lesson
+import com.jetbrains.kmpapp.data.model.LessonType
+import com.jetbrains.kmpapp.data.model.ScheduleTarget
+import com.jetbrains.kmpapp.data.model.forComboSource
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+
+class ScheduleComboTest {
+
+    private fun target(
+        id: Int,
+        isCombo: Boolean = false,
+        comboSourceIds: List<Int> = emptyList()
+    ) = ScheduleTarget(
+        id = id,
+        targetTitle = "Расписание $id",
+        fullTitle = "Расписание $id",
+        isCombo = isCombo,
+        comboSourceIds = comboSourceIds
+    )
+
+    @Test
+    fun comboSourcesIgnoreDuplicatesAndCombos() {
+        val targets = listOf(target(1), target(2), target(3, isCombo = true))
+
+        assertEquals(
+            listOf(1, 2),
+            selectComboSourceIds(targets, listOf(1, 1, 2, 3, 99))
+        )
+    }
+
+    @Test
+    fun comboTargetHasComboLabel() {
+        val combo = target(-1, isCombo = true, comboSourceIds = listOf(1, 2))
+
+        assertEquals("Комбо", combo.displayTypeName)
+    }
+
+    @Test
+    fun removingSourceKeepsComboWithTwoRemaining() {
+        val combo = target(-1, isCombo = true, comboSourceIds = listOf(1, 2, 3))
+
+        assertEquals(listOf(2, 3), comboAfterSourceRemoval(combo, 1)?.comboSourceIds)
+    }
+
+    @Test
+    fun removingSourceDropsComboWithLessThanTwoSources() {
+        val combo = target(-1, isCombo = true, comboSourceIds = listOf(1, 2))
+
+        assertNull(comboAfterSourceRemoval(combo, 1))
+    }
+
+    @Test
+    fun comboLessonIdIsScopedToSource() {
+        val lesson = Lesson(
+            id = "lesson-1",
+            subject = "Математика",
+            lessonType = LessonType.LECTURE,
+            teachers = emptyList(),
+            classrooms = emptyList(),
+            bellNumber = 1,
+            startTime = "09:00",
+            endTime = "10:30",
+            date = LocalDate(2026, 11, 26)
+        )
+
+        assertEquals("combo:7:lesson-1", lesson.forComboSource(7).id)
+    }
+}
