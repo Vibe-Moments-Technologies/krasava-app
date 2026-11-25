@@ -92,4 +92,11 @@ class SettingsNavigationTest {
     fun rootHasNoParent() {
         assertNull(OtherSubScreen.ROOT.parent())
     }
+
+    @Test
+    fun notificationPageIncludesWidgetsOnlyOnAndroid() {
+        // Владелец: Android — «Уведомления и виджеты», iOS — «Уведомления».
+        assertEquals("Уведомления и виджеты", notificationSettingsTitle(widgetsSupported = true))
+        assertEquals("Уведомления", notificationSettingsTitle(widgetsSupported = false))
+    }
 }

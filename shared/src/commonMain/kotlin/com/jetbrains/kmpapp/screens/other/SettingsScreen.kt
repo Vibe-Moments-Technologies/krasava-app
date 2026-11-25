@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jetbrains.kmpapp.data.appicon.AppIconManager
 import com.jetbrains.kmpapp.data.model.ThemeMode
+import com.jetbrains.kmpapp.data.widget.isScheduleWidgetPinningSupported
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 
 /**
@@ -208,7 +209,7 @@ fun SettingsScreen(
                 )
                 SettingsSectionDivider()
                 SettingsNavigationRow(
-                    title = "Уведомления",
+                    title = notificationSettingsTitle(isScheduleWidgetPinningSupported()),
                     subtitle = "Напоминания о парах и время до начала",
                     onClick = onOpenNotificationSettings,
                     icon = Icons.Default.Notifications
@@ -237,7 +238,7 @@ fun SettingsScreen(
                 SettingsSectionDivider()
                 SettingsNavigationRow(
                     title = "Дополнительно",
-                    subtitle = "Предупреждения о VPN, виджет на главный экран",
+                    subtitle = "Предупреждения о VPN",
                     onClick = onOpenAdvancedSettings,
                     icon = Icons.Default.Widgets
                 )

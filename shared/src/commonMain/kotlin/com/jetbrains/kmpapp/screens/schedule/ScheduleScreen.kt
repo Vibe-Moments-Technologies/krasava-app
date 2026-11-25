@@ -67,9 +67,21 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.plus
 import kotlin.math.abs
+
+/**
+ * Дата, соответствующая ОСТАНОВИВШЕЙСЯ странице пейджера.
+ * Вынесено отдельно, чтобы граница пятницы/понедельника и обратные переходы
+ * проверялись тестами, а не зависели от индекса дня недели.
+ */
+internal fun dateForSettledPage(
+    today: LocalDate,
+    basePage: Int,
+    settledPage: Int
+): LocalDate = today.plus(DatePeriod(days = settledPage - basePage))
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,10 +214,17 @@ private fun ScheduleMainContent(
     }
 
     LaunchedEffect(pagerState) {
-        // currentPage, а не settledPage: дата обновляется в момент переворота
-        // страницы (пока палец ещё на экране), лента календаря реагирует сразу.
-        snapshotFlow { pagerState.currentPage }.collect { page ->
-            val date = today.plus(DatePeriod(days = page - basePage))
+        // Дату берём ТОЛЬКО с фактически остановившейся страницы.
+        //
+        // Регрессия: когда здесь был currentPage, он менялся ещё во время
+        // свайпа/анимации. selectDate запускал LaunchedEffect(selectedDate),
+        // который начинал animateScrollToPage заново. На границе пятницы и
+        // понедельника два эффекта могли гонять пейджер туда-сюда между
+        // текущей и следующей неделей и уходить в прошлое.
+        // settledPage меняется один раз после остановки — обратный вызов
+        // selectDate уже не мешает остановившейся анимации.
+        snapshotFlow { pagerState.settledPage }.collect { page ->
+            val date = dateForSettledPage(today, basePage, page)
             if (date != selectedDate) viewModel.selectDate(date)
         }
     }
