@@ -530,7 +530,20 @@ class ScheduleStorage(
         } catch (_: Throwable) {
             emptyList()
         }
-        _savedTargets.value = targets
+        val restoredTargets = targets.map { target ->
+            if (target.isLocal &&
+                !target.isCombo &&
+                !target.isImported &&
+                !target.targetTitle.contains('*') &&
+                userLessonsKey(target) in _userLessons.value
+            ) {
+                target.copy(isImported = true)
+            } else {
+                target
+            }
+        }
+        _savedTargets.value = restoredTargets
+        if (restoredTargets != targets) persistTargets()
 
         // IMPORTANT: Restore cached lessons for all targets BEFORE setting selected target!
         val loadedCache = mutableMapOf<Int, List<Lesson>>()
@@ -1506,7 +1519,8 @@ class ScheduleStorage(
             id = nextLocalTargetId(),
             targetTitle = title,
             fullTitle = title,
-            isLocal = true
+            isLocal = true,
+            isImported = true
         )
         addTarget(target)
         if (lessons.isNotEmpty()) {

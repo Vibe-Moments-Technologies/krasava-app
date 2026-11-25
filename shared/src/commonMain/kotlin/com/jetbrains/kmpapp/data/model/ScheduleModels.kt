@@ -22,6 +22,7 @@ data class ScheduleTarget(
     val fullTitle: String,
     val scheduleTarget: Int = 1,
     val isLocal: Boolean = false,
+    val isImported: Boolean = false,
     val isCombo: Boolean = false,
     val comboSourceIds: List<Int> = emptyList()
 ) {
@@ -31,9 +32,30 @@ data class ScheduleTarget(
     val displayTypeName: String
         get() = when {
             isCombo -> "Комбо"
+            isImported -> "Импорт"
             isLocal -> "Своё"
             else -> type.displayName
         }
+}
+
+enum class ScheduleFilter(val displayName: String) {
+    ALL("Все"),
+    GROUP("Группы"),
+    TEACHER("Преподаватели"),
+    AUDITORIUM("Аудитории"),
+    OWN("Свои"),
+    IMPORT("Импорт"),
+    COMBO("Комбо")
+}
+
+fun ScheduleTarget.matchesFilter(filter: ScheduleFilter): Boolean = when (filter) {
+    ScheduleFilter.ALL -> true
+    ScheduleFilter.GROUP -> !isLocal && type == ScheduleTargetType.GROUP
+    ScheduleFilter.TEACHER -> !isLocal && type == ScheduleTargetType.TEACHER
+    ScheduleFilter.AUDITORIUM -> !isLocal && type == ScheduleTargetType.AUDITORIUM
+    ScheduleFilter.OWN -> isLocal && !isImported && !isCombo
+    ScheduleFilter.IMPORT -> isImported && !isCombo
+    ScheduleFilter.COMBO -> isCombo
 }
 
 internal const val COMBO_LESSON_PREFIX = "combo:"

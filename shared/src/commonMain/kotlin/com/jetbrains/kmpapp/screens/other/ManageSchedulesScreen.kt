@@ -78,7 +78,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
-import com.jetbrains.kmpapp.data.model.ScheduleTargetType
+import com.jetbrains.kmpapp.data.model.ScheduleFilter
 import com.jetbrains.kmpapp.data.share.ScheduleShareInbox
 import com.jetbrains.kmpapp.data.storage.combosUsingSource
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
@@ -242,26 +242,21 @@ fun ManageSchedulesScreen(
                             expanded = filterMenuExpanded,
                             onDismissRequest = { filterMenuExpanded = false }
                         ) {
-                            listOf(
-                                null to "Все",
-                                ScheduleTargetType.GROUP to "Группы",
-                                ScheduleTargetType.TEACHER to "Преподаватели",
-                                ScheduleTargetType.AUDITORIUM to "Аудитории"
-                            ).forEach { (type, title) ->
+                            ScheduleFilter.entries.forEach { filter ->
                                 DropdownMenuItem(
                                     text = {
                                         GlitchText(
-                                            text = title,
-                                            fontWeight = if (filterType == type) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (filterType == type) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                            text = filter.displayName,
+                                            fontWeight = if (filterType == filter) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (filterType == filter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                             fontSize = 13.sp
                                         )
                                     },
-                                    trailingIcon = if (filterType == type) {
+                                    trailingIcon = if (filterType == filter) {
                                         { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
                                     } else null,
                                     onClick = {
-                                        viewModel.setFilterType(type)
+                                        viewModel.setFilterType(filter)
                                         filterMenuExpanded = false
                                     }
                                 )
