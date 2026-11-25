@@ -80,6 +80,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import com.jetbrains.kmpapp.data.model.ScheduleTargetType
 import com.jetbrains.kmpapp.data.share.ScheduleShareInbox
+import com.jetbrains.kmpapp.data.storage.combosUsingSource
 import com.jetbrains.kmpapp.screens.components.PlatformBackHandler
 import com.jetbrains.kmpapp.screens.schedule.AddScheduleBottomSheet
 import kotlinx.coroutines.launch
@@ -106,6 +107,7 @@ fun ManageSchedulesScreen(
     var showEmptyDialog by remember { mutableStateOf(false) }
     var showComboDialog by remember { mutableStateOf(false) }
     var showImportDialog by remember { mutableStateOf(false) }
+    var pendingDeleteId by remember { mutableStateOf<Int?>(null) }
     var emptyName by remember { mutableStateOf("") }
     var comboName by remember { mutableStateOf("") }
     var comboSelectedIds by remember { mutableStateOf(emptySet<Int>()) }
@@ -127,6 +129,10 @@ fun ManageSchedulesScreen(
     }
 
     val comboCandidates = savedTargets.filterNot { it.isCombo }
+    val pendingDeleteTarget = savedTargets.firstOrNull { it.id == pendingDeleteId }
+    val dependentCombos = pendingDeleteTarget?.let {
+        combosUsingSource(savedTargets, it.id)
+    }.orEmpty()
 
     val submitComboSchedule = {
         val name = comboName.trim()
@@ -438,7 +444,13 @@ fun ManageSchedulesScreen(
                                         }
 
                                         IconButton(
-                                            onClick = { viewModel.removeTarget(target.id) }
+                                            onClick = {
+                                                if (combosUsingSource(savedTargets, target.id).isEmpty()) {
+                                                    viewModel.removeTarget(target.id)
+                                                } else {
+                                                    pendingDeleteId = target.id
+                                                }
+                                            }
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Delete,
@@ -596,6 +608,60 @@ fun ManageSchedulesScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showComboDialog = false }) {
+                    GlitchText("Отмена")
+                }
+            }
+        )
+    }
+
+    if (pendingDeleteTarget != null) {
+        val target = pendingDeleteTarget
+        AlertDialog(
+            onDismissRequest = { pendingDeleteId = null },
+            icon = { Icon(Icons.Default.Delete, contentDescription = null) },
+            title = { GlitchText("Удалить расписание?", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    GlitchText(
+                        text = "«${target.targetTitle}» используется в комбинированных расписаниях:"
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 200.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(dependentCombos, key = { it.id }) { combo ->
+                            GlitchText(
+                                text = "• ${combo.targetTitle}",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    GlitchText(
+                        text = "Удаление уберёт его из этих комбо. Если в комбо останется меньше двух расписаний, оно также будет удалено.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.removeTarget(target.id)
+                        pendingDeleteId = null
+                    }
+                ) {
+                    GlitchText(
+                        "Удалить",
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteId = null }) {
                     GlitchText("Отмена")
                 }
             }

@@ -55,6 +55,21 @@ class ScheduleComboTest {
     }
 
     @Test
+    fun combosUsingSourceFindsOnlyAffectedCombos() {
+        val targets = listOf(
+            target(1),
+            target(-1, isCombo = true, comboSourceIds = listOf(1, 2)),
+            target(-2, isCombo = true, comboSourceIds = listOf(2, 3)),
+            target(-3, isCombo = true, comboSourceIds = listOf(1, 3))
+        )
+
+        assertEquals(
+            listOf(-1, -3),
+            combosUsingSource(targets, 1).map { it.id }
+        )
+    }
+
+    @Test
     fun comboLessonIdIsScopedToSource() {
         val lesson = Lesson(
             id = "lesson-1",

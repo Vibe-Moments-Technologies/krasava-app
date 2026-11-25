@@ -2030,4 +2030,9 @@ internal fun comboAfterSourceRemoval(
     return combo.copy(comboSourceIds = remaining)
 }
 
+internal fun combosUsingSource(
+    targets: List<ScheduleTarget>,
+    sourceId: Int
+): List<ScheduleTarget> = targets.filter { it.isCombo && sourceId in it.comboSourceIds }
+
 
