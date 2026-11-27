@@ -7,9 +7,10 @@ import com.jetbrains.kmpapp.data.TaskRepository
 import com.jetbrains.kmpapp.data.DebugConfig
 import com.jetbrains.kmpapp.data.model.LessonColor
 import com.jetbrains.kmpapp.data.model.LessonType
+import com.jetbrains.kmpapp.data.model.ScheduleFilter
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
-import com.jetbrains.kmpapp.data.model.ScheduleTargetType
 import com.jetbrains.kmpapp.data.model.StorageStats
+import com.jetbrains.kmpapp.data.model.matchesFilter
 import com.jetbrains.kmpapp.data.model.ThemeMode
 import com.jetbrains.kmpapp.theme.CyberpunkVariant
 import com.jetbrains.kmpapp.theme.ThemeOverlay
@@ -361,8 +362,8 @@ class OtherViewModel(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
-    private val _filterType = MutableStateFlow<ScheduleTargetType?>(null)
-    val filterType: StateFlow<ScheduleTargetType?> = _filterType.asStateFlow()
+    private val _filterType = MutableStateFlow(ScheduleFilter.ALL)
+    val filterType: StateFlow<ScheduleFilter> = _filterType.asStateFlow()
 
     private val _sortOrder = MutableStateFlow(TargetSortOrder.TITLE_ASC)
     val sortOrder: StateFlow<TargetSortOrder> = _sortOrder.asStateFlow()
@@ -373,10 +374,7 @@ class OtherViewModel(
         _filterType,
         _sortOrder
     ) { list, query, filter, sort ->
-        var result = list
-        if (filter != null) {
-            result = result.filter { it.type == filter }
-        }
+        var result = list.filter { it.matchesFilter(filter) }
         val trimmed = query.trim()
         if (trimmed.isNotEmpty()) {
             result = result.filter {
@@ -396,8 +394,8 @@ class OtherViewModel(
         _searchQuery.value = query
     }
 
-    fun setFilterType(type: ScheduleTargetType?) {
-        _filterType.value = type
+    fun setFilterType(filter: ScheduleFilter) {
+        _filterType.value = filter
     }
 
     fun setSortOrder(order: TargetSortOrder) {
@@ -463,6 +461,10 @@ class OtherViewModel(
 
     fun createEmptySchedule(name: String) {
         repository.createEmptySchedule(name)
+    }
+
+    fun createComboSchedule(name: String, sourceIds: List<Int>) {
+        repository.createComboSchedule(name, sourceIds)
     }
 
     fun createShareLink(target: ScheduleTarget): String? =

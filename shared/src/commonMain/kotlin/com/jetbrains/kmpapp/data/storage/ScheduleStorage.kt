@@ -530,7 +530,20 @@ class ScheduleStorage(
         } catch (_: Throwable) {
             emptyList()
         }
-        _savedTargets.value = targets
+        val restoredTargets = targets.map { target ->
+            if (target.isLocal &&
+                !target.isCombo &&
+                !target.isImported &&
+                !target.targetTitle.contains('*') &&
+                userLessonsKey(target) in _userLessons.value
+            ) {
+                target.copy(isImported = true)
+            } else {
+                target
+            }
+        }
+        _savedTargets.value = restoredTargets
+        if (restoredTargets != targets) persistTargets()
 
         // IMPORTANT: Restore cached lessons for all targets BEFORE setting selected target!
         val loadedCache = mutableMapOf<Int, List<Lesson>>()
@@ -1477,6 +1490,26 @@ class ScheduleStorage(
         return target
     }
 
+    fun createComboTarget(name: String, sourceIds: List<Int>): ScheduleTarget? {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return null
+
+        val sources = selectComboSourceIds(_savedTargets.value, sourceIds)
+        if (sources.size < 2) return null
+
+        val title = uniqueStarredLocalTitle(trimmed, existingLocalTitles())
+        val target = ScheduleTarget(
+            id = nextLocalTargetId(),
+            targetTitle = title,
+            fullTitle = title,
+            isLocal = true,
+            isCombo = true,
+            comboSourceIds = sources
+        )
+        addTarget(target)
+        return target
+    }
+
     fun importLocalTarget(name: String, lessons: List<UserLesson>): ScheduleTarget? {
         val trimmed = name.trim()
         if (trimmed.isEmpty() || lessons.size > 2000) return null
@@ -1486,7 +1519,8 @@ class ScheduleStorage(
             id = nextLocalTargetId(),
             targetTitle = title,
             fullTitle = title,
-            isLocal = true
+            isLocal = true,
+            isImported = true
         )
         addTarget(target)
         if (lessons.isNotEmpty()) {
@@ -1519,42 +1553,49 @@ class ScheduleStorage(
     }
 
     fun removeTarget(targetId: Int) {
-        val removed = _savedTargets.value.firstOrNull { it.id == targetId }
-        // Пользовательские пары принадлежат конкретному расписанию: удаление
-        // расписания удаляет и их (id может совпадать у разных типов целей,
-        // поэтому чистим все совпавшие ключи).
-        val removedUserLessonKeys = _savedTargets.value
-            .filter { it.id == targetId }
-            .map { userLessonsKey(it) }
-        _savedTargets.update { list -> list.filter { it.id != targetId } }
-        if (_selectedTarget.value?.id == targetId) {
+        val current = _savedTargets.value
+        if (current.none { it.id == targetId }) return
+
+        val affectedCombos = current.filter { it.isCombo && targetId in it.comboSourceIds }
+        val updatedCombos = affectedCombos.mapNotNull { comboAfterSourceRemoval(it, targetId) }
+        val removedComboIds = affectedCombos.map { it.id }.toSet() - updatedCombos.map { it.id }.toSet()
+        val idsToRemove = setOf(targetId) + removedComboIds
+        val removedTargets = current.filter { it.id in idsToRemove }
+        val removedUserLessonKeys = removedTargets.map { userLessonsKey(it) }.toSet()
+
+        _savedTargets.update { list ->
+            list.filterNot { it.id in idsToRemove }.map { target ->
+                updatedCombos.firstOrNull { it.id == target.id } ?: target
+            }
+        }
+        val selectedId = _selectedTarget.value?.id
+        if (selectedId != null && selectedId in idsToRemove) {
             _selectedTarget.value = _savedTargets.value.firstOrNull()
             persistSelectedTargetId(_selectedTarget.value?.id)
         }
-        _cachedLessons.update { map -> map - targetId }
-        if (_notificationsTargetId.value == targetId) {
+        _cachedLessons.update { map -> map.filterKeys { it !in idsToRemove } }
+        val notificationTargetId = _notificationsTargetId.value
+        if (notificationTargetId != null && notificationTargetId in idsToRemove) {
             val fallback = _savedTargets.value.firstOrNull()?.id
             _notificationsTargetId.value = fallback
             persistNotificationsTargetId(fallback)
         }
-        lastSyncTimes.remove(targetId)
-        platformStorage.remove(KEY_LESSONS_PREFIX + targetId)
-        platformStorage.remove(KEY_LAST_SYNC_PREFIX + targetId)
-        platformStorage.remove(KEY_WEEK_MARKERS_PREFIX + targetId)
-        if (removedUserLessonKeys.isNotEmpty()) {
-            _userLessons.update { map -> map - removedUserLessonKeys.toSet() }
-            persistUserLessons()
+        idsToRemove.forEach { id ->
+            lastSyncTimes.remove(id)
+            platformStorage.remove(KEY_LESSONS_PREFIX + id)
+            platformStorage.remove(KEY_LAST_SYNC_PREFIX + id)
+            platformStorage.remove(KEY_WEEK_MARKERS_PREFIX + id)
         }
         if (removedUserLessonKeys.isNotEmpty()) {
-            _hiddenLessons.update { map -> map - removedUserLessonKeys.toSet() }
+            _userLessons.update { map -> map - removedUserLessonKeys }
+            persistUserLessons()
+            _hiddenLessons.update { map -> map - removedUserLessonKeys }
             persistHiddenLessons()
         }
         _selectedTarget.value?.let {
             com.jetbrains.kmpapp.data.model.SemesterWeeks.set(loadWeekMarkers(it.id))
         }
         persistTargets()
-        if (removed != null) {
-        }
     }
 
     fun selectTarget(target: ScheduleTarget?) {
@@ -1986,5 +2027,26 @@ internal fun uniqueStarredLocalTitle(base: String, existingTitles: Set<String>):
     }
     return title
 }
+
+internal fun selectComboSourceIds(
+    targets: List<ScheduleTarget>,
+    requestedIds: List<Int>
+): List<Int> = requestedIds.distinct().filter { id ->
+    targets.any { it.id == id && !it.isCombo }
+}
+
+internal fun comboAfterSourceRemoval(
+    combo: ScheduleTarget,
+    sourceId: Int
+): ScheduleTarget? {
+    val remaining = combo.comboSourceIds.filter { it != sourceId }
+    if (remaining.size < 2) return null
+    return combo.copy(comboSourceIds = remaining)
+}
+
+internal fun combosUsingSource(
+    targets: List<ScheduleTarget>,
+    sourceId: Int
+): List<ScheduleTarget> = targets.filter { it.isCombo && sourceId in it.comboSourceIds }
 
 
