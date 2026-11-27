@@ -50,9 +50,10 @@ enum class OtherSubScreen(val depth: Int) {
     INTERFACE_SETTINGS(2),
     SERVICES_SETTINGS(2),
     ADVANCED_SETTINGS(2),
-    // Единственное исключение из «без подстраниц»: палитра типов занятий
-    // слишком крупная, чтобы жить инлайн (решение владельца).
+    // Исключения из «без подстраниц» (решение владельца):
+    // палитра типов занятий слишком крупная, выбор кнопок шапки — отдельный экран.
     LESSON_COLORS(3),
+    HEADER_BUTTONS(3),
     THEMED_THEMES(2),
     RESOURCES(1),
     ABOUT(1),
@@ -86,8 +87,9 @@ private val SUB_SCREEN_PARENT = mapOf(
     OtherSubScreen.ADVANCED_SETTINGS to OtherSubScreen.SETTINGS,
     // «Внешний вид» остаётся инлайн в корне: его подстраницы — дети корня.
     OtherSubScreen.THEMED_THEMES to OtherSubScreen.SETTINGS,
-    // Цвета занятий — единственная вложенная подстраница (внутри расписания).
+    // Вложенные подстраницы расписания: цвета и кнопки шапки.
     OtherSubScreen.LESSON_COLORS to OtherSubScreen.SCHEDULE_SETTINGS,
+    OtherSubScreen.HEADER_BUTTONS to OtherSubScreen.SCHEDULE_SETTINGS,
     OtherSubScreen.RESOURCES to OtherSubScreen.ROOT,
     OtherSubScreen.ABOUT to OtherSubScreen.ROOT,
     OtherSubScreen.TEAM to OtherSubScreen.ABOUT,
@@ -211,12 +213,12 @@ class OtherViewModel(
     val notificationsTargetId: StateFlow<Int?> = repository.notificationsTargetId
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
     val qrButtonEnabled: StateFlow<Boolean> = repository.qrButtonEnabled
-    /** Слот доп. кнопки в шапке расписания (меню всегда рисуется отдельно). */
-    val headerSlotButton: StateFlow<com.jetbrains.kmpapp.data.model.HeaderButton?> =
-        repository.headerSlotButton
+    /** Выбранные кнопки шапки расписания (до трёх, включая меню). */
+    val headerButtons: StateFlow<List<com.jetbrains.kmpapp.data.model.HeaderButton>> =
+        repository.headerButtons
 
-    fun setHeaderSlotButton(button: com.jetbrains.kmpapp.data.model.HeaderButton?) {
-        repository.setHeaderSlotButton(button)
+    fun setHeaderButtons(buttons: List<com.jetbrains.kmpapp.data.model.HeaderButton>) {
+        repository.setHeaderButtons(buttons)
     }
     val askBeforeNoteDelete: StateFlow<Boolean> = repository.askBeforeNoteDelete
 

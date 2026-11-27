@@ -2,234 +2,100 @@ package com.jetbrains.kmpapp.data.model
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Кнопки шапки расписания (решение владельца): слот ОДИН рядом с меню,
- * остальные кнопки живут в пузырьке над лентой календаря.
+ * Выбор кнопок шапки (решение владельца): до 3 любых, включая меню.
+ * В пузырьке — все НЕ выбранные доступные кнопки.
  */
 class HeaderButtonSlotTest {
 
+    private val all = listOf(
+        HeaderButton.ADD,
+        HeaderButton.USER_LESSON,
+        HeaderButton.QR,
+        HeaderButton.DAY_BADGE,
+        HeaderButton.MENU
+    )
+
     @Test
-    fun defaultSlotIsAddButton() {
-        assertEquals(HeaderButton.ADD, HeaderButton.DEFAULT)
+    fun defaultSelectionIsAddAndMenu() {
+        assertEquals(
+            listOf(HeaderButton.ADD, HeaderButton.MENU),
+            HeaderButton.DEFAULT_SELECTION
+        )
     }
 
     @Test
-    fun missingKeyMeansFreshInstallDefault() {
-        // Ключа нет — свежая установка: в слоте «плюс» (дефолт владельца).
+    fun selectionRoundTripsThroughStorage() {
+        val selected = listOf(HeaderButton.QR, HeaderButton.MENU, HeaderButton.ADD)
+        val encoded = HeaderButton.encodeSelection(selected)
+        assertEquals(
+            listOf(HeaderButton.QR, HeaderButton.MENU, HeaderButton.ADD),
+            HeaderButton.decodeSelection(encoded)
+        )
+    }
+
+    @Test
+    fun selectionIsLimitedToThree() {
+        val encoded = HeaderButton.encodeSelection(all)
+        assertEquals(3, encoded.split(',').size)
+        assertEquals(3, HeaderButton.decodeSelection(encoded)?.size)
+    }
+
+    @Test
+    fun legacySingleSlotIsMigrated() {
         assertEquals(HeaderButton.ADD, HeaderButton.fromStoredId(null))
-        assertEquals(HeaderButton.ADD, HeaderButton.fromStoredId(""))
-        assertEquals(HeaderButton.ADD, HeaderButton.fromStoredId("   "))
+        assertEquals(null, HeaderButton.fromStoredId(HeaderButton.EMPTY_ID))
+        assertEquals(HeaderButton.QR, HeaderButton.fromStoredId("qr"))
+        assertEquals(null, HeaderButton.fromStoredId("не-кнопка"))
     }
 
     @Test
-    fun storedEmptyIdMeansAllExtrasOff() {
-        // Владелец выключил все допы: слот пуст, в шапке только меню.
-        assertNull(HeaderButton.fromStoredId(HeaderButton.EMPTY_ID))
+    fun menuCanBeTheOnlySelectedButton() {
+        val selected = normalizeHeaderSelection(listOf(HeaderButton.MENU), all)
+        assertEquals(listOf(HeaderButton.MENU), selected)
     }
 
     @Test
-    fun corruptedIdDoesNotSilentlyBecomePlus() {
-        // Битое значение — не «плюс»: слот пуст, пользователь увидит меню
-        // и выберет сам. Молчаливый возврат дефолта прятал бы ошибку.
-        assertNull(HeaderButton.fromStoredId("не-кнопка"))
+    fun anyThreeButtonsCanBeSelected() {
+        val selected = normalizeHeaderSelection(
+            listOf(HeaderButton.ADD, HeaderButton.QR, HeaderButton.MENU), all
+        )
+        assertEquals(3, selected.size)
+        assertTrue(HeaderButton.MENU in selected)
     }
 
     @Test
-    fun storedIdRoundTripWorks() {
-        HeaderButton.entries.forEach { button ->
-            assertEquals(button, HeaderButton.fromStoredId(HeaderButton.toStoredId(button)))
-        }
-        // Пустой слот тоже переживает перезапуск.
-        assertNull(HeaderButton.fromStoredId(HeaderButton.toStoredId(null)))
-        assertEquals(HeaderButton.EMPTY_ID, HeaderButton.toStoredId(null))
+    fun noButtonsCanBeSelected() {
+        assertTrue(normalizeHeaderSelection(emptyList(), all).isEmpty())
     }
 
-    // --- доступные кнопки (пузырёк меню) ---
+    @Test
+    fun unavailableButtonsAreRemovedButOrderKept() {
+        val available = listOf(HeaderButton.ADD, HeaderButton.QR, HeaderButton.MENU)
+        val selected = normalizeHeaderSelection(
+            listOf(HeaderButton.DAY_BADGE, HeaderButton.ADD, HeaderButton.MENU), available
+        )
+        assertEquals(listOf(HeaderButton.ADD, HeaderButton.MENU), selected)
+    }
 
     @Test
-    fun withoutTargetOnlyTargetBoundButtonsAreMissing() {
-        // QR не привязан к расписанию: он открывает раздел сканера и доступен
-        // даже без выбранной группы (поведение сохранено как было).
+    fun bubbleContainsAllNotSelectedButtons() {
+        val selected = listOf(HeaderButton.ADD, HeaderButton.MENU)
         assertEquals(
-            listOf(HeaderButton.ADD, HeaderButton.QR),
-            availableHeaderButtons(
-                hasTarget = false,
-                userLessonsEnabled = true,
-                qrAvailable = true,
-                calendarCollapsed = true
-            )
-        )
-        // Без расписания и без настройки QR остаётся только «плюс».
-        assertEquals(
-            listOf(HeaderButton.ADD),
-            availableHeaderButtons(
-                hasTarget = false,
-                userLessonsEnabled = true,
-                qrAvailable = false,
-                calendarCollapsed = true
-            )
+            listOf(HeaderButton.USER_LESSON, HeaderButton.QR, HeaderButton.DAY_BADGE),
+            bubbleHeaderButtons(selected, all)
         )
     }
 
     @Test
-    fun userLessonNeedsTargetAndSetting() {
-        val base = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = false,
-            qrAvailable = false, calendarCollapsed = false
-        )
-        assertTrue(HeaderButton.USER_LESSON !in base)
-
-        val withSetting = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = false, calendarCollapsed = false
-        )
-        assertTrue(HeaderButton.USER_LESSON in withSetting)
+    fun menuIsNeverShownInsideBubble() {
+        assertTrue(HeaderButton.MENU !in bubbleHeaderButtons(emptyList(), all))
     }
 
     @Test
-    fun dayBadgeOnlyWhenCalendarCollapsed() {
-        val expanded = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = true, calendarCollapsed = false
-        )
-        assertTrue(HeaderButton.DAY_BADGE !in expanded)
-
-        val collapsed = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = true, calendarCollapsed = true
-        )
-        assertTrue(HeaderButton.DAY_BADGE in collapsed)
-    }
-
-    @Test
-    fun fullSetHasFourButtons() {
-        val all = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = true, calendarCollapsed = true
-        )
-        assertEquals(4, all.size)
-        assertEquals(HeaderButton.entries.size, all.size)
-    }
-
-    // --- слот ---
-
-    @Test
-    fun slotKeepsChosenButtonWhenAvailable() {
-        assertEquals(
-            HeaderButton.QR,
-            resolveHeaderSlot(
-                chosen = HeaderButton.QR,
-                hasTarget = true, userLessonsEnabled = true,
-                qrAvailable = true, calendarCollapsed = true
-            )
-        )
-    }
-
-    @Test
-    fun slotEmptiesWhenChosenButtonBecomesUnavailable() {
-        // QR выбран, но настройку выключили → в шапке только меню.
-        assertNull(
-            resolveHeaderSlot(
-                chosen = HeaderButton.QR,
-                hasTarget = true, userLessonsEnabled = true,
-                qrAvailable = false, calendarCollapsed = true
-            )
-        )
-    }
-
-    @Test
-    fun dayBadgeSlotEmptiesWhenCalendarExpanded() {
-        assertNull(
-            resolveHeaderSlot(
-                chosen = HeaderButton.DAY_BADGE,
-                hasTarget = true, userLessonsEnabled = true,
-                qrAvailable = true, calendarCollapsed = false
-            )
-        )
-    }
-
-    @Test
-    fun addSlotAlwaysAvailable() {
-        assertEquals(
-            HeaderButton.ADD,
-            resolveHeaderSlot(
-                chosen = HeaderButton.ADD,
-                hasTarget = false, userLessonsEnabled = false,
-                qrAvailable = false, calendarCollapsed = false
-            )
-        )
-    }
-
-    // --- содержимое пузырька ---
-
-    @Test
-    fun bubbleExcludesButtonAlreadyInSlot() {
-        // Владелец: меню содержит ДРУГИЕ кнопки. «Плюс» в слоте — значит
-        // в пузырьке его нет (иначе дублирование в двух местах).
-        val all = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = true, calendarCollapsed = true
-        )
-        val slot = resolveHeaderSlot(
-            HeaderButton.ADD, hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = true, calendarCollapsed = true
-        )
-        val bubble = all.filter { it != slot }
-        assertEquals(3, bubble.size)
-        assertTrue(HeaderButton.ADD !in bubble)
-        assertTrue(HeaderButton.USER_LESSON in bubble)
-    }
-
-    @Test
-    fun bubbleHoldsEverythingWhenSlotIsEmpty() {
-        // Слот пуст (выбранная кнопка стала недоступна) — в пузырьке всё.
-        val all = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = false, calendarCollapsed = false
-        )
-        val slot = resolveHeaderSlot(
-            HeaderButton.QR, hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = false, calendarCollapsed = false
-        )
-        // Фильтруем ДО assertNull: у того контракт, после которого slot
-        // сужается до null и сравнение превращается в тавтологию.
-        val bubble = all.filter { it != slot }
-        assertEquals(listOf(HeaderButton.ADD, HeaderButton.USER_LESSON), all)
-        assertEquals(all, bubble)
-        assertNull(slot)
-    }
-
-    @Test
-    fun ownerCanTurnOffAllExtras() {
-        // Запрос владельца: «нет возможности выключить вообще все допы».
-        // chosen = null — осознанный пустой слот: в шапке только меню,
-        // даже когда все кнопки доступны.
-        assertNull(
-            resolveHeaderSlot(
-                chosen = null,
-                hasTarget = true, userLessonsEnabled = true,
-                qrAvailable = true, calendarCollapsed = true
-            )
-        )
-    }
-
-    @Test
-    fun emptySlotPutsEveryAvailableButtonInBubble() {
-        val all = availableHeaderButtons(
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = true, calendarCollapsed = true
-        )
-        val slot = resolveHeaderSlot(
-            chosen = null,
-            hasTarget = true, userLessonsEnabled = true,
-            qrAvailable = true, calendarCollapsed = true
-        )
-        val bubble = all.filter { it != slot }
-        assertEquals(4, bubble.size)
-        assertEquals(all, bubble)
-        assertNull(slot)
+    fun qrIsAlwaysAvailable() {
+        assertTrue(HeaderButton.QR in availableHeaderButtons(false, false, false))
     }
 }

@@ -41,7 +41,6 @@ fun ServicesSettingsPage(
     modifier: Modifier = Modifier
 ) {
     val askBeforeNoteDelete by viewModel.askBeforeNoteDelete.collectAsState()
-    val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
 
     SettingsPageScaffold(title = "Сервисы", onBack = onBack, modifier = modifier) {
         SettingsGroup(title = "Конспекты") {
@@ -50,15 +49,6 @@ fun ServicesSettingsPage(
                 subtitle = "Подтверждение перед удалением страниц и полей в конспектах",
                 checked = askBeforeNoteDelete,
                 onCheckedChange = viewModel::setAskBeforeNoteDelete
-            )
-        }
-
-        SettingsGroup(title = "Сканер QR") {
-            SettingsSwitchRow(
-                title = "Разрешить кнопку сканера",
-                subtitle = "Отметка посещаемости на «Пульсе». Место кнопки в шапке — в «Настройках расписания»",
-                checked = qrButtonEnabled,
-                onCheckedChange = viewModel::setQrButtonEnabled
             )
         }
 

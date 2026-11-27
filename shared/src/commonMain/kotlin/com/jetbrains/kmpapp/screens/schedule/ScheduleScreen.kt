@@ -153,13 +153,12 @@ private fun ScheduleMainContent(
     val currentMinutesState = viewModel.currentMinutes.collectAsState()
     val isVpnActive by viewModel.isVpnActive.collectAsState()
     val vpnWarningEnabled by viewModel.vpnWarningEnabled.collectAsState()
-    val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
     // Редактирование расписания (свои пары): настройка выключает и кнопку
     // в шапке, и подмешивание правил в список (см. currentLessons).
     val userLessonsEnabled by viewModel.userLessonsEnabled.collectAsState()
     // Слот доп. кнопки в шапке (одна кнопка + меню): выбор живёт в настройках
     // («Кнопки шапки расписания»), здесь только читаем и рисуем.
-    val headerSlotButton by viewModel.headerSlotButton.collectAsState()
+    val headerButtons by viewModel.headerButtons.collectAsState()
     // Пузырёк меню кнопок открыт. Состояние экрана (не хранилища): закрылся
     // переходом по табу — и ладно, это не настройка пользователя.
     var headerMenuOpen by remember { mutableStateOf(false) }
@@ -189,11 +188,10 @@ private fun ScheduleMainContent(
             headerMenuOpen = false
         }
     }
-    // Смена дня/расписания тоже закрывает пузырёк: он привязан к шапке
-    // текущего экрана, а не к содержимому дня.
-    LaunchedEffect(selectedTarget?.id, selectedDate) {
-        headerMenuOpen = false
-    }
+    // НЕ закрываем пузырёк здесь: при смене дня/расписания этот эффект
+    // срабатывал сразу после тапа по кнопке меню и мгновенно отменял его —
+    // кнопка выглядела неработающей. Закрытие происходит только по явному
+    // действию: выбор пункта, повторный тап по меню или открытие шторки ниже.
     val isToday = selectedDate == com.jetbrains.kmpapp.data.model.DateUtils.today()
     val basePage = 1000
     val today = com.jetbrains.kmpapp.data.model.DateUtils.today()
@@ -249,12 +247,9 @@ private fun ScheduleMainContent(
                 calendarBadgeDay = if (selectedTarget != null && calendarCollapsed) selectedDate.day else null,
                 onCalendarBadgeClick = { viewModel.setCalendarCollapsed(false) },
                 onCalendarBadgeLongClick = { showMonthPicker = true },
-                // Шапка: значок QR открывает РАЗДЕЛ сканера (не оверлей)
-                // — когда колбэк передан и настройка включена.
-                onQrScannerClick = if (qrButtonEnabled) {
-                    onOpenQrScanner
-                } else null,
-                slotButton = headerSlotButton,
+                // QR — обычная кнопка шапки, отдельного тумблера больше нет.
+                onQrScannerClick = onOpenQrScanner,
+                headerButtons = headerButtons,
                 menuOpen = headerMenuOpen,
                 onMenuToggle = { headerMenuOpen = !headerMenuOpen }
             )
@@ -449,13 +444,13 @@ private fun ScheduleMainContent(
         val bubbleButtons = rememberBubbleHeaderButtons(
             hasTarget = selectedTarget != null,
             userLessonsEnabled = userLessonsEnabled,
-            qrAvailable = qrButtonEnabled,
             calendarCollapsed = calendarCollapsed,
-            slotButton = headerSlotButton
+            selectedButtons = headerButtons
         )
         HeaderButtonBubble(
             buttons = bubbleButtons,
-            visible = headerMenuOpen,
+            // Пузырёк имеет смысл только если кнопка меню выбрана.
+            visible = headerMenuOpen && HeaderButton.MENU in headerButtons,
             calendarBadgeDay = if (calendarCollapsed) selectedDate.day else null,
             onButtonClick = { button ->
                 headerMenuOpen = false
@@ -467,6 +462,7 @@ private fun ScheduleMainContent(
                     }
                     HeaderButton.QR -> onOpenQrScanner?.invoke()
                     HeaderButton.DAY_BADGE -> viewModel.setCalendarCollapsed(false)
+                    HeaderButton.MENU -> Unit // в пузырьке меню не показываем
                 }
             },
             modifier = Modifier

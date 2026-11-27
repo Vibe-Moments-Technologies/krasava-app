@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.foundation.text.KeyboardActions
@@ -99,9 +100,6 @@ fun ManageSchedulesScreen(
     val savedTargets by viewModel.savedTargets.collectAsState()
     val filteredTargets by viewModel.filteredSavedTargets.collectAsState()
     val selectedTarget by viewModel.selectedTarget.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val filterType by viewModel.filterType.collectAsState()
-    val sortOrder by viewModel.sortOrder.collectAsState()
 
     var showAddSheet by remember { mutableStateOf(false) }
     var showEmptyDialog by remember { mutableStateOf(false) }
@@ -112,8 +110,7 @@ fun ManageSchedulesScreen(
     var comboName by remember { mutableStateOf("") }
     var comboSelectedIds by remember { mutableStateOf(emptySet<Int>()) }
     var importLink by remember { mutableStateOf("") }
-    var sortMenuExpanded by remember { mutableStateOf(false) }
-    var filterMenuExpanded by remember { mutableStateOf(false) }
+    var actionsMenuExpanded by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -194,76 +191,53 @@ fun ManageSchedulesScreen(
                     )
                 }
 
-                // Сортировка, фильтр и «плюс» — рядом в топбаре (репорт
-                // владельца): поиск по добавленным убран, фильтр переехал
-                // из чипов в кнопку рядом с добавлением.
+                // Владелец: вместо сортировки и фильтра — гамбургер рядом с
+                // плюсом. Меню в стиле выборщика групп: create empty / combo /
+                // import. Сортировка и фильтры убраны с этого экрана.
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box {
-                        IconButton(onClick = { sortMenuExpanded = true }) {
+                        IconButton(onClick = { actionsMenuExpanded = true }) {
                             Icon(
-                                imageVector = SortIcon,
-                                contentDescription = "Сортировка"
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Действия с расписаниями"
                             )
                         }
                         DropdownMenu(
-                            expanded = sortMenuExpanded,
-                            onDismissRequest = { sortMenuExpanded = false }
+                            expanded = actionsMenuExpanded,
+                            onDismissRequest = { actionsMenuExpanded = false }
                         ) {
-                            TargetSortOrder.entries.forEach { order ->
-                                DropdownMenuItem(
-                                    text = {
-                                        GlitchText(
-                                            text = order.displayName,
-                                            fontWeight = if (sortOrder == order) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (sortOrder == order) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    trailingIcon = if (sortOrder == order) {
-                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
-                                    } else null,
-                                    onClick = {
-                                        viewModel.setSortOrder(order)
-                                        sortMenuExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    Box {
-                        IconButton(onClick = { filterMenuExpanded = true }) {
-                            Icon(
-                                imageVector = Icons.Default.FilterAlt,
-                                contentDescription = "Фильтр"
+                            DropdownMenuItem(
+                                text = { GlitchText("Создать пустое расписание") },
+                                leadingIcon = { Icon(Icons.Default.Add, contentDescription = null) },
+                                onClick = {
+                                    actionsMenuExpanded = false
+                                    emptyName = ""
+                                    showEmptyDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { GlitchText("Соединить расписания") },
+                                leadingIcon = { Icon(Icons.Default.Layers, contentDescription = null) },
+                                onClick = {
+                                    actionsMenuExpanded = false
+                                    comboName = ""
+                                    comboSelectedIds = emptySet()
+                                    showComboDialog = true
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { GlitchText("Импортировать по ссылке") },
+                                leadingIcon = { Icon(Icons.Default.Link, contentDescription = null) },
+                                onClick = {
+                                    actionsMenuExpanded = false
+                                    importLink = ""
+                                    showImportDialog = true
+                                }
                             )
                         }
-                        DropdownMenu(
-                            expanded = filterMenuExpanded,
-                            onDismissRequest = { filterMenuExpanded = false }
-                        ) {
-                            ScheduleFilter.entries.forEach { filter ->
-                                DropdownMenuItem(
-                                    text = {
-                                        GlitchText(
-                                            text = filter.displayName,
-                                            fontWeight = if (filterType == filter) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (filterType == filter) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                            fontSize = 13.sp
-                                        )
-                                    },
-                                    trailingIcon = if (filterType == filter) {
-                                        { Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp)) }
-                                    } else null,
-                                    onClick = {
-                                        viewModel.setFilterType(filter)
-                                        filterMenuExpanded = false
-                                    }
-                                )
-                            }
-                        }
                     }
 
+                    Spacer(modifier = Modifier.width(8.dp))
                     FilledIconButton(
                         onClick = { showAddSheet = true },
                         modifier = Modifier.size(40.dp)
@@ -279,22 +253,6 @@ fun ManageSchedulesScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            ManageScheduleActions(
-                onCreateEmpty = {
-                    emptyName = ""
-                    showEmptyDialog = true
-                },
-                onCombine = {
-                    comboName = ""
-                    comboSelectedIds = emptySet()
-                    showComboDialog = true
-                },
-                onImportLink = {
-                    importLink = ""
-                    showImportDialog = true
-                }
-            )
-
             if (savedTargets.isEmpty()) {
                 Box(
                     modifier = Modifier

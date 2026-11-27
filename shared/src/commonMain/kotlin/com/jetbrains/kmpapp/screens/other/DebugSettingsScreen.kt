@@ -93,39 +93,14 @@ fun DebugSettingsScreen(
         viewModel.refreshStorageStats()
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        containerColor = MaterialTheme.colorScheme.background,
-        topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
-                }
-                Spacer(modifier = Modifier.width(4.dp))
-                GlitchText(
-                    text = "Отладка и эксперименты",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        },
-        modifier = modifier
-            .fillMaxSize()
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(viewModel.scrollState("debug"))
-                .padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
+    // Адаптировано под общий стиль страниц настроек: тот же Scaffold,
+    // заголовок, отступы и POSITION скролла в ViewModel.
+    SettingsPageScaffold(
+        title = "Отладка и эксперименты",
+        onBack = onBack,
+        modifier = modifier,
+        scrollKey = "debug"
+    ) {
             SectionTitle("Режимы")
             DebugSwitchCard(
                 title = "Имитировать оффлайн",
@@ -443,7 +418,6 @@ fun DebugSettingsScreen(
                     }
                 }
             }
-        }
     }
 
     if (showClearCacheDialog) {

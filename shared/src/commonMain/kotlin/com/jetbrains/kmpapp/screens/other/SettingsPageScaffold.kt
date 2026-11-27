@@ -199,6 +199,7 @@ internal fun HeaderButton.availableInSettings(
     // Кружок дня виден только при свёрнутой ленте, но поставить его в слот
     // можно заранее — когда лента свернётся, число появится в шапке.
     HeaderButton.DAY_BADGE -> hasTarget
+    HeaderButton.MENU -> true
 }
 
 /** Полное название кнопки для настроек (в шапке места мало — там короткое). */
@@ -207,6 +208,7 @@ internal fun HeaderButton.settingsTitle(): String = when (this) {
     HeaderButton.USER_LESSON -> "Своя пара"
     HeaderButton.QR -> "Сканер QR"
     HeaderButton.DAY_BADGE -> "Кружок дня"
+    HeaderButton.MENU -> "Меню кнопок"
 }
 
 internal fun HeaderButton.settingsSubtitle(available: Boolean): String = when (this) {
@@ -216,16 +218,13 @@ internal fun HeaderButton.settingsSubtitle(available: Boolean): String = when (t
     } else {
         "Нужно выбранное расписание и включённое «Редактирование расписания»"
     }
-    HeaderButton.QR -> if (available) {
-        "Отметка посещаемости на «Пульсе»"
-    } else {
-        "Включите «Сканер QR» в разделе «Сервисы»"
-    }
+    HeaderButton.QR -> "Отметка посещаемости на «Пульсе» (всегда доступен)"
     HeaderButton.DAY_BADGE -> if (available) {
         "Число дня: видно, когда лента календаря свёрнута"
     } else {
         "Нужно выбранное расписание"
     }
+    HeaderButton.MENU -> "Раскрывает пузырёк с кнопками, которые не выбраны в шапке"
 }
 
 /** Строка-свитчер одной кнопки шапки (слот один — радио-группа). */

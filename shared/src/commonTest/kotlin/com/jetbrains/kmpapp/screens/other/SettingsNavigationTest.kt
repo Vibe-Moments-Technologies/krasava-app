@@ -38,9 +38,10 @@ class SettingsNavigationTest {
     }
 
     @Test
-    fun lessonColorsIsTheOnlyNestedSettingsSubpage() {
-        // Согласованное исключение: палитра типов внутри расписания.
+    fun nestedSettingsSubpagesBelongToScheduleSettings() {
+        // Согласованные исключения: палитра типов и кнопки шапки.
         assertEquals(OtherSubScreen.SCHEDULE_SETTINGS, OtherSubScreen.LESSON_COLORS.parent())
+        assertEquals(OtherSubScreen.SCHEDULE_SETTINGS, OtherSubScreen.HEADER_BUTTONS.parent())
     }
 
     @Test
@@ -49,7 +50,7 @@ class SettingsNavigationTest {
         val names = OtherSubScreen.entries.map { it.name }
         listOf(
             "SCHEDULE_DISPLAY", "SCHEDULE_PROGRESS", "SCHEDULE_CALENDAR",
-            "HEADER_BUTTONS", "SERVICE_NOTES_SETTINGS", "DOCK_SETTINGS"
+            "SERVICE_NOTES_SETTINGS", "DOCK_SETTINGS"
         ).forEach { obsolete ->
             assertTrue(obsolete !in names, "$obsolete должна быть удалена")
         }

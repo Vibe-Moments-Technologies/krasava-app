@@ -50,9 +50,9 @@ class ScheduleViewModel(
     val showAbbreviatedNames: StateFlow<Boolean> = repository.showAbbreviatedNames
     val vpnWarningEnabled: StateFlow<Boolean> = repository.vpnWarningEnabled
     val qrButtonEnabled: StateFlow<Boolean> = repository.qrButtonEnabled
-    /** Какая доп. кнопка стоит в шапке рядом с кнопкой меню (слот один). */
-    val headerSlotButton: StateFlow<com.jetbrains.kmpapp.data.model.HeaderButton?> =
-        repository.headerSlotButton
+    /** Кнопки шапки расписания (до трёх, включая меню). */
+    val headerButtons: StateFlow<List<com.jetbrains.kmpapp.data.model.HeaderButton>> =
+        repository.headerButtons
     /** Редактирование расписания (свои пары): кнопка в шапке и сами пары. */
     val userLessonsEnabled: StateFlow<Boolean> = repository.userLessonsEnabled
 

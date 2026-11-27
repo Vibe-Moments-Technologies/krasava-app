@@ -141,7 +141,8 @@ fun OtherScreen(
                     ScheduleSettingsPage(
                         viewModel = viewModel,
                         onBack = back,
-                        onOpenLessonColors = { viewModel.navigateToSubScreen(OtherSubScreen.LESSON_COLORS) }
+                        onOpenLessonColors = { viewModel.navigateToSubScreen(OtherSubScreen.LESSON_COLORS) },
+                        onOpenHeaderButtons = { viewModel.navigateToSubScreen(OtherSubScreen.HEADER_BUTTONS) }
                     )
                 }
                 OtherSubScreen.NOTIFICATION_SETTINGS -> {
@@ -166,6 +167,9 @@ fun OtherScreen(
                 }
                 OtherSubScreen.LESSON_COLORS -> {
                     LessonColorSettingsScreen(viewModel = viewModel, onBack = back)
+                }
+                OtherSubScreen.HEADER_BUTTONS -> {
+                    HeaderButtonsSettingsPage(viewModel = viewModel, onBack = back)
                 }
                 OtherSubScreen.RESOURCES -> {
                     ResourcesScreen(viewModel = viewModel, onBack = back)

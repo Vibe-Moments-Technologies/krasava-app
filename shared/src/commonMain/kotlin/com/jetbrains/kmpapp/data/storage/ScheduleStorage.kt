@@ -324,15 +324,14 @@ class ScheduleStorage(
     val qrButtonEnabled: StateFlow<Boolean> = _qrButtonEnabled.asStateFlow()
 
     /**
-     * Какая дополнительная кнопка стоит в шапке расписания рядом с кнопкой
-     * меню. Слот один (решение владельца): включение другой кнопки
-     * автоматически выключает предыдущую. Кнопка меню в этот слот не входит —
-     * она показывается всегда.
+     * Кнопки шапки расписания (до 3 любых, включая меню).
      *
-     * null — все допы выключены: в шапке только меню, все кнопки в пузырьке.
+     * Владелец: «можно три любые или две и меню или только меню…» — поэтому
+     * список, а не один слот. В пузырьке показываются все НЕ выбранные кнопки.
+     * Старый одиночный слот мигрирует в список из одной кнопки.
      */
-    private val _headerSlotButton = MutableStateFlow<HeaderButton?>(HeaderButton.DEFAULT)
-    val headerSlotButton: StateFlow<HeaderButton?> = _headerSlotButton.asStateFlow()
+    private val _headerButtons = MutableStateFlow(HeaderButton.DEFAULT_SELECTION)
+    val headerButtons: StateFlow<List<HeaderButton>> = _headerButtons.asStateFlow()
 
     private val _notifyMinutesBefore = MutableStateFlow(15)
     val notifyMinutesBefore: StateFlow<Int> = _notifyMinutesBefore.asStateFlow()
@@ -452,8 +451,12 @@ class ScheduleStorage(
         _notificationsTargetId.value = platformStorage.getString(KEY_NOTIFICATIONS_TARGET_ID)?.toIntOrNull()
         _vpnWarningEnabled.value = loadBooleanFlag(KEY_VPN_WARNING_ENABLED, true)
         _qrButtonEnabled.value = loadBooleanFlag(KEY_QR_BUTTON_ENABLED, false)
-        _headerSlotButton.value =
+        val storedHeaderButtons = HeaderButton.decodeSelection(
+            platformStorage.getString(KEY_HEADER_BUTTONS)
+        )
+        _headerButtons.value = storedHeaderButtons ?: listOfNotNull(
             HeaderButton.fromStoredId(platformStorage.getString(KEY_HEADER_SLOT_BUTTON))
+        )
         _notifyMinutesBefore.value =
             platformStorage.getString(KEY_NOTIFY_MINUTES_BEFORE)?.toIntOrNull() ?: 15
         _askBeforeNoteDelete.value = loadBooleanFlag(KEY_ASK_BEFORE_NOTE_DELETE, true)
@@ -1371,20 +1374,17 @@ class ScheduleStorage(
         scope.launch { platformStorage.saveString(KEY_QR_BUTTON_ENABLED, enabled.toString()) }
     }
 
-    /**
-     * Поставить кнопку в слот шапки. Слот один: предыдущая кнопка при этом
-     * просто перестаёт быть выбранной — отдельного выключения не нужно.
-     *
-     * null — выключить все допы: в шапке останется только кнопка меню, а все
-     * кнопки переедут в пузырёк (запрос владельца).
-     */
-    fun setHeaderSlotButton(button: HeaderButton?) {
-        _headerSlotButton.value = button
+    /** Сохранить выбранные кнопки шапки (до трёх). */
+    fun setHeaderButtons(buttons: List<HeaderButton>) {
+        _headerButtons.value = buttons
         scope.launch {
             try {
-                platformStorage.saveString(KEY_HEADER_SLOT_BUTTON, HeaderButton.toStoredId(button))
+                platformStorage.saveString(
+                    KEY_HEADER_BUTTONS,
+                    HeaderButton.encodeSelection(buttons)
+                )
             } catch (e: Exception) {
-                println("Failed to persist header slot button: ${e.message}")
+                println("Failed to persist header buttons: ${e.message}")
             }
         }
     }
@@ -1997,6 +1997,7 @@ class ScheduleStorage(
         private const val KEY_VPN_WARNING_ENABLED = "krasava_vpn_warning_enabled"
         private const val KEY_QR_BUTTON_ENABLED = "krasava_qr_button_enabled"
         private const val KEY_HEADER_SLOT_BUTTON = "krasava_header_slot_button"
+        private const val KEY_HEADER_BUTTONS = "krasava_header_buttons"
         private const val KEY_NOTIFY_MINUTES_BEFORE = "krasava_notify_minutes_before"
         private const val KEY_ASK_BEFORE_NOTE_DELETE = "krasava_ask_before_note_delete"
         // Просьба о звезде на GitHub и отзыве в магазине.

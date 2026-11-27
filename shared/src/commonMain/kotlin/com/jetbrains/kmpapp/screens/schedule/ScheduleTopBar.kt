@@ -61,7 +61,7 @@ import com.jetbrains.kmpapp.data.model.ScheduleDiff
 import com.jetbrains.kmpapp.data.model.ScheduleTarget
 import com.jetbrains.kmpapp.data.model.availableHeaderButtons
 import com.jetbrains.kmpapp.data.model.badgeLabel
-import com.jetbrains.kmpapp.data.model.resolveHeaderSlot
+import com.jetbrains.kmpapp.data.model.normalizeHeaderSelection
 
 /** Подпись кнопки шапки — общая для слота, меню и настроек. */
 internal fun HeaderButton.title(): String = when (this) {
@@ -69,6 +69,7 @@ internal fun HeaderButton.title(): String = when (this) {
     HeaderButton.USER_LESSON -> "Своя пара"
     HeaderButton.QR -> "Сканер QR"
     HeaderButton.DAY_BADGE -> "День"
+    HeaderButton.MENU -> "Меню"
 }
 
 /** Иконка кнопки; у кружка дня иконки нет — там число. */
@@ -77,6 +78,7 @@ internal fun HeaderButton.icon(): ImageVector? = when (this) {
     HeaderButton.USER_LESSON -> Icons.Default.EditCalendar
     HeaderButton.QR -> Icons.Default.QrCodeScanner
     HeaderButton.DAY_BADGE -> null
+    HeaderButton.MENU -> Icons.Default.MoreVert
 }
 
 /**
@@ -142,19 +144,18 @@ fun ScheduleTopBar(
     onCalendarBadgeClick: () -> Unit = {},
     onCalendarBadgeLongClick: () -> Unit = {},
     onQrScannerClick: (() -> Unit)? = null,
-    slotButton: HeaderButton? = HeaderButton.DEFAULT,
+    headerButtons: List<HeaderButton> = HeaderButton.DEFAULT_SELECTION,
     menuOpen: Boolean = false,
     onMenuToggle: () -> Unit = {}
 ) {
     var dropdownExpanded by remember { mutableStateOf(false) }
 
-    val slot = resolveHeaderSlot(
-        chosen = slotButton,
+    val available = availableHeaderButtons(
         hasTarget = selectedTarget != null,
         userLessonsEnabled = onAddUserLessonClick != null,
-        qrAvailable = onQrScannerClick != null,
         calendarCollapsed = calendarBadgeDay != null
     )
+    val visibleButtons = normalizeHeaderSelection(headerButtons, available)
 
     Row(
         modifier = modifier
@@ -291,37 +292,27 @@ fun ScheduleTopBar(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // ПРАВАЯ группа: ровно две кнопки — слот и меню.
+        // ПРАВАЯ группа: до трёх выбранных кнопок.
         //
-        // Владелец: «стабильно вмещается только 2 кнопки справа» — поэтому
-        // в шапке максимум одна доп. кнопка, остальные уходят в пузырёк над
-        // заголовком календаря. Меню крайнее правое и показывается ВСЕГДА.
+        // Владелец: «выбор до 3 любых кнопок, включая меню». Меню — обычный
+        // вариант: если оно выбрано, тап открывает пузырёк с НЕ выбранными
+        // кнопками; если не выбрано — в шапке его нет.
         Row(verticalAlignment = Alignment.CenterVertically) {
-            if (slot != null) {
+            visibleButtons.forEachIndexed { index, button ->
+                if (index > 0) Spacer(modifier = Modifier.width(8.dp))
                 HeaderActionButton(
-                    button = slot,
+                    button = button,
                     dayNumber = calendarBadgeDay,
-                    onLongClick = if (slot == HeaderButton.DAY_BADGE) onCalendarBadgeLongClick else null,
+                    onLongClick = if (button == HeaderButton.DAY_BADGE) onCalendarBadgeLongClick else null,
                     onClick = {
-                        when (slot) {
+                        when (button) {
                             HeaderButton.ADD -> onAddClick()
                             HeaderButton.USER_LESSON -> onAddUserLessonClick?.invoke()
                             HeaderButton.QR -> onQrScannerClick?.invoke()
                             HeaderButton.DAY_BADGE -> onCalendarBadgeClick()
+                            HeaderButton.MENU -> onMenuToggle()
                         }
                     }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-            }
-
-            FilledIconButton(
-                onClick = onMenuToggle,
-                modifier = Modifier.size(40.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.MoreVert,
-                    contentDescription = if (menuOpen) "Скрыть меню кнопок" else "Меню кнопок",
-                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -418,27 +409,18 @@ fun HeaderButtonBubble(
 }
 
 /**
- * Кнопки для пузырька меню: доступные сейчас, КРОМЕ той, что уже стоит в слоте.
- *
- * Владелец: «кнопка меню с ДРУГИМИ такими кнопками» — та, что видна в шапке,
- * в пузырёк не попадает (иначе «плюс» дублировался бы в двух местах).
- * Слот пуст (все допы выключены) — в пузырьке все доступные кнопки.
+ * Кнопки для пузырька: ВСЕ доступные, кроме выбранных в шапке.
+ * МENU в пузырьке не показываем — открывать его нечем.
  */
 @Composable
 internal fun rememberBubbleHeaderButtons(
     hasTarget: Boolean,
     userLessonsEnabled: Boolean,
-    qrAvailable: Boolean,
     calendarCollapsed: Boolean,
-    slotButton: HeaderButton?
+    selectedButtons: List<HeaderButton>
 ): List<HeaderButton> = remember(
-    hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed, slotButton
+    hasTarget, userLessonsEnabled, calendarCollapsed, selectedButtons
 ) {
-    val available = availableHeaderButtons(
-        hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed
-    )
-    val slot = resolveHeaderSlot(
-        slotButton, hasTarget, userLessonsEnabled, qrAvailable, calendarCollapsed
-    )
-    available.filter { it != slot }
+    val available = availableHeaderButtons(hasTarget, userLessonsEnabled, calendarCollapsed)
+    available.filterNot { it in selectedButtons || it == HeaderButton.MENU }
 }

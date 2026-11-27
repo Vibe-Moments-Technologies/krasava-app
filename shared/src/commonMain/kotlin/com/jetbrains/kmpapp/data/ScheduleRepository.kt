@@ -216,9 +216,9 @@ class ScheduleRepository(
     val notificationsTargetId: StateFlow<Int?> = storage.notificationsTargetId
     val vpnWarningEnabled: StateFlow<Boolean> = storage.vpnWarningEnabled
     val qrButtonEnabled: StateFlow<Boolean> = storage.qrButtonEnabled
-    /** Слот доп. кнопки в шапке расписания (рядом с всегда видимым меню). */
-    val headerSlotButton: StateFlow<com.jetbrains.kmpapp.data.model.HeaderButton?> =
-        storage.headerSlotButton
+    /** Выбранные кнопки шапки расписания (до трёх, включая меню). */
+    val headerButtons: StateFlow<List<com.jetbrains.kmpapp.data.model.HeaderButton>> =
+        storage.headerButtons
     val askBeforeNoteDelete: StateFlow<Boolean> = storage.askBeforeNoteDelete
     /** Пора показать просьбу о звезде на GitHub / отзыве в магазине. */
     val reviewPromptVisible: StateFlow<Boolean> = storage.reviewPromptVisible
@@ -402,8 +402,8 @@ class ScheduleRepository(
     fun setNotificationsTargetId(targetId: Int?) = storage.setNotificationsTargetId(targetId)
     fun setVpnWarningEnabled(enabled: Boolean) = storage.setVpnWarningEnabled(enabled)
     fun setQrButtonEnabled(enabled: Boolean) = storage.setQrButtonEnabled(enabled)
-    fun setHeaderSlotButton(button: com.jetbrains.kmpapp.data.model.HeaderButton?) =
-        storage.setHeaderSlotButton(button)
+    fun setHeaderButtons(buttons: List<com.jetbrains.kmpapp.data.model.HeaderButton>) =
+        storage.setHeaderButtons(buttons)
     fun setAskBeforeNoteDelete(ask: Boolean) = storage.setAskBeforeNoteDelete(ask)
     /** Регистрация запуска приложения (счётчик для просьбы об отзыве). */
     fun registerAppLaunch() = storage.registerAppLaunch()

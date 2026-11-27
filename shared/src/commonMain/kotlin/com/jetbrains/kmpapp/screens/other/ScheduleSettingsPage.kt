@@ -5,13 +5,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.jetbrains.kmpapp.data.model.HeaderButton
 
 /**
  * Страница «Настройки расписания».
@@ -21,14 +21,15 @@ import com.jetbrains.kmpapp.data.model.HeaderButton
  * вложенности и четыре тапа до любого тумблера. Теперь все настройки лежат
  * на одной странице, сгруппированные заголовками.
  *
- * Единственное исключение — «Цвета занятий»: палитра типов слишком крупная
- * для инлайна, поэтому она осталась подстраницей (согласовано с владельцем).
+ * Подстраницы-исключения: «Цвета занятий» (крупная палитра) и «Кнопки шапки»
+ * (согласовано с владельцем отдельным пунктом).
  */
 @Composable
 fun ScheduleSettingsPage(
     viewModel: OtherViewModel,
     onBack: () -> Unit,
     onOpenLessonColors: () -> Unit,
+    onOpenHeaderButtons: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val showEmptyLessons by viewModel.showEmptyLessons.collectAsState()
@@ -40,10 +41,6 @@ fun ScheduleSettingsPage(
     val showBreakProgress by viewModel.showBreakProgress.collectAsState()
     val calendarSwipeCollapse by viewModel.calendarSwipeCollapse.collectAsState()
     val userLessonsEnabled by viewModel.userLessonsEnabled.collectAsState()
-    val slotButton by viewModel.headerSlotButton.collectAsState()
-    val qrButtonEnabled by viewModel.qrButtonEnabled.collectAsState()
-    val savedTargets by viewModel.savedTargets.collectAsState()
-    val hasTarget = savedTargets.isNotEmpty()
 
     SettingsPageScaffold(
         title = "Настройки расписания",
@@ -122,42 +119,20 @@ fun ScheduleSettingsPage(
             )
         }
 
-        SettingsGroup(title = "Кнопки шапки") {
-            if (slotButton == null) {
-                GlitchText(
-                    text = "Все кнопки убраны в меню: в шапке только «⋮».",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-            HeaderButton.entries.forEachIndexed { index, button ->
-                if (index > 0) SettingsRowDivider()
-                val available = button.availableInSettings(
-                    hasTarget = hasTarget,
-                    userLessonsEnabled = userLessonsEnabled,
-                    qrButtonEnabled = qrButtonEnabled
-                )
-                HeaderButtonToggleRow(
-                    button = button,
-                    checked = slotButton == button && available,
-                    enabled = available,
-                    // Слот один: включение другой кнопки выключает предыдущую;
-                    // выключение последней оставляет слот пустым.
-                    onCheckedChange = { checked ->
-                        viewModel.setHeaderSlotButton(if (checked) button else null)
-                    }
-                )
-            }
-        }
-
-        // Согласованное исключение: палитра типов — подстраницей.
-        SettingsGroup(title = "Оформление пар") {
+        // Подстраницы расписания: палитра и кнопки шапки.
+        SettingsGroup(title = "Оформление и шапка") {
             SettingsLinkRow(
                 title = "Цвета занятий",
                 subtitle = "Акценты для лекций, практик, лабораторных",
                 icon = Icons.Default.Palette,
                 onClick = onOpenLessonColors
+            )
+            SettingsRowDivider()
+            SettingsLinkRow(
+                title = "Кнопки шапки",
+                subtitle = "Выбрать до 3 кнопок, включая меню",
+                icon = Icons.Default.MoreVert,
+                onClick = onOpenHeaderButtons
             )
         }
     }
