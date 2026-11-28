@@ -1,0 +1,14 @@
+<svg width="12746" height="14641" viewBox="0 0 12746 14641" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="12746" height="14641" fill="#1E1E1E"/>
+<path d="M1518 1455H2316V1943.65V2093H2110H1518V1455Z" fill="#FFC0C0"/>
+<mask id="stroke0_0_1" fill="white">
+<path d="M1518 1455H2316V1943.65V2093H2110H1518V1455Z"/>
+</mask>
+<path d="M1518 1455H2316V1943.65V2093H2110H1518V1455Z" stroke-width="10" stroke="#7E7E7E" mask="url(#stroke0_0_1)"/>
+<path d="M1518 2093L2316 2093L2110 2288H1518V2093Z" fill="#1E1E1E"/>
+<mask id="stroke1_0_1" fill="white">
+<path d="M1518 2093L2316 2093L2110 2288H1518V2093Z"/>
+</mask>
+<path d="M1518 2093V2288H2110L2316 2093L1518 2093Z" stroke-width="10" stroke="#7E7E7E" mask="url(#stroke1_0_1)"/>
+<line x1="2213" y1="2093" x2="2243" y2="2093" stroke-width="10" stroke="white"/>
+</svg>
